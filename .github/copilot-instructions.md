@@ -1,13 +1,12 @@
-# Ignira - AI Coding Agent Instructions
+# Bluemoon - AI Coding Agent Instructions
 
 ## Architecture Overview
 
-Ignira is a platform for creating and managing your own AI agents. It is built with NestJS and Prisma.
+Bluemoon is a platform for creating and managing your own AI agents. It is built with NestJS and Prisma.
 
 - **Core Infrastructure** (`src/common/`): Shared services for database, auth, file storage, caching, logging, messaging
 - **Feature Modules** (`src/modules/`): Business logic (User, Post) - each with controllers, services, DTOs
 - **Background Workers** (`src/workers/`): Bull queue processors and schedulers for async tasks
-- **MCP Integration** (`src/common/mcp/`): Model Context Protocol tools, resources, and prompts for AI capabilities
 
 **Module Dependency Pattern**: Feature modules import `CommonModule` and specific helpers (e.g., `HelperModule`, `DatabaseModule`) but never import other feature modules directly. Cross-feature communication happens through services injected via module imports.
 
@@ -97,12 +96,6 @@ Responses automatically wrap via `ResponseInterceptor` into:
 - **Files**: JSON in `src/languages/en/` (e.g., `user.json`, `auth.json`)
 - **Usage**: Return message keys in services, interceptor translates automatically
 - **Headers**: Accept `accept-language` header for language selection
-
-### 9. Model Context Protocol (MCP)
-- **Location**: `src/common/mcp/` with separate services for tools, resources, prompts
-- **Decorators**: Use `@MCPTool()`, `@MCPResource()`, `@MCPPrompt()` from `@hmake98/nestjs-mcp`
-- **Config**: Auto-discovery enabled in `MCPCommonModule`
-- **Playground**: `/mcp/playground` endpoint for testing AI integrations
 
 ## Critical File Locations
 

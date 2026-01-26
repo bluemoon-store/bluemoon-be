@@ -1,4 +1,4 @@
-# Ignira 🚀
+# Bluemoon 🚀
 
 ## 🛠️ Tech Stack
 
@@ -13,7 +13,6 @@
 - **Testing**: Jest 30.x with SWC
 - **Logging**: Pino (structured JSON logging)
 - **Validation**: class-validator & class-transformer
-- **MCP Integration**: @hmake98/nestjs-mcp for AI capabilities
 - **Containerization**: Docker & Docker Compose
 
 ## 🚀 Quick Start
@@ -62,7 +61,6 @@ docker-compose up --build
 The API will be available at:
 - **API**: http://localhost:3001
 - **Documentation**: http://localhost:3001/docs
-- **MCP Playground**: http://localhost:3001/mcp/playground (for testing AI tools)
 
 ## 📋 Environment Configuration
 
@@ -73,7 +71,7 @@ Create a `.env` file based on `.env.docker` template. All environment variables 
 | Variable            | Description                              | Default       | Required |
 | ------------------- | ---------------------------------------- | ------------- | -------- |
 | `APP_ENV`           | Environment mode                         | `local`       | Yes      |
-| `APP_NAME`          | Application name                         | `ignira` | No    |
+| `APP_NAME`          | Application name                         | `bluemoon` | No    |
 | `APP_DEBUG`         | Enable debug mode                        | `true`        | No       |
 | `APP_LOG_LEVEL`     | Logging level                            | `debug`       | No       |
 | `APP_CORS_ORIGINS`  | Comma-separated allowed CORS origins     | `*`           | No       |
@@ -123,14 +121,6 @@ Create a `.env` file based on `.env.docker` template. All environment variables 
 | `REDIS_PASSWORD`   | Redis password        | -           | No       |
 | `REDIS_ENABLE_TLS` | Enable TLS for Redis  | `false`     | No       |
 
-### Model Context Protocol (MCP)
-
-| Variable              | Description           | Default              | Required |
-| --------------------- | --------------------- | -------------------- | -------- |
-| `MCP_SERVER_NAME`     | MCP server name       | `ignira-mcp` | No       |
-| `MCP_SERVER_VERSION`  | MCP server version    | `1.0.0`              | No       |
-| `MCP_LOG_LEVEL`       | MCP logging level     | `info`               | No       |
-
 ### Error Tracking
 
 | Variable      | Description                | Example | Required |
@@ -176,10 +166,10 @@ docker-compose down
 
 ```bash
 # Build production image (uses ci/Dockerfile for production)
-docker build -f ci/Dockerfile -t ignira:latest .
+docker build -f ci/Dockerfile -t bluemoon:latest .
 
 # Run production container
-docker run -p 3001:3001 --env-file .env ignira:latest
+docker run -p 3001:3001 --env-file .env bluemoon:latest
 ```
 
 ## 📚 API Documentation
@@ -202,215 +192,6 @@ curl -X POST http://localhost:3001/v1/auth/login \
 curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   http://localhost:3001/v1/user/profile
 ```
-
-## 🤖 Model Context Protocol (MCP) Integration
-
-This boilerplate includes built-in support for the Model Context Protocol (MCP), enabling AI-powered features through tools, resources, and prompts.
-
-### What is MCP?
-
-MCP is a standardized protocol for integrating AI capabilities into applications. It allows you to:
-- **Tools**: Execute functions through AI (e.g., calculations, data transformations)
-- **Resources**: Provide data to AI (e.g., documentation, configuration)
-- **Prompts**: Template AI interactions (e.g., code reviews, documentation generation)
-
-### MCP Playground
-
-Access the interactive MCP playground at `http://localhost:3001/mcp/playground` to:
-- Test all available tools, resources, and prompts
-- View auto-generated schemas
-- Execute operations with real-time feedback
-
-### Built-in Examples
-
-The boilerplate includes example MCP implementations in `src/common/mcp/services/`:
-
-#### Tools (Calculator & Utilities)
-```typescript
-// Mathematical operations
-- add(a, b)          // Add two numbers
-- subtract(a, b)     // Subtract two numbers
-- multiply(a, b)     // Multiply two numbers
-- divide(a, b)       // Divide two numbers
-
-// Text utilities
-- toUpperCase(text)  // Convert text to uppercase
-- toLowerCase(text)  // Convert text to lowercase
-- reverse(text)      // Reverse text string
-```
-
-#### Resources (Documentation & Data)
-```typescript
-// System information
-- system://info      // Application metadata and version
-- system://config    // Configuration overview
-- docs://api         // API documentation
-
-// Data resources
-- data://users       // User statistics
-- data://posts       // Post statistics
-```
-
-#### Prompts (AI Templates)
-```typescript
-// Code assistance prompts
-- code-review        // Review code for best practices
-- bug-analysis       // Analyze and suggest bug fixes
-- documentation      // Generate documentation
-- test-generation    // Generate unit tests
-```
-
-### Creating Custom MCP Services
-
-#### 1. Create a Tool Service
-
-```typescript
-// src/modules/your-module/services/mcp.tools.service.ts
-import { Injectable } from '@nestjs/common';
-import { MCPTool, MCPToolWithParams } from '@hmake98/nestjs-mcp';
-
-@Injectable()
-export class YourMCPToolsService {
-    // Simple tool (auto-infers parameters from TypeScript types)
-    @MCPTool({
-        name: 'customTool',
-        description: 'Your custom tool description',
-    })
-    async customTool(params: { input: string }): Promise<string> {
-        // Your business logic here
-        return `Processed: ${params.input}`;
-    }
-
-    // Tool with explicit parameter definitions
-    @MCPToolWithParams({
-        name: 'complexTool',
-        description: 'A more complex tool with explicit params',
-        parameters: [
-            {
-                name: 'userId',
-                type: 'string',
-                description: 'The user ID to process',
-                required: true,
-            },
-            {
-                name: 'options',
-                type: 'object',
-                description: 'Additional options',
-                required: false,
-            },
-        ],
-    })
-    async complexTool(params: { userId: string; options?: any }): Promise<any> {
-        // Your complex business logic
-        return { success: true, userId: params.userId };
-    }
-}
-```
-
-#### 2. Create a Resource Service
-
-```typescript
-// src/modules/your-module/services/mcp.resources.service.ts
-import { Injectable } from '@nestjs/common';
-import { MCPResource } from '@hmake98/nestjs-mcp';
-
-@Injectable()
-export class YourMCPResourcesService {
-    @MCPResource({
-        uri: 'data://your-resource',
-        name: 'Your Resource',
-        description: 'Provides access to your data',
-        mimeType: 'application/json',
-    })
-    async getResource() {
-        return {
-            uri: 'data://your-resource',
-            mimeType: 'application/json',
-            text: JSON.stringify({
-                data: 'your data',
-                timestamp: new Date().toISOString()
-            }),
-        };
-    }
-}
-```
-
-#### 3. Create a Prompt Service
-
-```typescript
-// src/modules/your-module/services/mcp.prompts.service.ts
-import { Injectable } from '@nestjs/common';
-import { MCPPrompt } from '@hmake98/nestjs-mcp';
-
-@Injectable()
-export class YourMCPPromptsService {
-    @MCPPrompt({
-        name: 'customPrompt',
-        description: 'Custom AI prompt template',
-        arguments: [
-            {
-                name: 'context',
-                description: 'Context for the prompt',
-                required: true,
-            },
-        ],
-    })
-    async customPrompt(args: { context: string }) {
-        return {
-            messages: [
-                {
-                    role: 'user',
-                    content: {
-                        type: 'text',
-                        text: `Given the context: ${args.context}, please provide analysis.`,
-                    },
-                },
-            ],
-        };
-    }
-}
-```
-
-#### 4. Register in Module
-
-```typescript
-// src/modules/your-module/your-module.module.ts
-import { Module } from '@nestjs/common';
-import { YourMCPToolsService } from './services/mcp.tools.service';
-import { YourMCPResourcesService } from './services/mcp.resources.service';
-import { YourMCPPromptsService } from './services/mcp.prompts.service';
-
-@Module({
-    providers: [
-        YourMCPToolsService,
-        YourMCPResourcesService,
-        YourMCPPromptsService,
-    ],
-    exports: [
-        YourMCPToolsService,
-        YourMCPResourcesService,
-        YourMCPPromptsService,
-    ],
-})
-export class YourModule {}
-```
-
-MCP services are **auto-discovered** - no additional registration needed! Just create the services with decorators and they'll automatically appear in the MCP playground.
-
-### Configuration
-
-MCP settings can be configured via environment variables:
-
-```bash
-MCP_SERVER_NAME="your-mcp-server"
-MCP_SERVER_VERSION="1.0.0"
-MCP_LOG_LEVEL="info"  # debug, info, warn, error
-```
-
-### Learn More
-
-- [MCP Package Documentation](https://github.com/hmake98/nestjs-mcp)
-- [MCP Protocol Specification](https://modelcontextprotocol.io)
 
 ## 🧪 Testing
 
@@ -468,8 +249,6 @@ src/
 │   ├── file/              # File upload handling
 │   ├── helper/            # Utility services
 │   ├── logger/            # Logging configuration
-│   ├── mcp/               # Model Context Protocol integration
-│   │   └── services/      # MCP tools, resources, and prompts
 │   ├── message/           # Internationalization
 │   ├── request/           # Request decorators and guards
 │   └── response/          # Response interceptors and filters
@@ -529,13 +308,13 @@ yarn rollback:email
 
 ```bash
 # Build and tag production image
-docker build -f ci/Dockerfile -t your-registry/ignira:v1.0.0 .
+docker build -f ci/Dockerfile -t your-registry/bluemoon:v1.0.0 .
 
 # Push to registry
-docker push your-registry/ignira:v1.0.0
+docker push your-registry/bluemoon:v1.0.0
 
 # Run with Docker
-docker run -d -p 3001:3001 --env-file .env --name nestjs-app your-registry/ignira:v1.0.0
+docker run -d -p 3001:3001 --env-file .env --name nestjs-app your-registry/bluemoon:v1.0.0
 
 # Or deploy with Docker Compose (full stack)
 docker-compose up -d --build
@@ -546,15 +325,15 @@ docker-compose up -d --build
 #### AWS ECS
 ```bash
 # 1. Create ECR repository
-aws ecr create-repository --repository-name ignira --region us-east-1
+aws ecr create-repository --repository-name bluemoon --region us-east-1
 
 # 2. Authenticate Docker to ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
 
 # 3. Build and push
-docker build -f ci/Dockerfile -t ignira:latest .
-docker tag ignira:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/ignira:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/ignira:latest
+docker build -f ci/Dockerfile -t bluemoon:latest .
+docker tag bluemoon:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/bluemoon:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/bluemoon:latest
 
 # 4. Create ECS task definition and service through AWS Console or CLI
 ```
@@ -562,11 +341,11 @@ docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/ignira:latest
 #### Google Cloud Run
 ```bash
 # 1. Build and submit to Google Container Registry
-gcloud builds submit --tag gcr.io/PROJECT-ID/ignira
+gcloud builds submit --tag gcr.io/PROJECT-ID/bluemoon
 
 # 2. Deploy to Cloud Run
-gcloud run deploy ignira \
-  --image gcr.io/PROJECT-ID/ignira \
+gcloud run deploy bluemoon \
+  --image gcr.io/PROJECT-ID/bluemoon \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
@@ -577,8 +356,8 @@ gcloud run deploy ignira \
 #### DigitalOcean App Platform
 ```bash
 # 1. Push to Docker Hub or DigitalOcean Container Registry
-docker build -f ci/Dockerfile -t your-dockerhub/ignira:latest .
-docker push your-dockerhub/ignira:latest
+docker build -f ci/Dockerfile -t your-dockerhub/bluemoon:latest .
+docker push your-dockerhub/bluemoon:latest
 
 # 2. Create app via DigitalOcean Console
 #    - Select Docker Hub as source
@@ -839,7 +618,7 @@ If you encounter issues not covered here:
    APP_LOG_LEVEL=debug
    ```
 
-3. **Search Issues**: Check [GitHub Issues](https://github.com/hmake98/ignira/issues)
+3. **Search Issues**: Check [GitHub Issues](https://github.com/hmake98/bluemoon/issues)
 
 4. **Create an Issue**: Provide:
    - Error message
@@ -888,8 +667,6 @@ If you encounter issues not covered here:
 - [Pino Logger](https://getpino.io/)
 - [class-validator](https://github.com/typestack/class-validator)
 - [Docker Documentation](https://docs.docker.com)
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
-- [@hmake98/nestjs-mcp Package](https://www.npmjs.com/package/@hmake98/nestjs-mcp)
 
 ## 📝 License
 

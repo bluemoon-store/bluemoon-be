@@ -1,5 +1,5 @@
 ssh:
-	cd .. && ssh -i "ignira-uty.pem" ubuntu@ec2-15-134-132-167.ap-southeast-2.compute.amazonaws.com
+	cd .. && ssh -i "bluemoon-uty.pem" ubuntu@ec2-15-134-132-167.ap-southeast-2.compute.amazonaws.com
 
 deploy:
 	git pull origin main

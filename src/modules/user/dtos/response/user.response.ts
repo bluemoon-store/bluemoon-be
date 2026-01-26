@@ -102,14 +102,14 @@ export class UserResponseDto implements Partial<User> {
 
     @ApiProperty({
         example: 50,
-        description: 'Current IGNIRA Sparks balance',
+        description: 'Current BLUEMOON Sparks balance',
     })
     @Expose()
     @IsNumber()
     sparks: number;
 
     @ApiProperty({
-        example: 'IGNIRA2024ABC',
+        example: 'BLUEMOON2024ABC',
         required: false,
         nullable: true,
         description: 'User referral code',
