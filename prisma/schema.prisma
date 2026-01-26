@@ -1,0 +1,201 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String    @id @default(uuid())
+  userName   String    @unique
+  email      String    @unique
+  password   String
+  firstName  String?   @map("first_name")
+  lastName   String?   @map("last_name")
+  isVerified Boolean   @default(false) @map("is_verified")
+  phone      String?
+  role       Role      @default(USER)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+  avatar     String?
+  posts      Post[]
+
+  // Energy Map related fields
+  dateOfBirth       DateTime?          @map("date_of_birth")
+  sparks            Int                @default(0) @map("sparks")
+  energyMaps        EnergyMap[]
+  sparkTransactions SparkTransaction[]
+  referralCode      String?            @unique @map("referral_code")
+  referredBy        String?            @map("referred_by")
+  images            Image[]
+  deviceTokens      DeviceToken[]
+
+  @@map("users")
+}
+
+model Post {
+  id        String      @id @default(uuid())
+  title     String      @db.VarChar(255)
+  content   String      @db.Text
+  status    PostStatus  @default(DRAFT)
+  images    PostImage[]
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String      @map("author_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  deletedAt DateTime?   @map("deleted_at")
+
+  @@index([authorId])
+  @@map("posts")
+}
+
+model PostImage {
+  id        String    @id @default(uuid())
+  key       String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String    @map("post_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([postId])
+  @@map("post_images")
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Role {
+  USER
+  ADMIN
+  DEVELOPER
+}
+
+// Energy Map main entity
+model EnergyMap {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  // Core fields
+  focus  EnergyMapFocus
+  status EnergyMapStatus @default(PROCESSING)
+
+  // Input data
+  name              String? // Can be alias for privacy
+  dateOfBirth       DateTime @map("date_of_birth")
+  leftPalmImageKey  String?  @map("left_palm_image_key")
+  rightPalmImageKey String?  @map("right_palm_image_key")
+  faceImageKey      String?  @map("face_image_key")
+
+  // Simple Map Results
+  corePattern          String[] @map("core_pattern")
+  strengths            String[] // Array of strengths
+  challenges           String[] // Array of challenges
+  careerTendencies     String[] @map("career_tendencies") // Array of career tendencies
+  relationshipPatterns String[] @map("relationship_patterns") // Array of relationship patterns
+
+  // Deep Map Results (unlocked with Sparks)
+  patternExplanation   String[] @map("pattern_explanation")
+  timingInsights       String[] @map("timing_insights")
+  evolutionPath        String[] @map("evolution_path")
+  adjustmentStrategies String[] @map("adjustment_strategies")
+
+  // Metadata
+  sparksUsed Int @default(0) @map("sparks_used")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([userId])
+  @@index([focus])
+  @@index([status])
+  @@map("energy_maps")
+}
+
+// Spark transactions for tracking
+model SparkTransaction {
+  id          String               @id @default(uuid())
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String               @map("user_id")
+  type        SparkTransactionType
+  amount      Int
+  reason      String
+  referenceId String?              @map("reference_id")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  deletedAt   DateTime?            @map("deleted_at")
+
+  @@index([userId])
+  @@index([type])
+  @@map("spark_transactions")
+}
+
+// Images table for storing uploaded files
+model Image {
+  id          String    @id @default(uuid())
+  key         String // S3 key
+  url         String? // Public URL (optional, can be calculated from key)
+  contentType String    @map("content_type")
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([userId])
+  @@map("images")
+}
+
+// Energy Map Enums
+enum EnergyMapFocus {
+  INNER_NATURE
+  CAREER_PATH
+  RELATIONSHIPS
+  LIFE_DIRECTION
+}
+
+enum EnergyMapStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum SparkTransactionType {
+  REFERRAL_BONUS
+  DAILY_RETURN
+  PURCHASE
+  DEEP_MAP_UNLOCK
+}
+
+// Device tokens for push notifications
+model DeviceToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  Platform
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([token])
+  @@map("device_tokens")
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+}

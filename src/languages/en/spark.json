@@ -1,0 +1,13 @@
+{
+    "success": {
+        "balance": "Spark balance retrieved successfully"
+    },
+    "error": {
+        "insufficient": "Insufficient sparks",
+        "notFound": "User not found",
+        "userNotFound": "User not found",
+        "failedToEarn": "Failed to earn sparks",
+        "failedToSpend": "Failed to spend sparks",
+        "failedToGetBalance": "Failed to get spark balance"
+    }
+}

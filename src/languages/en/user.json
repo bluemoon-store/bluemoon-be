@@ -1,0 +1,22 @@
+{
+    "success": {
+        "profile": "User details retrieved successfully",
+        "deleted": "User deleted successfully",
+        "updated": "User updated successfully",
+        "userDeleted": "User deleted successfully",
+        "dailySparksClaimed": "Daily sparks claimed successfully",
+        "referralCodeVerified": "Referral code verified successfully"
+    },
+    "error": {
+        "notFound": "User not found in database",
+        "userNotFound": "User not found in database",
+        "exists": "User with provided email/username already exists",
+        "userExists": "User with provided email/username already exists",
+        "dailySparksAlreadyClaimed": "Daily sparks already claimed today",
+        "invalidReferralCode": "Invalid referral code",
+        "failedToProcessReferral": "Failed to process referral",
+        "failedToAwardDailySparks": "Failed to award daily sparks",
+        "failedToVerifyReferralCode": "Failed to verify referral code",
+        "failedToDeleteUser": "Failed to delete user"
+    }
+}

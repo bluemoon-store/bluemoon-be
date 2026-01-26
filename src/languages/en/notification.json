@@ -1,0 +1,22 @@
+{
+    "success": {
+        "fcmTokenUpdated": "FCM token updated successfully",
+        "fcmTokenRemoved": "FCM token removed successfully",
+        "notificationSent": "Notification sent successfully"
+    },
+    "error": {
+        "tokenNotFound": "FCM token not found",
+        "unauthorized": "You are not authorized to perform this action",
+        "failedToUpdateToken": "Failed to update FCM token",
+        "failedToRemoveToken": "Failed to remove FCM token",
+        "failedToSendNotification": "Failed to send notification"
+    },
+    "welcome": {
+        "title": "Welcome to IGNIRA! 🎉",
+        "body": "Thank you for joining us. Start your journey of self-discovery today!"
+    },
+    "dailySparks": {
+        "title": "Daily Sparks Reminder ⚡",
+        "body": "Don't forget to claim your daily sparks bonus! Open the app now."
+    }
+}
