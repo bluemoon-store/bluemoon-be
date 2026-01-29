@@ -7,11 +7,10 @@ import {
 import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
-import { SparkService } from 'src/modules/spark/services/spark.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
-import { ReferralCodeVerifyDto } from '../dtos/request/referral-code.verify.request';
 import { UserUpdateDto } from '../dtos/request/user.update.request';
+import { UserBanDto } from '../dtos/request/user.ban.request';
 import {
     UserGetProfileResponseDto,
     UserUpdateProfileResponseDto,
@@ -20,10 +19,7 @@ import { IUserService } from '../interfaces/user.service.interface';
 
 @Injectable()
 export class UserService implements IUserService {
-    constructor(
-        private readonly databaseService: DatabaseService,
-        private readonly sparkService: SparkService
-    ) {}
+    constructor(private readonly databaseService: DatabaseService) {}
 
     async updateUser(
         userId: string,
@@ -107,48 +103,10 @@ export class UserService implements IUserService {
         return user;
     }
 
-    async processReferral(
-        newUserId: string,
-        referralCode: string
-    ): Promise<void> {
-        try {
-            // Find the referring user
-            const referringUser = await this.databaseService.user.findUnique({
-                where: { referralCode },
-            });
-
-            if (!referringUser) {
-                throw new HttpException(
-                    'user.error.invalidReferralCode',
-                    HttpStatus.BAD_REQUEST
-                );
-            }
-
-            // Update the new user with referral info
-            await this.databaseService.user.update({
-                where: { id: newUserId },
-                data: { referredBy: referringUser.id },
-            });
-
-            // Award sparks to the referring user
-            await this.sparkService.earnSparks(
-                referringUser.id,
-                10,
-                'Referral bonus for new user signup',
-                newUserId
-            );
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException(
-                'user.error.failedToProcessReferral',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    async awardDailySparks(userId: string): Promise<ApiGenericResponseDto> {
+    async banUser(
+        userId: string,
+        data: UserBanDto
+    ): Promise<ApiGenericResponseDto> {
         try {
             const user = await this.databaseService.user.findUnique({
                 where: { id: userId },
@@ -161,74 +119,113 @@ export class UserService implements IUserService {
                 );
             }
 
-            // Check if user already received daily sparks today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const todayTransaction =
-                await this.databaseService.sparkTransaction.findFirst({
-                    where: {
-                        userId,
-                        type: 'DAILY_RETURN',
-                        createdAt: {
-                            gte: today,
-                        },
-                    },
-                });
-
-            if (todayTransaction) {
+            if (user.isBanned) {
                 throw new HttpException(
-                    'user.error.dailySparksAlreadyClaimed',
+                    'user.error.userAlreadyBanned',
                     HttpStatus.BAD_REQUEST
                 );
             }
 
-            // Award daily sparks
-            await this.sparkService.earnSparks(userId, 1, 'Daily return bonus');
+            await this.databaseService.user.update({
+                where: { id: userId },
+                data: {
+                    isBanned: true,
+                    bannedAt: new Date(),
+                    bannedReason: data.reason || null,
+                },
+            });
 
             return {
                 success: true,
-                message: 'user.success.dailySparksClaimed',
+                message: 'user.success.userBanned',
             };
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
             }
             throw new HttpException(
-                'user.error.failedToAwardDailySparks',
+                'user.error.failedToBanUser',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
     }
 
-    async verifyReferralCode(
-        data: ReferralCodeVerifyDto
-    ): Promise<ApiGenericResponseDto> {
+    async unbanUser(userId: string): Promise<ApiGenericResponseDto> {
         try {
-            const { referralCode } = data;
-
-            // Find the user with this referral code
             const user = await this.databaseService.user.findUnique({
-                where: {
-                    referralCode: referralCode.toUpperCase(),
-                    deletedAt: null,
-                },
+                where: { id: userId },
             });
 
             if (!user) {
-                return {
-                    success: false,
-                    message: 'user.error.invalidReferralCode',
-                };
+                throw new HttpException(
+                    'user.error.userNotFound',
+                    HttpStatus.NOT_FOUND
+                );
             }
+
+            if (!user.isBanned) {
+                throw new HttpException(
+                    'user.error.userNotBanned',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            await this.databaseService.user.update({
+                where: { id: userId },
+                data: {
+                    isBanned: false,
+                    bannedAt: null,
+                    bannedReason: null,
+                },
+            });
 
             return {
                 success: true,
-                message: 'user.success.referralCodeVerified',
+                message: 'user.success.userUnbanned',
             };
-        } catch (_error) {
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
             throw new HttpException(
-                'user.error.failedToVerifyReferralCode',
+                'user.error.failedToUnbanUser',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    async getPurchaseHistory(userId: string): Promise<any> {
+        try {
+            const orders = await this.databaseService.order.findMany({
+                where: {
+                    userId,
+                    deletedAt: null,
+                },
+                include: {
+                    items: {
+                        include: {
+                            product: {
+                                include: {
+                                    category: true,
+                                    images: {
+                                        where: { isPrimary: true },
+                                        take: 1,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    cryptoPayment: true,
+                },
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+
+            return orders;
+        } catch (error) {
+            throw new HttpException(
+                'user.error.failedToGetPurchaseHistory',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

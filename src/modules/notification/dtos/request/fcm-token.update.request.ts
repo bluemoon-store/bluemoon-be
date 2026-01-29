@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { Platform } from '@prisma/client';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class FcmTokenUpdateDto {
     @ApiProperty({
@@ -13,11 +12,10 @@ export class FcmTokenUpdateDto {
     token: string;
 
     @ApiProperty({
-        enum: Platform,
-        example: Platform.ANDROID,
+        example: 'android',
         description: 'Device platform',
     })
-    @IsEnum(Platform)
+    @IsString()
     @IsNotEmpty()
-    platform: Platform;
+    platform: string;
 }

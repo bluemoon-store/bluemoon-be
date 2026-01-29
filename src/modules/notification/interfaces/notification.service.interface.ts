@@ -1,4 +1,3 @@
-import { Platform } from '@prisma/client';
 import {
     FcmTokenUpdateResponseDto,
     FcmTokenRemoveResponseDto,
@@ -8,7 +7,7 @@ export interface INotificationService {
     updateFcmToken(
         userId: string,
         token: string,
-        platform: Platform
+        platform: string
     ): Promise<FcmTokenUpdateResponseDto>;
 
     removeFcmToken(

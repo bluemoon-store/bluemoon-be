@@ -24,178 +24,374 @@ model User {
   updatedAt  DateTime  @updatedAt @map("updated_at")
   deletedAt  DateTime? @map("deleted_at")
   avatar     String?
-  posts      Post[]
 
-  // Energy Map related fields
-  dateOfBirth       DateTime?          @map("date_of_birth")
-  sparks            Int                @default(0) @map("sparks")
-  energyMaps        EnergyMap[]
-  sparkTransactions SparkTransaction[]
-  referralCode      String?            @unique @map("referral_code")
-  referredBy        String?            @map("referred_by")
-  images            Image[]
-  deviceTokens      DeviceToken[]
+  // Sparks / referral related fields
+  dateOfBirth DateTime? @map("date_of_birth")
+
+  // Store related fields
+  wallet          UserWallet?
+  orders          Order[]
+  cart            Cart?
+  supportTickets  SupportTicket[] @relation("UserTickets")
+  assignedTickets SupportTicket[] @relation("AssignedTickets")
+  ticketMessages  TicketMessage[]
+  isBanned        Boolean         @default(false) @map("is_banned")
+  bannedAt        DateTime?       @map("banned_at")
+  bannedReason    String?         @map("banned_reason")
+
+  // Two-factor authentication
+  twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String? @map("two_factor_secret")
 
   @@map("users")
 }
 
-model Post {
-  id        String      @id @default(uuid())
-  title     String      @db.VarChar(255)
-  content   String      @db.Text
-  status    PostStatus  @default(DRAFT)
-  images    PostImage[]
-  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId  String      @map("author_id")
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
-  deletedAt DateTime?   @map("deleted_at")
-
-  @@index([authorId])
-  @@map("posts")
-}
-
-model PostImage {
-  id        String    @id @default(uuid())
-  key       String
-  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    String    @map("post_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  @@index([postId])
-  @@map("post_images")
-}
-
-enum PostStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum Role {
   USER
+  MODERATOR
+  MANAGER
   ADMIN
   DEVELOPER
 }
 
-// Energy Map main entity
-model EnergyMap {
-  id     String @id @default(uuid())
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String @map("user_id")
-
-  // Core fields
-  focus  EnergyMapFocus
-  status EnergyMapStatus @default(PROCESSING)
-
-  // Input data
-  name              String? // Can be alias for privacy
-  dateOfBirth       DateTime @map("date_of_birth")
-  leftPalmImageKey  String?  @map("left_palm_image_key")
-  rightPalmImageKey String?  @map("right_palm_image_key")
-  faceImageKey      String?  @map("face_image_key")
-
-  // Simple Map Results
-  corePattern          String[] @map("core_pattern")
-  strengths            String[] // Array of strengths
-  challenges           String[] // Array of challenges
-  careerTendencies     String[] @map("career_tendencies") // Array of career tendencies
-  relationshipPatterns String[] @map("relationship_patterns") // Array of relationship patterns
-
-  // Deep Map Results (unlocked with Sparks)
-  patternExplanation   String[] @map("pattern_explanation")
-  timingInsights       String[] @map("timing_insights")
-  evolutionPath        String[] @map("evolution_path")
-  adjustmentStrategies String[] @map("adjustment_strategies")
-
-  // Metadata
-  sparksUsed Int @default(0) @map("sparks_used")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  @@index([userId])
-  @@index([focus])
-  @@index([status])
-  @@map("energy_maps")
-}
-
-// Spark transactions for tracking
-model SparkTransaction {
-  id          String               @id @default(uuid())
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String               @map("user_id")
-  type        SparkTransactionType
-  amount      Int
-  reason      String
-  referenceId String?              @map("reference_id")
-  createdAt   DateTime             @default(now()) @map("created_at")
-  updatedAt   DateTime             @updatedAt @map("updated_at")
-  deletedAt   DateTime?            @map("deleted_at")
-
-  @@index([userId])
-  @@index([type])
-  @@map("spark_transactions")
-}
-
-// Images table for storing uploaded files
-model Image {
+model ProductCategory {
   id          String    @id @default(uuid())
-  key         String // S3 key
-  url         String? // Public URL (optional, can be calculated from key)
-  contentType String    @map("content_type")
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  icon        String? // S3 key for category icon
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  products    Product[]
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  @@index([userId])
-  @@map("images")
+  @@map("product_categories")
 }
 
-// Energy Map Enums
-enum EnergyMapFocus {
-  INNER_NATURE
-  CAREER_PATH
-  RELATIONSHIPS
-  LIFE_DIRECTION
+// Product
+model Product {
+  id              String          @id @default(uuid())
+  name            String
+  slug            String          @unique
+  description     String          @db.Text
+  price           Decimal         @db.Decimal(20, 8) // Support crypto decimals
+  currency        String          @default("USD") // Base currency
+  stockQuantity   Int             @default(0) @map("stock_quantity")
+  isActive        Boolean         @default(true) @map("is_active")
+  isFeatured      Boolean         @default(false) @map("is_featured")
+  categoryId      String          @map("category_id")
+  category        ProductCategory @relation(fields: [categoryId], references: [id])
+  images          ProductImage[]
+  deliveryType    DeliveryType    @default(INSTANT) @map("delivery_type")
+  deliveryContent String?         @map("delivery_content") @db.Text // For instant delivery
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isActive])
+  @@map("products")
 }
 
-enum EnergyMapStatus {
-  PROCESSING
-  COMPLETED
-  FAILED
+enum DeliveryType {
+  INSTANT // Digital delivery (sent immediately)
+  MANUAL // Requires admin action
+  DOWNLOAD // File download link
 }
 
-enum SparkTransactionType {
-  REFERRAL_BONUS
-  DAILY_RETURN
-  PURCHASE
-  DEEP_MAP_UNLOCK
+// Product Images
+model ProductImage {
+  id        String    @id @default(uuid())
+  productId String    @map("product_id")
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  key       String // S3 key
+  url       String? // Optional cached URL
+  isPrimary Boolean   @default(false) @map("is_primary")
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([productId])
+  @@map("product_images")
 }
 
-// Device tokens for push notifications
-model DeviceToken {
+// Shopping Cart
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
   id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  platform  Platform
-  isActive  Boolean  @default(true) @map("is_active")
+  cartId    String   @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([userId])
-  @@index([token])
-  @@map("device_tokens")
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@map("cart_items")
 }
 
-enum Platform {
-  IOS
-  ANDROID
-  WEB
+// Orders & Payments
+model Order {
+  id             String          @id @default(uuid())
+  orderNumber    String          @unique @map("order_number") // e.g., ORD-20260129-XXXXX
+  userId         String          @map("user_id")
+  user           User            @relation(fields: [userId], references: [id])
+  status         OrderStatus     @default(PENDING)
+  totalAmount    Decimal         @map("total_amount") @db.Decimal(20, 8)
+  currency       String // USD, BTC, ETH, etc.
+  cryptoPayment  CryptoPayment?
+  items          OrderItem[]
+  supportTickets SupportTicket[]
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  completedAt    DateTime?       @map("completed_at")
+  cancelledAt    DateTime?       @map("cancelled_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING // Awaiting payment
+  PAYMENT_RECEIVED // Payment confirmed
+  PROCESSING // Admin processing
+  COMPLETED // Order delivered
+  CANCELLED // Order cancelled
+  REFUNDED // Payment refunded
+}
+
+model OrderItem {
+  id               String    @id @default(uuid())
+  orderId          String    @map("order_id")
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String    @map("product_id")
+  product          Product   @relation(fields: [productId], references: [id])
+  quantity         Int
+  priceAtPurchase  Decimal   @map("price_at_purchase") @db.Decimal(20, 8)
+  deliveredContent String?   @map("delivered_content") @db.Text // Actual content delivered
+  deliveredAt      DateTime? @map("delivered_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// Crypto Payment System
+model CryptoPayment {
+  id                    String         @id @default(uuid())
+  orderId               String         @unique @map("order_id")
+  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cryptocurrency        CryptoCurrency
+  paymentAddress        String         @map("payment_address") // Generated address
+  amount                Decimal        @db.Decimal(20, 8) // Amount in crypto
+  amountUsd             Decimal        @map("amount_usd") @db.Decimal(20, 2) // USD value at creation
+  exchangeRate          Decimal        @map("exchange_rate") @db.Decimal(20, 8) // Rate at payment time
+  status                PaymentStatus  @default(PENDING)
+  txHash                String?        @map("tx_hash") // Transaction hash
+  confirmations         Int            @default(0)
+  requiredConfirmations Int            @default(3) @map("required_confirmations")
+  expiresAt             DateTime       @map("expires_at")
+  paidAt                DateTime?      @map("paid_at")
+  confirmedAt           DateTime?      @map("confirmed_at")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  @@index([paymentAddress])
+  @@index([status])
+  @@index([txHash])
+  @@map("crypto_payments")
+}
+
+enum CryptoCurrency {
+  BTC // Bitcoin
+  ETH // Ethereum
+  LTC // Litecoin
+  USDT_ERC20 // USDT on Ethereum
+  BCH // Bitcoin Cash
+}
+
+enum PaymentStatus {
+  PENDING // Waiting for payment
+  PARTIAL // Partial payment received
+  PAID // Full amount received
+  CONFIRMING // Waiting for confirmations
+  CONFIRMED // Payment confirmed
+  EXPIRED // Payment window expired
+  FAILED // Payment failed
+}
+
+// User Wallet/Balance System
+model UserWallet {
+  id           String              @id @default(uuid())
+  userId       String              @unique @map("user_id")
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Decimal             @default(0) @db.Decimal(20, 2) // USD balance
+  transactions WalletTransaction[]
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  @@map("user_wallets")
+}
+
+model WalletTransaction {
+  id          String                @id @default(uuid())
+  walletId    String                @map("wallet_id")
+  wallet      UserWallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type        WalletTransactionType
+  amount      Decimal               @db.Decimal(20, 2)
+  balance     Decimal               @db.Decimal(20, 2) // Balance after transaction
+  description String
+  referenceId String?               @map("reference_id") // Order ID, etc.
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@index([walletId])
+  @@index([type])
+  @@map("wallet_transactions")
+}
+
+enum WalletTransactionType {
+  DEPOSIT // Add funds
+  PURCHASE // Product purchase
+  REFUND // Order refund
+  ADMIN_ADJUST // Admin adjustment
+}
+
+// Support Ticket System
+model SupportTicket {
+  id           String          @id @default(uuid())
+  ticketNumber String          @unique @map("ticket_number") // e.g., TKT-20260129-XXXXX
+  orderId      String?         @map("order_id")
+  order        Order?          @relation(fields: [orderId], references: [id])
+  userId       String          @map("user_id")
+  user         User            @relation("UserTickets", fields: [userId], references: [id])
+  subject      String
+  status       TicketStatus    @default(OPEN)
+  priority     TicketPriority  @default(MEDIUM)
+  messages     TicketMessage[]
+  assignedToId String?         @map("assigned_to_id")
+  assignedTo   User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+  closedAt     DateTime?       @map("closed_at")
+  deletedAt    DateTime?       @map("deleted_at")
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("support_tickets")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticketId  String        @map("ticket_id")
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id])
+  message   String        @db.Text
+  isStaff   Boolean       @default(false) @map("is_staff")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// CMS Content System
+model CmsContent {
+  id          String      @id @default(uuid())
+  key         String      @unique // faq, terms, privacy, etc.
+  type        ContentType
+  title       String
+  content     String      @db.Text
+  isPublished Boolean     @default(true) @map("is_published")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  deletedAt   DateTime?   @map("deleted_at")
+
+  @@map("cms_contents")
+}
+
+enum ContentType {
+  FAQ
+  TERMS
+  PRIVACY
+  LANDING_PAGE
+  ABOUT
+}
+
+// System Settings
+model SystemSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique // telegram_channel, telegram_bot_token, etc.
+  value     String   @db.Text
+  category  String // social, payment, general, etc.
+  isPublic  Boolean  @default(false) @map("is_public") // Can be exposed to frontend
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("system_settings")
+}
+
+// Analytics/Statistics
+model Analytics {
+  id        String       @id @default(uuid())
+  type      AnalyticType
+  date      DateTime     @db.Date
+  key       String // product_id, user_id, category_id, etc.
+  value     Float
+  metadata  Json? // Additional data
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@unique([type, date, key])
+  @@index([type, date])
+  @@map("analytics")
+}
+
+enum AnalyticType {
+  DAILY_SALES
+  PRODUCT_VIEWS
+  CATEGORY_VIEWS
+  REVENUE
+  USER_SIGNUPS
+  ORDERS_COUNT
 }

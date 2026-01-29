@@ -101,25 +101,6 @@ export class UserResponseDto implements Partial<User> {
     dateOfBirth: Date | null;
 
     @ApiProperty({
-        example: 50,
-        description: 'Current BLUEMOON Sparks balance',
-    })
-    @Expose()
-    @IsNumber()
-    sparks: number;
-
-    @ApiProperty({
-        example: 'BLUEMOON2024ABC',
-        required: false,
-        nullable: true,
-        description: 'User referral code',
-    })
-    @Expose()
-    @IsString()
-    @IsOptional()
-    referralCode: string | null;
-
-    @ApiProperty({
         example: faker.date.past().toISOString(),
     })
     @Expose()

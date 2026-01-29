@@ -2,12 +2,13 @@ import { Role } from '@prisma/client';
 
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
-import { ReferralCodeVerifyDto } from '../dtos/request/referral-code.verify.request';
 import { UserUpdateDto } from '../dtos/request/user.update.request';
 import {
     UserGetProfileResponseDto,
     UserUpdateProfileResponseDto,
 } from '../dtos/response/user.response';
+
+import { UserBanDto } from '../dtos/request/user.ban.request';
 
 export interface IUserService {
     updateUser(
@@ -20,9 +21,7 @@ export interface IUserService {
         currentUserRole: Role
     ): Promise<ApiGenericResponseDto>;
     getProfile(userId: string): Promise<UserGetProfileResponseDto>;
-    processReferral(newUserId: string, referralCode: string): Promise<void>;
-    awardDailySparks(userId: string): Promise<ApiGenericResponseDto>;
-    verifyReferralCode(
-        data: ReferralCodeVerifyDto
-    ): Promise<ApiGenericResponseDto>;
+    banUser(userId: string, data: UserBanDto): Promise<ApiGenericResponseDto>;
+    unbanUser(userId: string): Promise<ApiGenericResponseDto>;
+    getPurchaseHistory(userId: string): Promise<any>;
 }

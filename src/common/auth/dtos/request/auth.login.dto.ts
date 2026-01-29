@@ -1,6 +1,13 @@
 import { faker } from '@faker-js/faker';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
+import {
+    IsEmail,
+    IsNotEmpty,
+    IsString,
+    Matches,
+    IsOptional,
+    Length,
+} from 'class-validator';
 
 export class UserLoginDto {
     @ApiProperty({
@@ -27,4 +34,14 @@ export class UserLoginDto {
         }
     )
     public password: string;
+
+    @ApiProperty({
+        example: faker.string.numeric(6),
+        description: '6-digit TOTP code (required if 2FA is enabled)',
+        required: false,
+    })
+    @IsString()
+    @IsOptional()
+    @Length(6, 6)
+    public twoFactorCode?: string;
 }

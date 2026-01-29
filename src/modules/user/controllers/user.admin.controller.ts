@@ -1,4 +1,11 @@
-import { Controller, Delete, HttpStatus, Param } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    HttpStatus,
+    Param,
+    Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -8,6 +15,7 @@ import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
+import { UserBanDto } from '../dtos/request/user.ban.request';
 import { UserService } from '../services/user.service';
 
 @ApiTags('admin.user')
@@ -31,5 +39,34 @@ export class UserAdminController {
         @AuthUser() user: IAuthUser
     ): Promise<ApiGenericResponseDto> {
         return this.userService.deleteUser(userId, user.userId, user.role);
+    }
+
+    @Post(':id/ban')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Ban user' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'user.success.userBanned',
+    })
+    public async banUser(
+        @Param('id') userId: string,
+        @Body() payload: UserBanDto
+    ): Promise<ApiGenericResponseDto> {
+        return this.userService.banUser(userId, payload);
+    }
+
+    @Post(':id/unban')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Unban user' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'user.success.userUnbanned',
+    })
+    public async unbanUser(
+        @Param('id') userId: string
+    ): Promise<ApiGenericResponseDto> {
+        return this.userService.unbanUser(userId);
     }
 }

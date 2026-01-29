@@ -15,12 +15,12 @@ import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
-import { ReferralCodeVerifyDto } from '../dtos/request/referral-code.verify.request';
 import { UserUpdateDto } from '../dtos/request/user.update.request';
 import {
     UserGetProfileResponseDto,
     UserUpdateProfileResponseDto,
 } from '../dtos/response/user.response';
+import { PurchaseHistoryResponseDto } from '../dtos/response/user.purchase-history.response';
 import { UserService } from '../services/user.service';
 import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
 
@@ -61,33 +61,6 @@ export class UserPublicController {
         return this.userService.updateUser(user.userId, payload);
     }
 
-    @Post('daily')
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Claim daily sparks bonus' })
-    @DocGenericResponse({
-        httpStatus: HttpStatus.OK,
-        messageKey: 'user.success.dailySparksClaimed',
-    })
-    public async claimDailySparks(
-        @AuthUser() user: IAuthUser
-    ): Promise<ApiGenericResponseDto> {
-        return this.userService.awardDailySparks(user.userId);
-    }
-
-    @Post('referral-code/verify')
-    @PublicRoute()
-    @ApiOperation({ summary: 'Verify referral code' })
-    @DocResponse({
-        serialization: ApiGenericResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'user.success.referralCodeVerified',
-    })
-    public async verifyReferralCode(
-        @Body() payload: ReferralCodeVerifyDto
-    ): Promise<ApiGenericResponseDto> {
-        return this.userService.verifyReferralCode(payload);
-    }
-
     @Delete()
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete own account' })
@@ -99,5 +72,20 @@ export class UserPublicController {
         @AuthUser() user: IAuthUser
     ): Promise<ApiGenericResponseDto> {
         return this.userService.deleteUser(user.userId, user.userId, user.role);
+    }
+
+    @Get('purchases')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get purchase history' })
+    @DocResponse({
+        serialization: PurchaseHistoryResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'user.success.purchaseHistory',
+    })
+    public async getPurchaseHistory(
+        @AuthUser() user: IAuthUser
+    ): Promise<PurchaseHistoryResponseDto> {
+        const orders = await this.userService.getPurchaseHistory(user.userId);
+        return { orders };
     }
 }
