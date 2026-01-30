@@ -2,13 +2,19 @@ import {
     Body,
     Controller,
     Get,
+    HttpException,
     HttpStatus,
     Param,
     Post,
     Put,
     Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiOperation,
+    ApiQuery,
+    ApiTags,
+} from '@nestjs/swagger';
 import { Role, OrderStatus } from '@prisma/client';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -43,6 +49,16 @@ export class OrderAdminController {
     @AllowedRoles([Role.ADMIN, Role.MANAGER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all orders (admin)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({
+        name: 'status',
+        required: false,
+        type: String,
+        enum: Object.values(OrderStatus),
+        description: 'Filter by order status',
+    })
+    @ApiQuery({ name: 'userId', required: false, type: String })
     @DocPaginatedResponse({
         serialization: OrderDetailResponseDto,
         httpStatus: HttpStatus.OK,

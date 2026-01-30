@@ -194,8 +194,9 @@ export class BasePrismaQueryDto {
     include?: Record<string, boolean | object>;
 
     @ApiPropertyOptional({
-        description: 'Basic filters as key-value pairs',
-        example: { status: 'active', role: 'admin' },
+        description: 'Basic filters as key-value pairs (JSON string or object)',
+        type: 'object',
+        additionalProperties: true,
     })
     @IsOptional()
     @IsObject()

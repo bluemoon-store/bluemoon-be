@@ -7,7 +7,12 @@ import {
     Post,
     Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiOperation,
+    ApiQuery,
+    ApiTags,
+} from '@nestjs/swagger';
 import { OrderStatus } from '@prisma/client';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -53,6 +58,15 @@ export class OrderPublicController {
     @Get()
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List user orders' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({
+        name: 'status',
+        required: false,
+        type: String,
+        enum: Object.values(OrderStatus),
+        description: 'Filter by order status',
+    })
     @DocPaginatedResponse({
         serialization: OrderResponseDto,
         httpStatus: HttpStatus.OK,
