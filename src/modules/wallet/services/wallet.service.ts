@@ -1,0 +1,488 @@
+import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
+import { WalletTransactionType } from '@prisma/client';
+
+import { DatabaseService } from 'src/common/database/services/database.service';
+import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
+
+import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
+import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
+import { WalletResponseDto } from '../dtos/response/wallet.response';
+import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
+import { IWalletService } from '../interfaces/wallet.service.interface';
+
+@Injectable()
+export class WalletService implements IWalletService {
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly paginationService: HelperPaginationService,
+        private readonly logger: PinoLogger
+    ) {
+        this.logger.setContext(WalletService.name);
+    }
+
+    /**
+     * Create a transaction record
+     */
+    private async createTransaction(
+        walletId: string,
+        type: WalletTransactionType,
+        amount: number,
+        balance: number,
+        description: string,
+        referenceId?: string
+    ): Promise<void> {
+        await this.databaseService.walletTransaction.create({
+            data: {
+                walletId,
+                type,
+                amount: amount.toString(),
+                balance: balance.toString(),
+                description,
+                referenceId,
+            },
+        });
+
+        this.logger.info(
+            {
+                walletId,
+                type,
+                amount,
+                balance,
+                referenceId,
+            },
+            'Wallet transaction created'
+        );
+    }
+
+    /**
+     * Get current balance as number
+     */
+    private getBalanceAsNumber(balance: any): number {
+        if (typeof balance === 'string') {
+            return parseFloat(balance);
+        }
+        return Number(balance);
+    }
+
+    /**
+     * Create wallet for user
+     */
+    async createWallet(userId: string): Promise<WalletResponseDto> {
+        try {
+            // Check if wallet already exists
+            const existingWallet =
+                await this.databaseService.userWallet.findUnique({
+                    where: { userId },
+                });
+
+            if (existingWallet) {
+                return existingWallet as WalletResponseDto;
+            }
+
+            // Verify user exists
+            const user = await this.databaseService.user.findUnique({
+                where: { id: userId },
+            });
+
+            if (!user) {
+                throw new HttpException(
+                    'wallet.error.userNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
+
+            // Create wallet
+            const wallet = await this.databaseService.userWallet.create({
+                data: {
+                    userId,
+                    balance: 0,
+                },
+            });
+
+            this.logger.info({ userId, walletId: wallet.id }, 'Wallet created');
+            return wallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to create wallet: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.createWalletFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get wallet for user (creates if doesn't exist)
+     */
+    async getWallet(userId: string): Promise<WalletResponseDto> {
+        try {
+            let wallet = await this.databaseService.userWallet.findUnique({
+                where: { userId },
+            });
+
+            if (!wallet) {
+                // Create wallet if it doesn't exist
+                wallet = await this.createWallet(userId);
+            }
+
+            return wallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to get wallet: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.getWalletFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get wallet by user ID (admin use - doesn't create if missing)
+     */
+    async getWalletByUserId(userId: string): Promise<WalletResponseDto> {
+        try {
+            const wallet = await this.databaseService.userWallet.findUnique({
+                where: { userId },
+            });
+
+            if (!wallet) {
+                throw new HttpException(
+                    'wallet.error.walletNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
+
+            return wallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(
+                `Failed to get wallet by user ID: ${error.message}`
+            );
+            throw new HttpException(
+                'wallet.error.getWalletFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Add balance to wallet (admin only)
+     */
+    async addBalance(
+        userId: string,
+        data: WalletAddBalanceDto
+    ): Promise<WalletResponseDto> {
+        try {
+            // Get or create wallet
+            const wallet = await this.getWallet(userId);
+
+            // Calculate new balance
+            const currentBalance = this.getBalanceAsNumber(wallet.balance);
+            const newBalance = currentBalance + data.amount;
+
+            // Update wallet balance
+            const updatedWallet = await this.databaseService.userWallet.update({
+                where: { id: wallet.id },
+                data: { balance: newBalance.toString() },
+            });
+
+            // Create transaction record
+            await this.createTransaction(
+                wallet.id,
+                WalletTransactionType.DEPOSIT,
+                data.amount,
+                newBalance,
+                data.description,
+                data.referenceId
+            );
+
+            this.logger.info(
+                {
+                    userId,
+                    walletId: wallet.id,
+                    amount: data.amount,
+                    oldBalance: currentBalance,
+                    newBalance,
+                },
+                'Balance added to wallet'
+            );
+
+            return updatedWallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to add balance: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.addBalanceFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Deduct balance from wallet (internal use)
+     */
+    async deductBalance(
+        userId: string,
+        amount: number,
+        description: string,
+        referenceId?: string
+    ): Promise<WalletResponseDto> {
+        try {
+            if (amount <= 0) {
+                throw new HttpException(
+                    'wallet.error.invalidAmount',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Get wallet
+            const wallet = await this.getWallet(userId);
+
+            // Check sufficient balance
+            const currentBalance = this.getBalanceAsNumber(wallet.balance);
+            if (currentBalance < amount) {
+                throw new HttpException(
+                    'wallet.error.insufficientBalance',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Calculate new balance
+            const newBalance = currentBalance - amount;
+
+            // Update wallet balance
+            const updatedWallet = await this.databaseService.userWallet.update({
+                where: { id: wallet.id },
+                data: { balance: newBalance.toString() },
+            });
+
+            // Create transaction record
+            await this.createTransaction(
+                wallet.id,
+                WalletTransactionType.PURCHASE,
+                amount,
+                newBalance,
+                description,
+                referenceId
+            );
+
+            this.logger.info(
+                {
+                    userId,
+                    walletId: wallet.id,
+                    amount,
+                    oldBalance: currentBalance,
+                    newBalance,
+                    referenceId,
+                },
+                'Balance deducted from wallet'
+            );
+
+            return updatedWallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to deduct balance: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.deductBalanceFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Adjust balance (admin only - can be positive or negative)
+     */
+    async adjustBalance(
+        userId: string,
+        data: WalletAdjustBalanceDto
+    ): Promise<WalletResponseDto> {
+        try {
+            // Get wallet
+            const wallet = await this.getWalletByUserId(userId);
+
+            // Calculate new balance
+            const currentBalance = this.getBalanceAsNumber(wallet.balance);
+            const newBalance = currentBalance + data.amount;
+
+            // Prevent negative balance unless explicitly allowed (for refunds, etc.)
+            if (newBalance < 0) {
+                throw new HttpException(
+                    'wallet.error.negativeBalanceNotAllowed',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Determine transaction type
+            const transactionType =
+                data.amount >= 0
+                    ? WalletTransactionType.ADMIN_ADJUST
+                    : WalletTransactionType.ADMIN_ADJUST;
+
+            // Update wallet balance
+            const updatedWallet = await this.databaseService.userWallet.update({
+                where: { id: wallet.id },
+                data: { balance: newBalance.toString() },
+            });
+
+            // Create transaction record
+            await this.createTransaction(
+                wallet.id,
+                transactionType,
+                Math.abs(data.amount),
+                newBalance,
+                data.description,
+                data.referenceId
+            );
+
+            this.logger.info(
+                {
+                    userId,
+                    walletId: wallet.id,
+                    adjustment: data.amount,
+                    oldBalance: currentBalance,
+                    newBalance,
+                    referenceId: data.referenceId,
+                },
+                'Balance adjusted'
+            );
+
+            return updatedWallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to adjust balance: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.adjustBalanceFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Refund balance to wallet (for order refunds)
+     */
+    async refundBalance(
+        userId: string,
+        amount: number,
+        description: string,
+        referenceId?: string
+    ): Promise<WalletResponseDto> {
+        try {
+            if (amount <= 0) {
+                throw new HttpException(
+                    'wallet.error.invalidAmount',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Get wallet
+            const wallet = await this.getWallet(userId);
+
+            // Calculate new balance
+            const currentBalance = this.getBalanceAsNumber(wallet.balance);
+            const newBalance = currentBalance + amount;
+
+            // Update wallet balance
+            const updatedWallet = await this.databaseService.userWallet.update({
+                where: { id: wallet.id },
+                data: { balance: newBalance.toString() },
+            });
+
+            // Create transaction record
+            await this.createTransaction(
+                wallet.id,
+                WalletTransactionType.REFUND,
+                amount,
+                newBalance,
+                description,
+                referenceId
+            );
+
+            this.logger.info(
+                {
+                    userId,
+                    walletId: wallet.id,
+                    amount,
+                    oldBalance: currentBalance,
+                    newBalance,
+                    referenceId,
+                },
+                'Balance refunded to wallet'
+            );
+
+            return updatedWallet as WalletResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to refund balance: ${error.message}`);
+            throw new HttpException(
+                'wallet.error.refundBalanceFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get transaction history
+     */
+    async getTransactionHistory(
+        userId: string,
+        options?: {
+            page?: number;
+            limit?: number;
+            type?: string;
+        }
+    ): Promise<any> {
+        try {
+            // Get wallet
+            const wallet = await this.getWallet(userId);
+
+            // Build where clause
+            const where: any = {
+                walletId: wallet.id,
+            };
+
+            if (options?.type) {
+                where.type = options.type as WalletTransactionType;
+            }
+
+            const result = await this.paginationService.paginate(
+                this.databaseService.walletTransaction,
+                {
+                    page: options?.page ?? 1,
+                    limit: options?.limit ?? 10,
+                },
+                {
+                    where,
+                    orderBy: { createdAt: 'desc' },
+                }
+            );
+
+            return result;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(
+                `Failed to get transaction history: ${error.message}`
+            );
+            throw new HttpException(
+                'wallet.error.getTransactionHistoryFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+}

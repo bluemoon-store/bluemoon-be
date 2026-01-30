@@ -1,0 +1,342 @@
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
+    Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
+
+import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
+import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
+import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
+import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
+import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
+
+import { CategoryCreateDto } from '../dtos/request/category.create.request';
+import { CategoryUpdateDto } from '../dtos/request/category.update.request';
+import { ProductCreateDto } from '../dtos/request/product.create.request';
+import { ProductUpdateDto } from '../dtos/request/product.update.request';
+import { ProductSearchDto } from '../dtos/request/product.search.request';
+import {
+    ProductResponseDto,
+    ProductListResponseDto,
+} from '../dtos/response/product.response';
+import { CategoryResponseDto } from '../dtos/response/category.response';
+import { ProductService } from '../services/product.service';
+import { ProductCategoryService } from '../services/product-category.service';
+
+@ApiTags('admin.product')
+@Controller({
+    path: '/admin/products',
+    version: '1',
+})
+export class ProductAdminController {
+    constructor(
+        private readonly productService: ProductService,
+        private readonly categoryService: ProductCategoryService
+    ) {}
+
+    // Product CRUD Operations
+
+    @Post()
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Create product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.CREATED,
+        messageKey: 'product.success.created',
+    })
+    public async create(
+        @Body() payload: ProductCreateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.create(payload);
+    }
+
+    @Get()
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'List all products (admin)' })
+    @DocPaginatedResponse({
+        serialization: ProductListResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.list',
+    })
+    public async list(
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('categoryId') categoryId?: string,
+        @Query('isActive') isActive?: boolean,
+        @Query('isFeatured') isFeatured?: boolean
+    ) {
+        return this.productService.findAll({
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            categoryId,
+            isActive: isActive !== undefined ? isActive === true : undefined,
+            isFeatured:
+                isFeatured !== undefined ? isFeatured === true : undefined,
+        });
+    }
+
+    @Get('search')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Search products (admin)' })
+    @DocPaginatedResponse({
+        serialization: ProductListResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.search',
+    })
+    public async search(@Query() query: ProductSearchDto) {
+        return this.productService.search(query);
+    }
+
+    @Get(':id')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get product by ID (admin)' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.productFound',
+    })
+    public async getById(@Param('id') id: string): Promise<ProductResponseDto> {
+        return this.productService.findOne(id);
+    }
+
+    @Put(':id')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async update(
+        @Param('id') id: string,
+        @Body() payload: ProductUpdateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.update(id, payload);
+    }
+
+    @Delete(':id')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Delete product' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.productDeleted',
+    })
+    public async delete(
+        @Param('id') id: string
+    ): Promise<ApiGenericResponseDto> {
+        return this.productService.delete(id);
+    }
+
+    @Put(':id/stock')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update product stock' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.stockUpdated',
+    })
+    public async updateStock(
+        @Param('id') id: string,
+        @Body('stockQuantity') stockQuantity: number
+    ): Promise<ProductResponseDto> {
+        return this.productService.updateStock(id, stockQuantity);
+    }
+
+    @Put(':id/toggle-active')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Toggle product active status' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.activeToggled',
+    })
+    public async toggleActive(
+        @Param('id') id: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.toggleActive(id);
+    }
+
+    @Put(':id/toggle-featured')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Toggle product featured status' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.featuredToggled',
+    })
+    public async toggleFeatured(
+        @Param('id') id: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.toggleFeatured(id);
+    }
+
+    // Image Management
+
+    @Post(':id/images')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Add image to product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.imageAdded',
+    })
+    public async addImage(
+        @Param('id') productId: string,
+        @Body('imageKey') imageKey: string,
+        @Body('isPrimary') isPrimary?: boolean
+    ): Promise<ProductResponseDto> {
+        return this.productService.addImage(
+            productId,
+            imageKey,
+            isPrimary ?? false
+        );
+    }
+
+    @Delete(':id/images/:imageId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Remove image from product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.imageRemoved',
+    })
+    public async removeImage(
+        @Param('id') productId: string,
+        @Param('imageId') imageId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.removeImage(productId, imageId);
+    }
+
+    @Put(':id/images/:imageId/primary')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Set image as primary' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.primaryImageSet',
+    })
+    public async setPrimaryImage(
+        @Param('id') productId: string,
+        @Param('imageId') imageId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.setPrimaryImage(productId, imageId);
+    }
+
+    // Category CRUD Operations
+
+    @Post('categories')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Create category' })
+    @DocResponse({
+        serialization: CategoryResponseDto,
+        httpStatus: HttpStatus.CREATED,
+        messageKey: 'product.success.categoryCreated',
+    })
+    public async createCategory(
+        @Body() payload: CategoryCreateDto
+    ): Promise<CategoryResponseDto> {
+        return this.categoryService.create(payload);
+    }
+
+    @Get('categories')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'List all categories (admin)' })
+    @DocPaginatedResponse({
+        serialization: CategoryResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.listCategories',
+    })
+    public async listCategories(
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('isActive') isActive?: boolean
+    ) {
+        return this.categoryService.findAll({
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            isActive: isActive !== undefined ? isActive === true : undefined,
+        });
+    }
+
+    @Get('categories/:id')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get category by ID' })
+    @DocResponse({
+        serialization: CategoryResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.categoryFound',
+    })
+    public async getCategoryById(
+        @Param('id') id: string
+    ): Promise<CategoryResponseDto> {
+        return this.categoryService.findOne(id);
+    }
+
+    @Put('categories/:id')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update category' })
+    @DocResponse({
+        serialization: CategoryResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.categoryUpdated',
+    })
+    public async updateCategory(
+        @Param('id') id: string,
+        @Body() payload: CategoryUpdateDto
+    ): Promise<CategoryResponseDto> {
+        return this.categoryService.update(id, payload);
+    }
+
+    @Delete('categories/:id')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Delete category' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.categoryDeleted',
+    })
+    public async deleteCategory(
+        @Param('id') id: string
+    ): Promise<ApiGenericResponseDto> {
+        return this.categoryService.delete(id);
+    }
+
+    @Put('categories/:id/toggle-active')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Toggle category active status' })
+    @DocResponse({
+        serialization: CategoryResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.categoryActiveToggled',
+    })
+    public async toggleCategoryActive(
+        @Param('id') id: string
+    ): Promise<CategoryResponseDto> {
+        return this.categoryService.toggleActive(id);
+    }
+}

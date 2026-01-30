@@ -1,0 +1,100 @@
+import {
+    Body,
+    Controller,
+    Get,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
+    Query,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
+
+import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
+import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
+import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
+
+import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
+import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
+import { WalletResponseDto } from '../dtos/response/wallet.response';
+import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
+import { WalletService } from '../services/wallet.service';
+
+@ApiTags('admin.wallet')
+@Controller({
+    path: '/admin/wallet',
+    version: '1',
+})
+export class WalletAdminController {
+    constructor(private readonly walletService: WalletService) {}
+
+    @Get('users/:userId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'View user wallet' })
+    @DocResponse({
+        serialization: WalletResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.walletFound',
+    })
+    public async getUserWallet(
+        @Param('userId') userId: string
+    ): Promise<WalletResponseDto> {
+        return this.walletService.getWalletByUserId(userId);
+    }
+
+    @Post('users/:userId/balance')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Add balance to user wallet' })
+    @DocResponse({
+        serialization: WalletResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.balanceAdded',
+    })
+    public async addBalance(
+        @Param('userId') userId: string,
+        @Body() payload: WalletAddBalanceDto
+    ): Promise<WalletResponseDto> {
+        return this.walletService.addBalance(userId, payload);
+    }
+
+    @Put('users/:userId/balance')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Adjust user wallet balance' })
+    @DocResponse({
+        serialization: WalletResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.balanceAdjusted',
+    })
+    public async adjustBalance(
+        @Param('userId') userId: string,
+        @Body() payload: WalletAdjustBalanceDto
+    ): Promise<WalletResponseDto> {
+        return this.walletService.adjustBalance(userId, payload);
+    }
+
+    @Get('users/:userId/transactions')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get user transaction history (admin)' })
+    @DocPaginatedResponse({
+        serialization: WalletTransactionResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.transactionHistory',
+    })
+    public async getUserTransactionHistory(
+        @Param('userId') userId: string,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('type') type?: string
+    ) {
+        return this.walletService.getTransactionHistory(userId, {
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            type,
+        });
+    }
+}

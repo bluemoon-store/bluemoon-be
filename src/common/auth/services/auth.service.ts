@@ -17,6 +17,7 @@ import {
 import { HelperEncryptionService } from '../../helper/services/helper.encryption.service';
 import { IAuthUser } from '../../request/interfaces/request.interface';
 import { UserService } from 'src/modules/user/services/user.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 import { UserLoginDto } from '../dtos/request/auth.login.dto';
 import { UserCreateDto } from '../dtos/request/auth.signup.dto';
 import { TwoFactorSetupDto } from '../dtos/request/auth.2fa.setup.dto';
@@ -37,6 +38,7 @@ export class AuthService implements IAuthService {
         private readonly databaseService: DatabaseService,
         private readonly helperEncryptionService: HelperEncryptionService,
         private readonly userService: UserService,
+        private readonly walletService: WalletService,
         @InjectQueue(APP_BULL_QUEUES.EMAIL)
         private emailQueue: Queue,
         @InjectQueue(APP_BULL_QUEUES.NOTIFICATION)
@@ -160,6 +162,9 @@ export class AuthService implements IAuthService {
                     referralCode
                 );
             }
+
+            // Create wallet for new user
+            await this.walletService.createWallet(createdUser.id);
 
             const tokens = await this.helperEncryptionService.createJwtTokens({
                 role: createdUser.role,
