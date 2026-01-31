@@ -11,10 +11,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
-import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
-import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
 import { CartAddItemDto } from '../dtos/request/cart.add-item.request';
 import { CartUpdateItemDto } from '../dtos/request/cart.update-item.request';

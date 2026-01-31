@@ -1,0 +1,20 @@
+{
+    "success": {
+        "cartFound": "Cart retrieved successfully",
+        "itemAdded": "Item added to cart successfully",
+        "itemUpdated": "Cart item updated successfully",
+        "itemRemoved": "Item removed from cart successfully",
+        "cartCleared": "Cart cleared successfully"
+    },
+    "error": {
+        "productNotFound": "Product not found",
+        "productInactive": "Product is not active",
+        "insufficientStock": "Insufficient stock",
+        "getCartFailed": "Failed to retrieve cart",
+        "addItemFailed": "Failed to add item to cart",
+        "itemNotFound": "Cart item not found",
+        "updateItemFailed": "Failed to update cart item",
+        "removeItemFailed": "Failed to remove item from cart",
+        "clearCartFailed": "Failed to clear cart"
+    }
+}

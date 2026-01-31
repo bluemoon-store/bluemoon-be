@@ -7,20 +7,17 @@ import {
     Post,
     Query,
 } from '@nestjs/common';
-import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiQuery,
-    ApiTags,
-} from '@nestjs/swagger';
-import { OrderStatus } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
+import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 
 import { OrderCreateDto } from '../dtos/request/order.create.request';
+import { OrderHistoryQueryDto } from '../dtos/request/order-history.request';
 import {
     OrderResponseDto,
     OrderDetailResponseDto,
@@ -58,15 +55,6 @@ export class OrderPublicController {
     @Get()
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List user orders' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiQuery({
-        name: 'status',
-        required: false,
-        type: String,
-        enum: Object.values(OrderStatus),
-        description: 'Filter by order status',
-    })
     @DocPaginatedResponse({
         serialization: OrderResponseDto,
         httpStatus: HttpStatus.OK,
@@ -74,14 +62,12 @@ export class OrderPublicController {
     })
     public async getOrderHistory(
         @AuthUser() user: IAuthUser,
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('status') status?: OrderStatus
-    ) {
+        @Query(QueryTransformPipe) query: OrderHistoryQueryDto
+    ): Promise<ApiPaginatedDataDto<OrderResponseDto>> {
         return this.orderService.getOrderHistory(user.userId, {
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            status,
+            page: query.page,
+            limit: query.limit,
+            status: query.status,
         });
     }
 

@@ -1,0 +1,37 @@
+{
+    "success": {
+        "created": "Order created successfully",
+        "list": "Orders retrieved successfully",
+        "orderFound": "Order retrieved successfully",
+        "statusUpdated": "Order status updated successfully",
+        "delivered": "Order delivered successfully",
+        "refunded": "Order refunded successfully",
+        "deliveryContent": "Delivery content retrieved successfully"
+    },
+    "error": {
+        "cartEmpty": "Cart is empty",
+        "productNotFound": "Product not found",
+        "productInactive": "Product is not active",
+        "insufficientStock": "Insufficient stock",
+        "createOrderFailed": "Failed to create order",
+        "getOrderHistoryFailed": "Failed to retrieve order history",
+        "orderNotFound": "Order not found",
+        "getOrderDetailFailed": "Failed to retrieve order details",
+        "updateOrderStatusFailed": "Failed to update order status",
+        "cannotRefundOrder": "Order cannot be refunded",
+        "refundFailed": "Failed to refund order",
+        "cannotCancelOrder": "Order cannot be cancelled",
+        "cancelOrderFailed": "Failed to cancel order",
+        "getAllOrdersFailed": "Failed to retrieve orders",
+        "invalidOrderStatusForDelivery": "Order status is not valid for delivery",
+        "processInstantDeliveryFailed": "Failed to process instant delivery",
+        "orderItemNotFound": "Order item not found",
+        "deliverOrderFailed": "Failed to deliver order",
+        "orderNotDelivered": "Order has not been delivered",
+        "getDeliveryContentFailed": "Failed to retrieve delivery content",
+        "orderItemMismatch": "Order item does not match",
+        "notDownloadable": "Product is not downloadable",
+        "downloadLinkNotAvailable": "Download link is not available",
+        "generateDownloadLinkFailed": "Failed to generate download link"
+    }
+}

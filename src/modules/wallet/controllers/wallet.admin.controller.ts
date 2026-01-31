@@ -15,8 +15,10 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
+import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 
 import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
+import { WalletTransactionHistoryQueryDto } from '../dtos/request/wallet-transaction-history.request';
 import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
 import { WalletResponseDto } from '../dtos/response/wallet.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
@@ -88,14 +90,12 @@ export class WalletAdminController {
     })
     public async getUserTransactionHistory(
         @Param('userId') userId: string,
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('type') type?: string
+        @Query(QueryTransformPipe) query: WalletTransactionHistoryQueryDto
     ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>> {
         return this.walletService.getTransactionHistory(userId, {
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            type,
+            page: query.page,
+            limit: query.limit,
+            type: query.type,
         });
     }
 }

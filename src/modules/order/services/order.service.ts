@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { OrderStatus, DeliveryType } from '@prisma/client';
+import { OrderStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
+import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 import { OrderCreateDto } from '../dtos/request/order.create.request';
 import { OrderStatusUpdateDto } from '../dtos/request/order.status-update.request';
@@ -13,12 +15,17 @@ import {
     OrderDetailResponseDto,
 } from '../dtos/response/order.response';
 import { IOrderService } from '../interfaces/order.service.interface';
+import { calculateLineItemsTotals } from 'src/common/utils/commerce.util';
+import { generateOrderNumberString } from '../utils/order.util';
+import { OrderDeliveryService } from './order-delivery.service';
 
 @Injectable()
 export class OrderService implements IOrderService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
+        private readonly deliveryService: OrderDeliveryService,
+        private readonly walletService: WalletService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderService.name);
@@ -28,13 +35,7 @@ export class OrderService implements IOrderService {
      * Generate unique order number (format: ORD-YYYYMMDD-XXXXX)
      */
     async generateOrderNumber(): Promise<string> {
-        const date = new Date();
-        const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const randomStr = Math.random()
-            .toString(36)
-            .substring(2, 7)
-            .toUpperCase();
-        const orderNumber = `ORD-${dateStr}-${randomStr}`;
+        const orderNumber = generateOrderNumberString();
 
         // Check if order number already exists (very unlikely but check anyway)
         const existing = await this.databaseService.order.findUnique({
@@ -99,36 +100,6 @@ export class OrderService implements IOrderService {
     }
 
     /**
-     * Calculate order total from cart items
-     */
-    private calculateOrderTotal(items: any[]): {
-        totalAmount: string;
-        currency: string;
-    } {
-        if (!items || items.length === 0) {
-            return { totalAmount: '0', currency: 'USD' };
-        }
-
-        const currency = items[0]?.product?.currency || 'USD';
-        let totalAmount = 0;
-
-        for (const item of items) {
-            if (item.product && item.product.price) {
-                const price =
-                    typeof item.product.price === 'string'
-                        ? parseFloat(item.product.price)
-                        : Number(item.product.price);
-                totalAmount += price * item.quantity;
-            }
-        }
-
-        return {
-            totalAmount: totalAmount.toFixed(8), // Support crypto decimals
-            currency,
-        };
-    }
-
-    /**
      * Create order from cart
      */
     async createOrder(
@@ -170,7 +141,7 @@ export class OrderService implements IOrderService {
             }
 
             // Calculate totals
-            const { totalAmount, currency } = this.calculateOrderTotal(
+            const { totalAmount, currency } = calculateLineItemsTotals(
                 cart.items
             );
 
@@ -297,35 +268,36 @@ export class OrderService implements IOrderService {
                 where.status = options.status;
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.order,
-                {
-                    page: options?.page ?? 1,
-                    limit: options?.limit ?? 10,
-                },
-                {
-                    where,
-                    include: {
-                        items: {
-                            include: {
-                                product: {
-                                    include: {
-                                        category: true,
-                                        images: {
-                                            where: { deletedAt: null },
-                                            orderBy: [
-                                                { isPrimary: 'desc' },
-                                                { sortOrder: 'asc' },
-                                            ],
+            const result =
+                await this.paginationService.paginate<OrderResponseDto>(
+                    this.databaseService.order,
+                    {
+                        page: options?.page ?? 1,
+                        limit: options?.limit ?? 10,
+                    },
+                    {
+                        where,
+                        include: {
+                            items: {
+                                include: {
+                                    product: {
+                                        include: {
+                                            category: true,
+                                            images: {
+                                                where: { deletedAt: null },
+                                                orderBy: [
+                                                    { isPrimary: 'desc' },
+                                                    { sortOrder: 'asc' },
+                                                ],
+                                            },
                                         },
                                     },
                                 },
                             },
                         },
-                    },
-                    orderBy: { createdAt: 'desc' },
-                }
-            );
+                        orderBy: { createdAt: 'desc' },
+                    }
+                );
 
             return result;
         } catch (error) {
@@ -475,6 +447,24 @@ export class OrderService implements IOrderService {
                 'Order status updated'
             );
 
+            // Process instant delivery if status changed to PAYMENT_RECEIVED or PROCESSING
+            if (
+                data.status === OrderStatus.PAYMENT_RECEIVED ||
+                data.status === OrderStatus.PROCESSING
+            ) {
+                try {
+                    await this.deliveryService.processInstantDelivery(orderId);
+                } catch (deliveryError) {
+                    this.logger.warn(
+                        {
+                            orderId,
+                            error: deliveryError?.message,
+                        },
+                        'Failed to process instant delivery after status update'
+                    );
+                }
+            }
+
             return updatedOrder as OrderResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
@@ -485,6 +475,57 @@ export class OrderService implements IOrderService {
             );
             throw new HttpException(
                 'order.error.updateOrderStatusFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Refund order: update status to REFUNDED and refund amount to user wallet
+     */
+    async refundOrder(orderId: string): Promise<ApiGenericResponseDto> {
+        try {
+            const order = await this.getOrderDetail(orderId);
+
+            if (
+                order.status !== OrderStatus.COMPLETED &&
+                order.status !== OrderStatus.CANCELLED
+            ) {
+                throw new HttpException(
+                    'order.error.cannotRefundOrder',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            await this.updateOrderStatus(orderId, {
+                status: OrderStatus.REFUNDED,
+            });
+
+            const totalAmount =
+                typeof order.totalAmount === 'string'
+                    ? parseFloat(order.totalAmount)
+                    : Number(order.totalAmount);
+
+            await this.walletService.refundBalance(
+                order.userId,
+                totalAmount,
+                `Refund for order ${order.orderNumber}`,
+                order.id
+            );
+
+            this.logger.info({ orderId }, 'Order refunded successfully');
+
+            return {
+                success: true,
+                message: 'order.success.refunded',
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to refund order: ${error.message}`);
+            throw new HttpException(
+                'order.error.refundFailed',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
@@ -604,45 +645,46 @@ export class OrderService implements IOrderService {
                 where.userId = options.userId;
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.order,
-                {
-                    page: options?.page ?? 1,
-                    limit: options?.limit ?? 10,
-                },
-                {
-                    where,
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                email: true,
-                                userName: true,
-                                firstName: true,
-                                lastName: true,
+            const result =
+                await this.paginationService.paginate<OrderDetailResponseDto>(
+                    this.databaseService.order,
+                    {
+                        page: options?.page ?? 1,
+                        limit: options?.limit ?? 10,
+                    },
+                    {
+                        where,
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    email: true,
+                                    userName: true,
+                                    firstName: true,
+                                    lastName: true,
+                                },
                             },
-                        },
-                        items: {
-                            include: {
-                                product: {
-                                    include: {
-                                        category: true,
-                                        images: {
-                                            where: { deletedAt: null },
-                                            orderBy: [
-                                                { isPrimary: 'desc' },
-                                                { sortOrder: 'asc' },
-                                            ],
+                            items: {
+                                include: {
+                                    product: {
+                                        include: {
+                                            category: true,
+                                            images: {
+                                                where: { deletedAt: null },
+                                                orderBy: [
+                                                    { isPrimary: 'desc' },
+                                                    { sortOrder: 'asc' },
+                                                ],
+                                            },
                                         },
                                     },
                                 },
                             },
+                            cryptoPayment: true,
                         },
-                        cryptoPayment: true,
-                    },
-                    orderBy: { createdAt: 'desc' },
-                }
-            );
+                        orderBy: { createdAt: 'desc' },
+                    }
+                );
 
             return result;
         } catch (error) {

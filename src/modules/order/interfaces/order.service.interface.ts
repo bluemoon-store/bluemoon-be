@@ -8,7 +8,6 @@ import {
 } from '../dtos/response/order.response';
 import { OrderCreateDto } from '../dtos/request/order.create.request';
 import { OrderStatusUpdateDto } from '../dtos/request/order.status-update.request';
-import { OrderDeliverDto } from '../dtos/request/order.deliver.request';
 
 export interface IOrderService {
     createOrder(
@@ -38,5 +37,6 @@ export interface IOrderService {
         status?: OrderStatus;
         userId?: string;
     }): Promise<ApiPaginatedDataDto<OrderDetailResponseDto>>;
+    refundOrder(orderId: string): Promise<ApiGenericResponseDto>;
     generateOrderNumber(): Promise<string>;
 }

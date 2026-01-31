@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { faker } from '@faker-js/faker';
 import { IsInt, Min } from 'class-validator';
 
 export class CartUpdateItemDto {

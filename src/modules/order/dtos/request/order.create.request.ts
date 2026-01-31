@@ -1,5 +1,4 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { faker } from '@faker-js/faker';
 import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class OrderCreateDto {

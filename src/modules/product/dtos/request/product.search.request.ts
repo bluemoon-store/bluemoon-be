@@ -6,9 +6,7 @@ import {
     IsString,
     IsUUID,
     IsBoolean,
-    IsInt,
     Min,
-    Max,
     IsNumber,
 } from 'class-validator';
 import { BasePrismaQueryDto } from 'src/common/helper/dtos/query.dto';
