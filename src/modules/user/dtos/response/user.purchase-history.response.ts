@@ -1,16 +1,5 @@
-import { faker } from '@faker-js/faker';
 import { ApiProperty } from '@nestjs/swagger';
-import {
-    Order,
-    OrderItem,
-    Product,
-    ProductCategory,
-    ProductImage,
-    CryptoPayment,
-    OrderStatus,
-    PaymentStatus,
-    CryptoCurrency,
-} from '@prisma/client';
+import { OrderStatus, PaymentStatus, CryptoCurrency } from '@prisma/client';
 import {
     IsArray,
     IsDate,

@@ -12,10 +12,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
+import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
 import { CategoryCreateDto } from '../dtos/request/category.create.request';
@@ -23,6 +25,8 @@ import { CategoryUpdateDto } from '../dtos/request/category.update.request';
 import { ProductCreateDto } from '../dtos/request/product.create.request';
 import { ProductUpdateDto } from '../dtos/request/product.update.request';
 import { ProductSearchDto } from '../dtos/request/product.search.request';
+import { ProductListQueryDto } from '../dtos/request/product.list.request';
+import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
     ProductResponseDto,
     ProductListResponseDto,
@@ -69,19 +73,14 @@ export class ProductAdminController {
         messageKey: 'product.success.list',
     })
     public async list(
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('categoryId') categoryId?: string,
-        @Query('isActive') isActive?: boolean,
-        @Query('isFeatured') isFeatured?: boolean
-    ) {
+        @Query(QueryTransformPipe) query: ProductListQueryDto
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            categoryId,
-            isActive: isActive !== undefined ? isActive === true : undefined,
-            isFeatured:
-                isFeatured !== undefined ? isFeatured === true : undefined,
+            page: query.page,
+            limit: query.limit,
+            categoryId: query.categoryId,
+            isActive: query.isActive,
+            isFeatured: query.isFeatured,
         });
     }
 
@@ -94,7 +93,9 @@ export class ProductAdminController {
         httpStatus: HttpStatus.OK,
         messageKey: 'product.success.search',
     })
-    public async search(@Query() query: ProductSearchDto) {
+    public async search(
+        @Query() query: ProductSearchDto
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.search(query);
     }
 
@@ -269,14 +270,12 @@ export class ProductAdminController {
         messageKey: 'product.success.listCategories',
     })
     public async listCategories(
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('isActive') isActive?: boolean
-    ) {
+        @Query(QueryTransformPipe) query: CategoryListQueryDto
+    ): Promise<ApiPaginatedDataDto<CategoryResponseDto>> {
         return this.categoryService.findAll({
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            isActive: isActive !== undefined ? isActive === true : undefined,
+            page: query.page,
+            limit: query.limit,
+            isActive: query.isActive,
         });
     }
 

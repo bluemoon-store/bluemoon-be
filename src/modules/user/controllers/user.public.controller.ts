@@ -1,12 +1,4 @@
-import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpStatus,
-    Post,
-    Put,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
@@ -22,7 +14,6 @@ import {
 } from '../dtos/response/user.response';
 import { PurchaseHistoryResponseDto } from '../dtos/response/user.purchase-history.response';
 import { UserService } from '../services/user.service';
-import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
 
 @ApiTags('public.user')
 @Controller({

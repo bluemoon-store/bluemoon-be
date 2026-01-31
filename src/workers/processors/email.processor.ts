@@ -6,7 +6,7 @@ import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
 import {
     ISendEmailBasePayload,
-    IWelcomeEmailDataPaylaod,
+    IWelcomeEmailDataPayload,
 } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
 
@@ -21,7 +21,7 @@ export class EmailProcessorWorker {
 
     @Process(AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL)
     async processWelcomeEmails(
-        job: Job<ISendEmailBasePayload<IWelcomeEmailDataPaylaod>>
+        job: Job<ISendEmailBasePayload<IWelcomeEmailDataPayload>>
     ) {
         const { toEmails, data } = job.data;
 

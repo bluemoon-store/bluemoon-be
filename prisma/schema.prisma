@@ -11,21 +11,19 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  userName   String    @unique
-  email      String    @unique
-  password   String
-  firstName  String?   @map("first_name")
-  lastName   String?   @map("last_name")
-  isVerified Boolean   @default(false) @map("is_verified")
-  phone      String?
-  role       Role      @default(USER)
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-  deletedAt  DateTime? @map("deleted_at")
-  avatar     String?
-
-  // Sparks / referral related fields
+  id          String    @id @default(uuid())
+  userName    String    @unique
+  email       String    @unique
+  password    String
+  firstName   String?   @map("first_name")
+  lastName    String?   @map("last_name")
+  isVerified  Boolean   @default(false) @map("is_verified")
+  phone       String?
+  role        Role      @default(USER)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  avatar      String?
   dateOfBirth DateTime? @map("date_of_birth")
 
   // Store related fields

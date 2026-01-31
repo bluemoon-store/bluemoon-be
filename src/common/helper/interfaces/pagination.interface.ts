@@ -3,10 +3,12 @@ export interface IPaginationParams {
     limit: number;
 }
 
+export type OrderByInput = Record<string, 'asc' | 'desc'>;
+
 export interface IPrismaQueryOptions<WhereType = any> {
     where?: WhereType;
     include?: Record<string, boolean | object>;
-    orderBy?: Record<string, 'asc' | 'desc'>;
+    orderBy?: OrderByInput | OrderByInput[];
 }
 
 export type PrismaDelegate = {

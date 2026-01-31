@@ -1,0 +1,23 @@
+{
+    "success": {
+        "walletFound": "Wallet retrieved successfully",
+        "balanceFound": "Balance retrieved successfully",
+        "balanceAdded": "Balance added successfully",
+        "balanceAdjusted": "Balance adjusted successfully",
+        "transactionHistory": "Transaction history retrieved successfully"
+    },
+    "error": {
+        "userNotFound": "User not found",
+        "createWalletFailed": "Failed to create wallet",
+        "getWalletFailed": "Failed to retrieve wallet",
+        "walletNotFound": "Wallet not found",
+        "addBalanceFailed": "Failed to add balance",
+        "invalidAmount": "Invalid amount",
+        "insufficientBalance": "Insufficient balance",
+        "deductBalanceFailed": "Failed to deduct balance",
+        "negativeBalanceNotAllowed": "Balance cannot be negative",
+        "adjustBalanceFailed": "Failed to adjust balance",
+        "refundBalanceFailed": "Failed to refund balance",
+        "getTransactionHistoryFailed": "Failed to retrieve transaction history"
+    }
+}

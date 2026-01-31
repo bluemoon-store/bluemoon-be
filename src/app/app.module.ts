@@ -3,7 +3,6 @@ import { TerminusModule } from '@nestjs/terminus';
 
 import { CommonModule } from 'src/common/common.module';
 import { UserModule } from 'src/modules/user/user.module';
-import { NotificationModule } from 'src/modules/notification/notification.module';
 import { ProductModule } from 'src/modules/product/product.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { WalletModule } from 'src/modules/wallet/wallet.module';
@@ -24,7 +23,6 @@ import { HealthController } from './controllers/health.controller';
 
         // Feature Modules
         UserModule,
-        NotificationModule,
         ProductModule,
         CartModule,
         WalletModule,

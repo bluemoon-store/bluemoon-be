@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
@@ -90,7 +91,7 @@ export class WalletAdminController {
         @Query('page') page?: number,
         @Query('limit') limit?: number,
         @Query('type') type?: string
-    ) {
+    ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>> {
         return this.walletService.getTransactionHistory(userId, {
             page: page ? Number(page) : undefined,
             limit: limit ? Number(limit) : undefined,

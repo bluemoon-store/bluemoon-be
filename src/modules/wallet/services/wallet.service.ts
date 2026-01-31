@@ -4,6 +4,7 @@ import { WalletTransactionType } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 
 import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
 import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
@@ -445,7 +446,7 @@ export class WalletService implements IWalletService {
             limit?: number;
             type?: string;
         }
-    ): Promise<any> {
+    ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>> {
         try {
             // Get wallet
             const wallet = await this.getWallet(userId);
@@ -459,17 +460,18 @@ export class WalletService implements IWalletService {
                 where.type = options.type as WalletTransactionType;
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.walletTransaction,
-                {
-                    page: options?.page ?? 1,
-                    limit: options?.limit ?? 10,
-                },
-                {
-                    where,
-                    orderBy: { createdAt: 'desc' },
-                }
-            );
+            const result =
+                await this.paginationService.paginate<WalletTransactionResponseDto>(
+                    this.databaseService.walletTransaction,
+                    {
+                        page: options?.page ?? 1,
+                        limit: options?.limit ?? 10,
+                    },
+                    {
+                        where,
+                        orderBy: { createdAt: 'desc' },
+                    }
+                );
 
             return result;
         } catch (error) {

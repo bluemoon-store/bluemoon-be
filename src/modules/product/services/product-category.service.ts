@@ -4,11 +4,13 @@ import { PinoLogger } from 'nestjs-pino';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 
 import { CategoryCreateDto } from '../dtos/request/category.create.request';
 import { CategoryUpdateDto } from '../dtos/request/category.update.request';
 import { CategoryResponseDto } from '../dtos/response/category.response';
 import { IProductCategoryService } from '../interfaces/product-category.service.interface';
+import { generateSlug } from '../utils/product.util';
 
 @Injectable()
 export class ProductCategoryService implements IProductCategoryService {
@@ -20,21 +22,6 @@ export class ProductCategoryService implements IProductCategoryService {
         this.logger.setContext(ProductCategoryService.name);
     }
 
-    /**
-     * Generate a URL-friendly slug from a string
-     */
-    private generateSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .trim()
-            .replace(/[^\w\s-]/g, '') // Remove special characters
-            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-    }
-
-    /**
-     * Ensure slug is unique by appending a number if needed
-     */
     private async ensureUniqueSlug(
         baseSlug: string,
         excludeId?: string
@@ -63,10 +50,9 @@ export class ProductCategoryService implements IProductCategoryService {
 
     async create(data: CategoryCreateDto): Promise<CategoryResponseDto> {
         try {
-            // Generate slug if not provided
             const slug = data.slug
-                ? await this.ensureUniqueSlug(this.generateSlug(data.slug))
-                : await this.ensureUniqueSlug(this.generateSlug(data.name));
+                ? await this.ensureUniqueSlug(generateSlug(data.slug))
+                : await this.ensureUniqueSlug(generateSlug(data.name));
 
             // Check if name is unique
             const existingByName =
@@ -113,7 +99,7 @@ export class ProductCategoryService implements IProductCategoryService {
         page?: number;
         limit?: number;
         isActive?: boolean;
-    }): Promise<any> {
+    }): Promise<ApiPaginatedDataDto<CategoryResponseDto>> {
         try {
             const where: any = {
                 deletedAt: null,
@@ -123,17 +109,21 @@ export class ProductCategoryService implements IProductCategoryService {
                 where.isActive = options.isActive;
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.productCategory,
-                {
-                    page: options?.page ?? 1,
-                    limit: options?.limit ?? 10,
-                },
-                {
-                    where,
-                    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-                }
-            );
+            const result =
+                await this.paginationService.paginate<CategoryResponseDto>(
+                    this.databaseService.productCategory,
+                    {
+                        page: options?.page ?? 1,
+                        limit: options?.limit ?? 10,
+                    },
+                    {
+                        where,
+                        orderBy: [
+                            { sortOrder: 'asc' as const },
+                            { createdAt: 'desc' as const },
+                        ],
+                    }
+                );
 
             return result;
         } catch (error) {
@@ -234,18 +224,11 @@ export class ProductCategoryService implements IProductCategoryService {
                 }
             }
 
-            // Generate slug if name is being updated
             let slug = data.slug;
             if (data.name && !data.slug) {
-                slug = await this.ensureUniqueSlug(
-                    this.generateSlug(data.name),
-                    id
-                );
+                slug = await this.ensureUniqueSlug(generateSlug(data.name), id);
             } else if (data.slug) {
-                slug = await this.ensureUniqueSlug(
-                    this.generateSlug(data.slug),
-                    id
-                );
+                slug = await this.ensureUniqueSlug(generateSlug(data.slug), id);
             }
 
             const updateData: any = { ...data };
@@ -274,7 +257,6 @@ export class ProductCategoryService implements IProductCategoryService {
 
     async delete(id: string): Promise<ApiGenericResponseDto> {
         try {
-            // Check if category exists
             await this.findOne(id);
 
             // Check if category has products
@@ -302,7 +284,7 @@ export class ProductCategoryService implements IProductCategoryService {
 
             this.logger.info({ categoryId: id }, 'Category deleted');
             return {
-                statusCode: HttpStatus.OK,
+                success: true,
                 message: 'product.success.categoryDeleted',
             };
         } catch (error) {

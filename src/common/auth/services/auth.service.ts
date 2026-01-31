@@ -7,12 +7,7 @@ import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
-import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
-import {
-    ISendEmailBasePayload,
-    IWelcomeEmailDataPaylaod,
-} from 'src/common/helper/interfaces/email.interface';
 
 import { HelperEncryptionService } from '../../helper/services/helper.encryption.service';
 import { IAuthUser } from '../../request/interfaces/request.interface';
@@ -128,7 +123,7 @@ export class AuthService implements IAuthService {
 
     public async signup(data: UserCreateDto): Promise<AuthResponseDto> {
         try {
-            const { email, firstName, lastName, password, referralCode } = data;
+            const { email, firstName, lastName, password } = data;
 
             const existingUser = await this.databaseService.user.findUnique({
                 where: { email },
@@ -152,16 +147,8 @@ export class AuthService implements IAuthService {
                     lastName: lastName?.trim(),
                     role: Role.USER,
                     userName: faker.internet.username(),
-                    referralCode: faker.string.alphanumeric(8).toUpperCase(),
                 },
             });
-
-            if (referralCode) {
-                await this.userService.processReferral(
-                    createdUser.id,
-                    referralCode
-                );
-            }
 
             // Create wallet for new user
             await this.walletService.createWallet(createdUser.id);
@@ -179,7 +166,7 @@ export class AuthService implements IAuthService {
             //             userName: createdUser.userName,
             //         },
             //         toEmails: [email],
-            //     } as ISendEmailBasePayload<IWelcomeEmailDataPaylaod>,
+            //     } as ISendEmailBasePayload<IWelcomeEmailDataPayload>,
             //     { delay: 15000 }
             // );
 

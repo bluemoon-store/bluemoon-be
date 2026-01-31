@@ -7,6 +7,7 @@ import {
     UserGetProfileResponseDto,
     UserUpdateProfileResponseDto,
 } from '../dtos/response/user.response';
+import { PurchaseHistoryOrderDto } from '../dtos/response/user.purchase-history.response';
 
 import { UserBanDto } from '../dtos/request/user.ban.request';
 
@@ -23,5 +24,5 @@ export interface IUserService {
     getProfile(userId: string): Promise<UserGetProfileResponseDto>;
     banUser(userId: string, data: UserBanDto): Promise<ApiGenericResponseDto>;
     unbanUser(userId: string): Promise<ApiGenericResponseDto>;
-    getPurchaseHistory(userId: string): Promise<any>;
+    getPurchaseHistory(userId: string): Promise<PurchaseHistoryOrderDto[]>;
 }

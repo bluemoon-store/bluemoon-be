@@ -5,7 +5,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
 import {
     ISendEmailBasePayload,
-    IWelcomeEmailDataPaylaod,
+    IWelcomeEmailDataPayload,
 } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
 import { EmailProcessorWorker } from 'src/workers/processors/email.processor';
@@ -50,12 +50,12 @@ describe('EmailProcessorWorkerService', () => {
 
     describe('processWelcomeEmails', () => {
         it('should process the welcome email job and call sendEmail', async () => {
-            const jobData: ISendEmailBasePayload<IWelcomeEmailDataPaylaod> = {
+            const jobData: ISendEmailBasePayload<IWelcomeEmailDataPayload> = {
                 toEmails: ['test@example.com'],
                 data: { userName: 'Test User' },
             };
             const jobMock = { data: jobData } as Job<
-                ISendEmailBasePayload<IWelcomeEmailDataPaylaod>
+                ISendEmailBasePayload<IWelcomeEmailDataPayload>
             >;
 
             await service.processWelcomeEmails(jobMock);

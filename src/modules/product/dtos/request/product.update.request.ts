@@ -15,7 +15,8 @@ import {
 export class ProductUpdateDto {
     @ApiPropertyOptional({
         example: faker.commerce.productName(),
-        description: 'Product name',
+        description:
+            'Product name (can be duplicated and changed; not required to be unique)',
     })
     @IsOptional()
     @IsString()

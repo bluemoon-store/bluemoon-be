@@ -4,7 +4,9 @@ import { Prisma } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
+import { OrderByInput } from 'src/common/helper/interfaces/pagination.interface';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 
 import { ProductCreateDto } from '../dtos/request/product.create.request';
 import { ProductUpdateDto } from '../dtos/request/product.update.request';
@@ -14,6 +16,7 @@ import {
     ProductListResponseDto,
 } from '../dtos/response/product.response';
 import { IProductService } from '../interfaces/product.service.interface';
+import { generateSlug } from '../utils/product.util';
 
 @Injectable()
 export class ProductService implements IProductService {
@@ -25,21 +28,6 @@ export class ProductService implements IProductService {
         this.logger.setContext(ProductService.name);
     }
 
-    /**
-     * Generate a URL-friendly slug from a string
-     */
-    private generateSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .trim()
-            .replace(/[^\w\s-]/g, '') // Remove special characters
-            .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-            .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-    }
-
-    /**
-     * Ensure slug is unique by appending a number if needed
-     */
     private async ensureUniqueSlug(
         baseSlug: string,
         excludeId?: string
@@ -67,7 +55,6 @@ export class ProductService implements IProductService {
 
     async create(data: ProductCreateDto): Promise<ProductResponseDto> {
         try {
-            // Verify category exists
             const category =
                 await this.databaseService.productCategory.findFirst({
                     where: {
@@ -85,8 +72,8 @@ export class ProductService implements IProductService {
 
             // Generate slug if not provided
             const slug = data.slug
-                ? await this.ensureUniqueSlug(this.generateSlug(data.slug))
-                : await this.ensureUniqueSlug(this.generateSlug(data.name));
+                ? await this.ensureUniqueSlug(generateSlug(data.slug))
+                : await this.ensureUniqueSlug(generateSlug(data.name));
 
             // Create product
             const product = await this.databaseService.product.create({
@@ -171,7 +158,7 @@ export class ProductService implements IProductService {
         categoryId?: string;
         isActive?: boolean;
         isFeatured?: boolean;
-    }): Promise<any> {
+    }): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         try {
             const where: Prisma.ProductWhereInput = {
                 deletedAt: null,
@@ -189,27 +176,31 @@ export class ProductService implements IProductService {
                 where.isFeatured = options.isFeatured;
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.product,
-                {
-                    page: options?.page ?? 1,
-                    limit: options?.limit ?? 10,
-                },
-                {
-                    where,
-                    include: {
-                        category: true,
-                        images: {
-                            where: { deletedAt: null },
-                            orderBy: [
-                                { isPrimary: 'desc' },
-                                { sortOrder: 'asc' },
-                            ],
-                        },
+            const result =
+                await this.paginationService.paginate<ProductListResponseDto>(
+                    this.databaseService.product,
+                    {
+                        page: options?.page ?? 1,
+                        limit: options?.limit ?? 10,
                     },
-                    orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
-                }
-            );
+                    {
+                        where,
+                        include: {
+                            category: true,
+                            images: {
+                                where: { deletedAt: null },
+                                orderBy: [
+                                    { isPrimary: 'desc' },
+                                    { sortOrder: 'asc' },
+                                ],
+                            },
+                        },
+                        orderBy: [
+                            { isFeatured: 'desc' as const },
+                            { createdAt: 'desc' as const },
+                        ],
+                    }
+                );
 
             return result;
         } catch (error) {
@@ -221,7 +212,9 @@ export class ProductService implements IProductService {
         }
     }
 
-    async search(query: ProductSearchDto): Promise<any> {
+    async search(
+        query: ProductSearchDto
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         try {
             const where: Prisma.ProductWhereInput = {
                 deletedAt: null,
@@ -285,30 +278,34 @@ export class ProductService implements IProductService {
                     [query.sortBy]: sortOrder,
                 } as Prisma.ProductOrderByWithRelationInput);
             } else {
-                orderBy = [{ isFeatured: 'desc' }, { createdAt: 'desc' }];
+                orderBy = [
+                    { isFeatured: 'desc' as const },
+                    { createdAt: 'desc' as const },
+                ];
             }
 
-            const result = await this.paginationService.paginate(
-                this.databaseService.product,
-                {
-                    page: query.page ?? 1,
-                    limit: query.limit ?? 10,
-                },
-                {
-                    where,
-                    include: {
-                        category: true,
-                        images: {
-                            where: { deletedAt: null },
-                            orderBy: [
-                                { isPrimary: 'desc' },
-                                { sortOrder: 'asc' },
-                            ],
-                        },
+            const result =
+                await this.paginationService.paginate<ProductListResponseDto>(
+                    this.databaseService.product,
+                    {
+                        page: query.page ?? 1,
+                        limit: query.limit ?? 10,
                     },
-                    orderBy,
-                }
-            );
+                    {
+                        where,
+                        include: {
+                            category: true,
+                            images: {
+                                where: { deletedAt: null },
+                                orderBy: [
+                                    { isPrimary: 'desc' },
+                                    { sortOrder: 'asc' },
+                                ],
+                            },
+                        },
+                        orderBy: orderBy as OrderByInput[],
+                    }
+                );
 
             return result;
         } catch (error) {
@@ -399,10 +396,8 @@ export class ProductService implements IProductService {
         data: ProductUpdateDto
     ): Promise<ProductResponseDto> {
         try {
-            // Check if product exists
             await this.findOne(id);
 
-            // Verify category exists if being updated
             if (data.categoryId) {
                 const category =
                     await this.databaseService.productCategory.findFirst({
@@ -420,18 +415,11 @@ export class ProductService implements IProductService {
                 }
             }
 
-            // Generate slug if name is being updated
             let slug = data.slug;
             if (data.name && !data.slug) {
-                slug = await this.ensureUniqueSlug(
-                    this.generateSlug(data.name),
-                    id
-                );
+                slug = await this.ensureUniqueSlug(generateSlug(data.name), id);
             } else if (data.slug) {
-                slug = await this.ensureUniqueSlug(
-                    this.generateSlug(data.slug),
-                    id
-                );
+                slug = await this.ensureUniqueSlug(generateSlug(data.slug), id);
             }
 
             const updateData: any = { ...data };
@@ -467,10 +455,8 @@ export class ProductService implements IProductService {
 
     async delete(id: string): Promise<ApiGenericResponseDto> {
         try {
-            // Check if product exists
             await this.findOne(id);
 
-            // Check if product has orders
             const orderItemCount = await this.databaseService.orderItem.count({
                 where: {
                     productId: id,
@@ -498,7 +484,7 @@ export class ProductService implements IProductService {
 
             this.logger.info({ productId: id }, 'Product deleted');
             return {
-                statusCode: HttpStatus.OK,
+                success: true,
                 message: 'product.success.productDeleted',
             };
         } catch (error) {
@@ -634,7 +620,6 @@ export class ProductService implements IProductService {
         isPrimary: boolean = false
     ): Promise<ProductResponseDto> {
         try {
-            // Verify product exists
             await this.findOne(productId);
 
             // If setting as primary, unset other primary images
@@ -691,7 +676,6 @@ export class ProductService implements IProductService {
         imageId: string
     ): Promise<ProductResponseDto> {
         try {
-            // Verify product exists
             await this.findOne(productId);
 
             // Verify image exists and belongs to product
@@ -754,10 +738,8 @@ export class ProductService implements IProductService {
         imageId: string
     ): Promise<ProductResponseDto> {
         try {
-            // Verify product exists
             await this.findOne(productId);
 
-            // Verify image exists and belongs to product
             const image = await this.databaseService.productImage.findFirst({
                 where: {
                     id: imageId,

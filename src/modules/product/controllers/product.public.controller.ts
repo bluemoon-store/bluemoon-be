@@ -1,11 +1,15 @@
 import { Controller, Get, HttpStatus, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
+import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 
 import { ProductSearchDto } from '../dtos/request/product.search.request';
+import { ProductListQueryDto } from '../dtos/request/product.list.request';
+import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
     ProductResponseDto,
     ProductListResponseDto,
@@ -34,19 +38,14 @@ export class ProductPublicController {
         messageKey: 'product.success.list',
     })
     public async list(
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('categoryId') categoryId?: string,
-        @Query('isActive') isActive?: boolean,
-        @Query('isFeatured') isFeatured?: boolean
-    ) {
+        @Query(QueryTransformPipe) query: ProductListQueryDto
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            categoryId,
-            isActive: isActive !== undefined ? isActive === true : undefined,
-            isFeatured:
-                isFeatured !== undefined ? isFeatured === true : undefined,
+            page: query.page,
+            limit: query.limit,
+            categoryId: query.categoryId,
+            isActive: query.isActive,
+            isFeatured: query.isFeatured,
         });
     }
 
@@ -58,7 +57,9 @@ export class ProductPublicController {
         httpStatus: HttpStatus.OK,
         messageKey: 'product.success.search',
     })
-    public async search(@Query() query: ProductSearchDto) {
+    public async search(
+        @Query() query: ProductSearchDto
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.search(query);
     }
 
@@ -71,14 +72,12 @@ export class ProductPublicController {
         messageKey: 'product.success.listCategories',
     })
     public async listCategories(
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('isActive') isActive?: boolean
-    ) {
+        @Query(QueryTransformPipe) query: CategoryListQueryDto
+    ): Promise<ApiPaginatedDataDto<CategoryResponseDto>> {
         return this.categoryService.findAll({
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
-            isActive: isActive !== undefined ? isActive === true : undefined,
+            page: query.page,
+            limit: query.limit,
+            isActive: query.isActive,
         });
     }
 
@@ -106,12 +105,12 @@ export class ProductPublicController {
     })
     public async getProductsByCategory(
         @Param('id') categoryId: string,
-        @Query('page') page?: number,
-        @Query('limit') limit?: number
-    ) {
+        @Query(QueryTransformPipe)
+        query: Pick<ProductListQueryDto, 'page' | 'limit'>
+    ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({
-            page: page ? Number(page) : undefined,
-            limit: limit ? Number(limit) : undefined,
+            page: query.page,
+            limit: query.limit,
             categoryId,
             isActive: true, // Only show active products
         });

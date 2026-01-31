@@ -15,6 +15,7 @@ import {
     UserGetProfileResponseDto,
     UserUpdateProfileResponseDto,
 } from '../dtos/response/user.response';
+import { PurchaseHistoryOrderDto } from '../dtos/response/user.purchase-history.response';
 import { IUserService } from '../interfaces/user.service.interface';
 
 @Injectable()
@@ -194,7 +195,9 @@ export class UserService implements IUserService {
         }
     }
 
-    async getPurchaseHistory(userId: string): Promise<any> {
+    async getPurchaseHistory(
+        userId: string
+    ): Promise<PurchaseHistoryOrderDto[]> {
         try {
             const orders = await this.databaseService.order.findMany({
                 where: {
@@ -222,8 +225,11 @@ export class UserService implements IUserService {
                 },
             });
 
-            return orders;
+            return orders as unknown as PurchaseHistoryOrderDto[];
         } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
             throw new HttpException(
                 'user.error.failedToGetPurchaseHistory',
                 HttpStatus.INTERNAL_SERVER_ERROR

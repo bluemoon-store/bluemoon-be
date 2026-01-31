@@ -10,7 +10,6 @@ import {
     IsString,
     IsUUID,
     IsBoolean,
-    IsNumber,
 } from 'class-validator';
 
 export class UserResponseDto implements Partial<User> {

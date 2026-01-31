@@ -46,7 +46,8 @@ export class ProductImageDto {
 export class ProductCreateDto {
     @ApiProperty({
         example: faker.commerce.productName(),
-        description: 'Product name',
+        description:
+            'Product name (can be duplicated; not required to be unique)',
     })
     @IsString()
     @MaxLength(255)
