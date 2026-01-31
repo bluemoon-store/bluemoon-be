@@ -1,8 +1,8 @@
-# Bluemoon - AI Coding Agent Instructions
+# Jinx.to - AI Coding Agent Instructions
 
 ## Architecture Overview
 
-Bluemoon is a platform for creating and managing your own AI agents. It is built with NestJS and Prisma.
+Jinx.to is a platform for creating and managing your own AI agents. It is built with NestJS and Prisma.
 
 - **Core Infrastructure** (`src/common/`): Shared services for database, auth, file storage, caching, logging, messaging
 - **Feature Modules** (`src/modules/`): Business logic (User, Post) - each with controllers, services, DTOs

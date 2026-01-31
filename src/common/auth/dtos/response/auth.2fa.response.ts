@@ -18,7 +18,7 @@ export class TwoFactorSetupResponseDto {
 
     @ApiProperty({
         example:
-            'otpauth://totp/Bluemoon:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Bluemoon',
+            'otpauth://totp/Jinx.to:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Jinx.to',
         description: 'TOTP URI for manual entry',
     })
     @IsString()

@@ -224,8 +224,8 @@ export class AuthService implements IAuthService {
 
             // Generate secret
             const secret = speakeasy.generateSecret({
-                name: `Bluemoon (${user.email})`,
-                issuer: 'Bluemoon',
+                name: `Jinx.to (${user.email})`,
+                issuer: 'Jinx.to',
                 length: 32,
             });
 
@@ -233,7 +233,7 @@ export class AuthService implements IAuthService {
             const otpAuthUrl = speakeasy.otpauthURL({
                 secret: secret.base32,
                 label: user.email,
-                issuer: 'Bluemoon',
+                issuer: 'Jinx.to',
                 encoding: 'base32',
             });
 

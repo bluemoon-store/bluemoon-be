@@ -1,4 +1,4 @@
-# Bluemoon 🚀
+# Jinx.to 🚀
 
 ## 🛠️ Tech Stack
 
@@ -71,7 +71,7 @@ Create a `.env` file based on `.env.docker` template. All environment variables 
 | Variable            | Description                              | Default       | Required |
 | ------------------- | ---------------------------------------- | ------------- | -------- |
 | `APP_ENV`           | Environment mode                         | `local`       | Yes      |
-| `APP_NAME`          | Application name                         | `bluemoon` | No    |
+| `APP_NAME`          | Application name                         | `jinx.to` | No    |
 | `APP_DEBUG`         | Enable debug mode                        | `true`        | No       |
 | `APP_LOG_LEVEL`     | Logging level                            | `debug`       | No       |
 | `APP_CORS_ORIGINS`  | Comma-separated allowed CORS origins     | `*`           | No       |
@@ -166,10 +166,10 @@ docker-compose down
 
 ```bash
 # Build production image (uses ci/Dockerfile for production)
-docker build -f ci/Dockerfile -t bluemoon:latest .
+docker build -f ci/Dockerfile -t jinx.to:latest .
 
 # Run production container
-docker run -p 3001:3001 --env-file .env bluemoon:latest
+docker run -p 3001:3001 --env-file .env jinx.to:latest
 ```
 
 ## 📚 API Documentation
@@ -308,13 +308,13 @@ yarn rollback:email
 
 ```bash
 # Build and tag production image
-docker build -f ci/Dockerfile -t your-registry/bluemoon:v1.0.0 .
+docker build -f ci/Dockerfile -t your-registry/jinx.to:v1.0.0 .
 
 # Push to registry
-docker push your-registry/bluemoon:v1.0.0
+docker push your-registry/jinx.to:v1.0.0
 
 # Run with Docker
-docker run -d -p 3001:3001 --env-file .env --name nestjs-app your-registry/bluemoon:v1.0.0
+docker run -d -p 3001:3001 --env-file .env --name nestjs-app your-registry/jinx.to:v1.0.0
 
 # Or deploy with Docker Compose (full stack)
 docker-compose up -d --build
@@ -325,15 +325,15 @@ docker-compose up -d --build
 #### AWS ECS
 ```bash
 # 1. Create ECR repository
-aws ecr create-repository --repository-name bluemoon --region us-east-1
+aws ecr create-repository --repository-name jinx.to --region us-east-1
 
 # 2. Authenticate Docker to ECR
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
 
 # 3. Build and push
-docker build -f ci/Dockerfile -t bluemoon:latest .
-docker tag bluemoon:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/bluemoon:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/bluemoon:latest
+docker build -f ci/Dockerfile -t jinx.to:latest .
+docker tag jinx.to:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/jinx.to:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/jinx.to:latest
 
 # 4. Create ECS task definition and service through AWS Console or CLI
 ```
@@ -341,11 +341,11 @@ docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/bluemoon:latest
 #### Google Cloud Run
 ```bash
 # 1. Build and submit to Google Container Registry
-gcloud builds submit --tag gcr.io/PROJECT-ID/bluemoon
+gcloud builds submit --tag gcr.io/PROJECT-ID/jinx.to
 
 # 2. Deploy to Cloud Run
-gcloud run deploy bluemoon \
-  --image gcr.io/PROJECT-ID/bluemoon \
+gcloud run deploy jinx.to \
+  --image gcr.io/PROJECT-ID/jinx.to \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
@@ -356,8 +356,8 @@ gcloud run deploy bluemoon \
 #### DigitalOcean App Platform
 ```bash
 # 1. Push to Docker Hub or DigitalOcean Container Registry
-docker build -f ci/Dockerfile -t your-dockerhub/bluemoon:latest .
-docker push your-dockerhub/bluemoon:latest
+docker build -f ci/Dockerfile -t your-dockerhub/jinx.to:latest .
+docker push your-dockerhub/jinx.to:latest
 
 # 2. Create app via DigitalOcean Console
 #    - Select Docker Hub as source
@@ -618,7 +618,7 @@ If you encounter issues not covered here:
    APP_LOG_LEVEL=debug
    ```
 
-3. **Search Issues**: Check [GitHub Issues](https://github.com/hmake98/bluemoon/issues)
+3. **Search Issues**: Check [GitHub Issues](https://github.com/hmake98/jinx.to/issues)
 
 4. **Create an Issue**: Provide:
    - Error message

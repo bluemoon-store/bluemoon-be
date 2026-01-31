@@ -1,8 +1,8 @@
 {
-  "name": "bluemoon",
+  "name": "jinx.to",
   "version": "1.0.0",
-  "description": "Bluemoon is a platform for creating and managing your own AI agents.",
-  "author": "hmake98",
+  "description": "Jinx.to is a platform for creating and managing your own AI agents.",
+  "author": "beiryu",
   "license": "MIT",
   "private": true,
   "engines": {
