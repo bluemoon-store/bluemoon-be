@@ -201,24 +201,50 @@ model CryptoPayment {
   id                    String         @id @default(uuid())
   orderId               String         @unique @map("order_id")
   order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Cryptocurrency info
   cryptocurrency        CryptoCurrency
-  paymentAddress        String         @map("payment_address") // Generated address
-  amount                Decimal        @db.Decimal(20, 8) // Amount in crypto
+  network               String? // e.g., "mainnet", "ERC20", "BEP20", "TRC20"
+
+  // Payment address (generated from system HD wallet)
+  paymentAddress        String         @map("payment_address")
+  derivationIndex       Int            @map("derivation_index")
+  derivationPath        String         @map("derivation_path")
+  encryptedPrivateKey   String         @map("encrypted_private_key") @db.Text
+
+  // Amount info
+  amount                Decimal        @db.Decimal(30, 18) // Crypto amount (support 18 decimals for ETH)
   amountUsd             Decimal        @map("amount_usd") @db.Decimal(20, 2) // USD value at creation
-  exchangeRate          Decimal        @map("exchange_rate") @db.Decimal(20, 8) // Rate at payment time
+  exchangeRate          Decimal?       @map("exchange_rate") @db.Decimal(20, 8) // Rate at payment time
+
+  // Platform wallet info
+  platformWalletAddress String         @map("platform_wallet_address")
+
+  // Payment status
   status                PaymentStatus  @default(PENDING)
-  txHash                String?        @map("tx_hash") // Transaction hash
+
+  // Transaction info
+  txHash                String?        @map("tx_hash") // Incoming transaction hash
+  forwardTxHash         String?        @map("forward_tx_hash") // Outgoing transaction hash
   confirmations         Int            @default(0)
   requiredConfirmations Int            @default(3) @map("required_confirmations")
+
+  // Timestamps
   expiresAt             DateTime       @map("expires_at")
   paidAt                DateTime?      @map("paid_at")
   confirmedAt           DateTime?      @map("confirmed_at")
+  forwardedAt           DateTime?      @map("forwarded_at")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  // Metadata
+  metadata              Json? // Additional info (network fee, gas price, etc.)
 
   @@index([paymentAddress])
   @@index([status])
   @@index([txHash])
+  @@index([cryptocurrency])
+  @@index([expiresAt])
   @@map("crypto_payments")
 }
 
@@ -226,18 +252,48 @@ enum CryptoCurrency {
   BTC // Bitcoin
   ETH // Ethereum
   LTC // Litecoin
-  USDT_ERC20 // USDT on Ethereum
   BCH // Bitcoin Cash
+  USDT_ERC20 // USDT on Ethereum
+  USDT_TRC20 // USDT on Tron
+  USDC_ERC20 // USDC on Ethereum
 }
 
 enum PaymentStatus {
   PENDING // Waiting for payment
-  PARTIAL // Partial payment received
-  PAID // Full amount received
+  PAID // Payment detected (but not confirmed)
   CONFIRMING // Waiting for confirmations
-  CONFIRMED // Payment confirmed
-  EXPIRED // Payment window expired
-  FAILED // Payment failed
+  CONFIRMED // Payment confirmed (order can proceed)
+  FORWARDING // Forwarding to platform wallet
+  FORWARDED // Successfully forwarded
+  EXPIRED // Payment window expired (15 min)
+  FAILED // Payment processing failed
+}
+
+// System Wallet Index Tracker
+model SystemWalletIndex {
+  id             String         @id @default(uuid())
+  cryptocurrency CryptoCurrency @unique
+  nextIndex      Int            @default(0) @map("next_index")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("system_wallet_indexes")
+}
+
+// Crypto Exchange Rate Cache
+model CryptoExchangeRate {
+  id             String         @id @default(uuid())
+  cryptocurrency CryptoCurrency
+  fiatCurrency   String         @default("USD") @map("fiat_currency")
+  rate           Decimal        @db.Decimal(20, 8)
+  provider       String // "tatum", "kraken", etc.
+  expiresAt      DateTime       @map("expires_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@unique([cryptocurrency, fiatCurrency])
+  @@index([cryptocurrency])
+  @@index([expiresAt])
+  @@map("crypto_exchange_rates")
 }
 
 // User Wallet/Balance System

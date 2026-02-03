@@ -1,6 +1,7 @@
 import AppConfig from './app.config';
 import AuthConfig from './auth.config';
 import AwsConfig from './aws.config';
+import CryptoConfig from './crypto.config';
 import DocConfig from './doc.config';
 import FirebaseConfig from './firebase.config';
 import RedisConfig from './redis.config';
@@ -12,4 +13,5 @@ export default [
     AuthConfig,
     DocConfig,
     FirebaseConfig,
+    CryptoConfig,
 ];
