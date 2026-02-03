@@ -50,11 +50,17 @@
         "editor.defaultFormatter": "foxundermoon.shell-format"
     },
     "cSpell.words": [
+        "bech",
         "beiryu",
+        "bitcoinjs",
+        "checksummed",
         "dtos",
         "jinx.to",
         "LITECOIN",
         "Presign",
-        "unban"
+        "scure",
+        "tronweb",
+        "unban",
+        "wordlist"
     ]
 }

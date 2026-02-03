@@ -42,4 +42,11 @@ export interface ISystemWalletService {
      * @returns Next index
      */
     getNextIndex(cryptocurrency: CryptoCurrency): Promise<number>;
+
+    /**
+     * Get platform wallet address for a cryptocurrency
+     * @param cryptocurrency - Cryptocurrency type
+     * @returns Platform wallet address
+     */
+    getPlatformWalletAddress(cryptocurrency: CryptoCurrency): string;
 }
