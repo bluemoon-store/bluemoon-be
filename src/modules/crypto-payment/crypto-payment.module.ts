@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { CommonModule } from 'src/common/common.module';
 import { CustomLoggerModule } from 'src/common/logger/logger.module';
@@ -16,11 +17,15 @@ import { LitecoinProvider } from './blockchain-providers/litecoin-provider.servi
 import { BitcoinCashProvider } from './blockchain-providers/bitcoin-cash-provider.service';
 import { BlockchainProviderFactory } from './blockchain-providers/blockchain-provider.factory';
 
+// Processors
+import { PaymentVerificationProcessor } from './processors/payment-verification.processor';
+
 @Module({
     imports: [
         ConfigModule,
         CommonModule, // Provides DatabaseService and CacheManager
         CustomLoggerModule, // Provides PinoLogger
+        ScheduleModule.forRoot(), // For cron jobs
         BullModule.registerQueue({
             name: 'crypto-payment-verification',
         }),
@@ -42,6 +47,8 @@ import { BlockchainProviderFactory } from './blockchain-providers/blockchain-pro
         BitcoinCashProvider,
         // Factory
         BlockchainProviderFactory,
+        // Processors
+        PaymentVerificationProcessor,
     ],
     exports: [
         SystemWalletService,
