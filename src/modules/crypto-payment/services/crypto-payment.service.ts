@@ -1,0 +1,633 @@
+import {
+    Injectable,
+    BadRequestException,
+    NotFoundException,
+    HttpException,
+    HttpStatus,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { PinoLogger } from 'nestjs-pino';
+import {
+    CryptoCurrency,
+    PaymentStatus,
+    OrderStatus,
+    Prisma,
+} from '@prisma/client';
+
+import { DatabaseService } from 'src/common/database/services/database.service';
+import { SystemWalletService } from './system-wallet.service';
+import { ExchangeRateService } from './exchange-rate.service';
+import { ICryptoPaymentService } from '../interfaces/crypto-payment.service.interface';
+import { CryptoPaymentResponseDto } from '../dtos/response/crypto-payment.response';
+import { PaymentStatusResponseDto } from '../dtos/response/payment-status.response';
+import {
+    generatePaymentQRCode,
+    generatePaymentURI,
+} from '../utils/qr-code.util';
+
+/**
+ * Crypto Payment Service
+ * Handles creation, status checking, and management of cryptocurrency payments
+ */
+@Injectable()
+export class CryptoPaymentService implements ICryptoPaymentService {
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly systemWalletService: SystemWalletService,
+        private readonly exchangeRateService: ExchangeRateService,
+        private readonly configService: ConfigService,
+        @InjectQueue('crypto-payment-verification')
+        private readonly paymentVerificationQueue: Queue,
+        private readonly logger: PinoLogger
+    ) {
+        this.logger.setContext(CryptoPaymentService.name);
+    }
+
+    /**
+     * Create a crypto payment for an order
+     * @param orderId - Order ID
+     * @param cryptocurrency - Selected cryptocurrency
+     * @param userId - User ID (for authorization)
+     * @returns Payment details with address and QR code
+     */
+    async createPayment(
+        orderId: string,
+        cryptocurrency: CryptoCurrency,
+        userId: string
+    ): Promise<CryptoPaymentResponseDto> {
+        this.logger.info(
+            { orderId, cryptocurrency, userId },
+            'Creating crypto payment'
+        );
+
+        try {
+            // 1. Get order details and verify ownership
+            const order = await this.databaseService.order.findUnique({
+                where: { id: orderId },
+                include: {
+                    cryptoPayment: true,
+                },
+            });
+
+            if (!order) {
+                throw new NotFoundException(`Order not found: ${orderId}`);
+            }
+
+            // Verify order belongs to user
+            if (order.userId !== userId) {
+                throw new BadRequestException(
+                    'You do not have permission to create payment for this order'
+                );
+            }
+
+            // Check if order is in valid status
+            if (order.status !== OrderStatus.PENDING) {
+                throw new BadRequestException(
+                    `Cannot create payment for order with status: ${order.status}. Order must be PENDING.`
+                );
+            }
+
+            // Check if payment already exists
+            if (order.cryptoPayment) {
+                this.logger.warn(
+                    { orderId, paymentId: order.cryptoPayment.id },
+                    'Payment already exists for this order'
+                );
+                // Return existing payment instead of creating new one
+                return this.mapToResponseDto(order.cryptoPayment, orderId);
+            }
+
+            // 2. Get exchange rate and calculate crypto amount
+            const amountUsd = parseFloat(order.totalAmount.toString());
+            if (amountUsd <= 0) {
+                throw new BadRequestException(
+                    'Order total amount must be greater than 0'
+                );
+            }
+
+            const exchangeRate = await this.exchangeRateService.getRate(
+                cryptocurrency,
+                'USD'
+            );
+            const cryptoAmount = await this.exchangeRateService.convertToCrypto(
+                amountUsd,
+                cryptocurrency,
+                'USD'
+            );
+
+            this.logger.debug(
+                {
+                    orderId,
+                    cryptocurrency,
+                    amountUsd,
+                    exchangeRate,
+                    cryptoAmount,
+                },
+                'Calculated crypto amount'
+            );
+
+            // 3. Generate unique payment address
+            const addressDetails =
+                await this.systemWalletService.generatePaymentAddress(
+                    orderId,
+                    cryptocurrency,
+                    cryptoAmount,
+                    amountUsd
+                );
+
+            // 4. Get platform wallet address
+            const platformWalletAddress =
+                this.systemWalletService.getPlatformWalletAddress(
+                    cryptocurrency
+                );
+
+            if (!platformWalletAddress) {
+                throw new BadRequestException(
+                    `Platform wallet address not configured for ${cryptocurrency}`
+                );
+            }
+
+            // 5. Determine required confirmations based on cryptocurrency
+            const requiredConfirmations =
+                this.getRequiredConfirmations(cryptocurrency);
+
+            // 6. Determine network based on cryptocurrency
+            const network = this.getNetwork(cryptocurrency);
+
+            // 7. Create payment record in database
+            const payment = await this.databaseService.cryptoPayment.create({
+                data: {
+                    orderId,
+                    cryptocurrency,
+                    network,
+                    paymentAddress: addressDetails.address,
+                    derivationIndex: addressDetails.derivationIndex,
+                    derivationPath: addressDetails.derivationPath,
+                    encryptedPrivateKey: addressDetails.encryptedPrivateKey,
+                    amount: new Prisma.Decimal(cryptoAmount),
+                    amountUsd: new Prisma.Decimal(amountUsd),
+                    exchangeRate: new Prisma.Decimal(exchangeRate),
+                    platformWalletAddress,
+                    status: PaymentStatus.PENDING,
+                    requiredConfirmations,
+                    expiresAt: addressDetails.expiresAt,
+                },
+            });
+
+            this.logger.info(
+                {
+                    paymentId: payment.id,
+                    orderId,
+                    cryptocurrency,
+                    address: addressDetails.address,
+                    amount: cryptoAmount,
+                    expiresAt: addressDetails.expiresAt,
+                },
+                'Payment record created'
+            );
+
+            // 8. Generate QR code
+            const qrCode = await generatePaymentQRCode(
+                addressDetails.address,
+                cryptoAmount,
+                cryptocurrency
+            );
+
+            // 9. Generate payment URI
+            const paymentUri = generatePaymentURI(
+                addressDetails.address,
+                cryptoAmount,
+                cryptocurrency
+            );
+
+            // 10. Queue verification job (check payment status periodically)
+            await this.paymentVerificationQueue.add(
+                'verify-payment',
+                {
+                    paymentId: payment.id,
+                    orderId,
+                },
+                {
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 60000, // Start with 1 minute delay
+                    },
+                    removeOnComplete: true,
+                    removeOnFail: false,
+                }
+            );
+
+            this.logger.info(
+                { paymentId: payment.id, orderId },
+                'Payment verification job queued'
+            );
+
+            // 11. Return payment details
+            const timeRemaining = Math.max(
+                0,
+                Math.floor(
+                    (addressDetails.expiresAt.getTime() - Date.now()) / 1000
+                )
+            );
+
+            return {
+                paymentId: payment.id,
+                orderId,
+                cryptocurrency,
+                network,
+                paymentAddress: addressDetails.address,
+                amount: cryptoAmount.toString(),
+                amountUsd: amountUsd.toString(),
+                exchangeRate: exchangeRate.toString(),
+                qrCode,
+                status: payment.status,
+                expiresAt: addressDetails.expiresAt,
+                timeRemaining,
+                txHash: payment.txHash || undefined,
+                confirmations: payment.confirmations,
+                requiredConfirmations: payment.requiredConfirmations,
+                paymentUri,
+                createdAt: payment.createdAt,
+            };
+        } catch (error) {
+            if (
+                error instanceof NotFoundException ||
+                error instanceof BadRequestException
+            ) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, orderId, cryptocurrency, userId },
+                'Failed to create crypto payment'
+            );
+
+            throw new HttpException(
+                `Failed to create crypto payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get payment status
+     * @param paymentId - Payment ID
+     * @param userId - User ID (for authorization)
+     * @returns Current payment status
+     */
+    async getPaymentStatus(
+        paymentId: string,
+        userId: string
+    ): Promise<PaymentStatusResponseDto> {
+        this.logger.debug({ paymentId, userId }, 'Getting payment status');
+
+        try {
+            const payment = await this.databaseService.cryptoPayment.findUnique(
+                {
+                    where: { id: paymentId },
+                    include: {
+                        order: true,
+                    },
+                }
+            );
+
+            if (!payment) {
+                throw new NotFoundException(`Payment not found: ${paymentId}`);
+            }
+
+            // Verify payment belongs to user's order
+            if (payment.order.userId !== userId) {
+                throw new BadRequestException(
+                    'You do not have permission to view this payment'
+                );
+            }
+
+            // Check if payment has expired
+            const now = new Date();
+            const isExpired = now > payment.expiresAt;
+            const timeRemaining = isExpired
+                ? 0
+                : Math.max(
+                      0,
+                      Math.floor(
+                          (payment.expiresAt.getTime() - now.getTime()) / 1000
+                      )
+                  );
+
+            // Auto-expire if needed
+            if (isExpired && payment.status === PaymentStatus.PENDING) {
+                this.logger.warn(
+                    { paymentId, expiresAt: payment.expiresAt },
+                    'Payment expired, updating status'
+                );
+                await this.expirePayment(paymentId);
+                // Refresh payment data
+                const updatedPayment =
+                    await this.databaseService.cryptoPayment.findUnique({
+                        where: { id: paymentId },
+                    });
+                if (updatedPayment) {
+                    return this.mapToStatusResponseDto(updatedPayment, 0, true);
+                }
+            }
+
+            return this.mapToStatusResponseDto(
+                payment,
+                timeRemaining,
+                isExpired
+            );
+        } catch (error) {
+            if (
+                error instanceof NotFoundException ||
+                error instanceof BadRequestException
+            ) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, paymentId, userId },
+                'Failed to get payment status'
+            );
+
+            throw new HttpException(
+                `Failed to get payment status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get payment by order ID
+     * @param orderId - Order ID
+     * @param userId - User ID (for authorization)
+     * @returns Payment details
+     */
+    async getPaymentByOrderId(
+        orderId: string,
+        userId: string
+    ): Promise<CryptoPaymentResponseDto> {
+        this.logger.debug({ orderId, userId }, 'Getting payment by order ID');
+
+        try {
+            const order = await this.databaseService.order.findUnique({
+                where: { id: orderId },
+                include: {
+                    cryptoPayment: true,
+                },
+            });
+
+            if (!order) {
+                throw new NotFoundException(`Order not found: ${orderId}`);
+            }
+
+            // Verify order belongs to user
+            if (order.userId !== userId) {
+                throw new BadRequestException(
+                    'You do not have permission to view this order'
+                );
+            }
+
+            if (!order.cryptoPayment) {
+                throw new NotFoundException(
+                    `No crypto payment found for order: ${orderId}`
+                );
+            }
+
+            return this.mapToResponseDto(order.cryptoPayment, orderId);
+        } catch (error) {
+            if (
+                error instanceof NotFoundException ||
+                error instanceof BadRequestException
+            ) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, orderId, userId },
+                'Failed to get payment by order ID'
+            );
+
+            throw new HttpException(
+                `Failed to get payment by order ID: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Handle payment expiration
+     * @param paymentId - Payment ID
+     */
+    async expirePayment(paymentId: string): Promise<void> {
+        this.logger.info({ paymentId }, 'Expiring payment');
+
+        try {
+            const payment = await this.databaseService.cryptoPayment.findUnique(
+                {
+                    where: { id: paymentId },
+                }
+            );
+
+            if (!payment) {
+                this.logger.warn(
+                    { paymentId },
+                    'Payment not found for expiration'
+                );
+                return;
+            }
+
+            // Only expire if still pending
+            if (payment.status !== PaymentStatus.PENDING) {
+                this.logger.debug(
+                    { paymentId, status: payment.status },
+                    'Payment already processed, skipping expiration'
+                );
+                return;
+            }
+
+            // Update payment status to EXPIRED
+            await this.databaseService.cryptoPayment.update({
+                where: { id: paymentId },
+                data: {
+                    status: PaymentStatus.EXPIRED,
+                },
+            });
+
+            this.logger.info(
+                { paymentId, orderId: payment.orderId },
+                'Payment expired successfully'
+            );
+        } catch (error) {
+            this.logger.error({ error, paymentId }, 'Failed to expire payment');
+            // Don't throw - expiration is not critical
+        }
+    }
+
+    /**
+     * Get required confirmations for a cryptocurrency
+     * @param cryptocurrency - Cryptocurrency type
+     * @returns Required number of confirmations
+     */
+    private getRequiredConfirmations(cryptocurrency: CryptoCurrency): number {
+        const confirmationsConfig = this.configService.get<
+            Record<string, number>
+        >('crypto.confirmations');
+
+        const configMap: Record<CryptoCurrency, string> = {
+            BTC: 'btc',
+            ETH: 'eth',
+            LTC: 'ltc',
+            BCH: 'bch',
+            USDT_ERC20: 'usdtErc20',
+            USDT_TRC20: 'usdtTrc20',
+            USDC_ERC20: 'usdcErc20',
+        };
+
+        const configKey = configMap[cryptocurrency];
+        const confirmations = confirmationsConfig?.[configKey];
+
+        if (confirmations && confirmations > 0) {
+            return confirmations;
+        }
+
+        // Default confirmations
+        const defaults: Record<CryptoCurrency, number> = {
+            BTC: 3,
+            ETH: 12,
+            LTC: 6,
+            BCH: 6,
+            USDT_ERC20: 12,
+            USDT_TRC20: 19,
+            USDC_ERC20: 12,
+        };
+
+        return defaults[cryptocurrency] || 3;
+    }
+
+    /**
+     * Get network string for a cryptocurrency
+     * @param cryptocurrency - Cryptocurrency type
+     * @returns Network string
+     */
+    private getNetwork(cryptocurrency: CryptoCurrency): string {
+        const networkMap: Record<CryptoCurrency, string> = {
+            BTC: 'mainnet',
+            ETH: 'mainnet',
+            LTC: 'mainnet',
+            BCH: 'mainnet',
+            USDT_ERC20: 'ERC20',
+            USDT_TRC20: 'TRC20',
+            USDC_ERC20: 'ERC20',
+        };
+
+        const isTestnet = this.configService.get<boolean>(
+            'crypto.tatum.testnet',
+            false
+        );
+
+        if (isTestnet) {
+            const testnetMap: Record<CryptoCurrency, string> = {
+                BTC: 'testnet',
+                ETH: 'sepolia',
+                LTC: 'testnet',
+                BCH: 'testnet',
+                USDT_ERC20: 'ERC20',
+                USDT_TRC20: 'TRC20',
+                USDC_ERC20: 'ERC20',
+            };
+            return testnetMap[cryptocurrency] || networkMap[cryptocurrency];
+        }
+
+        return networkMap[cryptocurrency];
+    }
+
+    /**
+     * Map database payment to response DTO
+     * @param payment - Payment record
+     * @param orderId - Order ID
+     * @returns Response DTO
+     */
+    private async mapToResponseDto(
+        payment: any,
+        orderId: string
+    ): Promise<CryptoPaymentResponseDto> {
+        const now = new Date();
+        const timeRemaining = Math.max(
+            0,
+            Math.floor((payment.expiresAt.getTime() - now.getTime()) / 1000)
+        );
+
+        // Generate QR code
+        let qrCode: string;
+        try {
+            qrCode = await generatePaymentQRCode(
+                payment.paymentAddress,
+                parseFloat(payment.amount.toString()),
+                payment.cryptocurrency
+            );
+        } catch (error) {
+            this.logger.warn(
+                { error, paymentId: payment.id },
+                'Failed to generate QR code for existing payment'
+            );
+            qrCode = ''; // Fallback to empty string
+        }
+
+        const paymentUri = generatePaymentURI(
+            payment.paymentAddress,
+            parseFloat(payment.amount.toString()),
+            payment.cryptocurrency
+        );
+
+        return {
+            paymentId: payment.id,
+            orderId,
+            cryptocurrency: payment.cryptocurrency,
+            network: payment.network || undefined,
+            paymentAddress: payment.paymentAddress,
+            amount: payment.amount.toString(),
+            amountUsd: payment.amountUsd.toString(),
+            exchangeRate: payment.exchangeRate?.toString() || undefined,
+            qrCode,
+            status: payment.status,
+            expiresAt: payment.expiresAt,
+            timeRemaining,
+            txHash: payment.txHash || undefined,
+            confirmations: payment.confirmations,
+            requiredConfirmations: payment.requiredConfirmations,
+            paymentUri,
+            createdAt: payment.createdAt,
+        };
+    }
+
+    /**
+     * Map database payment to status response DTO
+     * @param payment - Payment record
+     * @param timeRemaining - Time remaining in seconds
+     * @param isExpired - Whether payment is expired
+     * @returns Status response DTO
+     */
+    private mapToStatusResponseDto(
+        payment: any,
+        timeRemaining: number,
+        isExpired: boolean
+    ): PaymentStatusResponseDto {
+        return {
+            paymentId: payment.id,
+            status: payment.status,
+            paymentAddress: payment.paymentAddress,
+            amount: payment.amount.toString(),
+            txHash: payment.txHash || undefined,
+            confirmations: payment.confirmations,
+            requiredConfirmations: payment.requiredConfirmations,
+            timeRemaining,
+            isExpired,
+            paidAt: payment.paidAt || undefined,
+            confirmedAt: payment.confirmedAt || undefined,
+            expiresAt: payment.expiresAt,
+        };
+    }
+}

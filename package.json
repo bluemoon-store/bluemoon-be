@@ -53,6 +53,7 @@
     "@sentry/tracing": "^7.120.4",
     "@types/express": "^5.0.5",
     "argon2": "^0.44.0",
+    "axios": "^1.13.4",
     "bitcoinjs-lib": "^7.0.1",
     "bull": "^4.16.5",
     "cache-manager": "^7.2.5",
