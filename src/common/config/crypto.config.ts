@@ -62,12 +62,23 @@ export default registerAs(
                 process.env.PAYMENT_EXPIRATION_MINUTES || '15',
                 10
             ),
+            expirationGracePeriodMinutes: parseInt(
+                process.env.PAYMENT_EXPIRATION_GRACE_PERIOD_MINUTES || '30',
+                10
+            ), // Check for funds 30 min after expiration
             monitorIntervalSeconds: parseInt(
                 process.env.PAYMENT_MONITOR_INTERVAL_SECONDS || '60',
                 10
             ),
             enableForwarding: process.env.ENABLE_PAYMENT_FORWARDING === 'true',
             autoDelivery: process.env.ENABLE_AUTO_DELIVERY !== 'false', // default true
+            partialPaymentTolerancePercent: parseFloat(
+                process.env.PARTIAL_PAYMENT_TOLERANCE_PERCENT || '1.0'
+            ), // Accept if payment is within 1% of expected
+            maxForwardingRetries: parseInt(
+                process.env.MAX_FORWARDING_RETRIES || '5',
+                10
+            ),
         },
 
         // Confirmation Requirements

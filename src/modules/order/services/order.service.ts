@@ -201,7 +201,7 @@ export class OrderService implements IOrderService {
                 return { order: newOrder, items: orderItems };
             });
 
-            // Fetch complete order with items
+            // Fetch complete order with items and crypto payment
             const completeOrder = await this.databaseService.order.findUnique({
                 where: { id: order.order.id },
                 include: {
@@ -221,6 +221,7 @@ export class OrderService implements IOrderService {
                             },
                         },
                     },
+                    cryptoPayment: true,
                 },
             });
 
@@ -230,11 +231,16 @@ export class OrderService implements IOrderService {
                     orderNumber,
                     userId,
                     totalAmount,
+                    paymentMethod: data.paymentMethod,
                 },
                 'Order created'
             );
 
-            return completeOrder as OrderResponseDto;
+            // Note: Crypto payment creation is handled via separate endpoint
+            // POST /v1/crypto-payments/orders/:orderId
+            // This allows for better separation of concerns and error handling
+
+            return completeOrder as unknown as OrderResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -294,6 +300,7 @@ export class OrderService implements IOrderService {
                                     },
                                 },
                             },
+                            cryptoPayment: true,
                         },
                         orderBy: { createdAt: 'desc' },
                     }
@@ -366,7 +373,7 @@ export class OrderService implements IOrderService {
                 );
             }
 
-            return order as OrderDetailResponseDto;
+            return order as unknown as OrderDetailResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -435,6 +442,7 @@ export class OrderService implements IOrderService {
                             },
                         },
                     },
+                    cryptoPayment: true,
                 },
             });
 
@@ -465,7 +473,7 @@ export class OrderService implements IOrderService {
                 }
             }
 
-            return updatedOrder as OrderResponseDto;
+            return updatedOrder as unknown as OrderResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -547,6 +555,7 @@ export class OrderService implements IOrderService {
                 },
                 include: {
                     items: true,
+                    cryptoPayment: true,
                 },
             });
 
@@ -604,13 +613,14 @@ export class OrderService implements IOrderService {
                                     },
                                 },
                             },
+                            cryptoPayment: true,
                         },
                     });
                 }
             );
 
             this.logger.info({ orderId, userId }, 'Order cancelled');
-            return cancelledOrder as OrderResponseDto;
+            return cancelledOrder as unknown as OrderResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

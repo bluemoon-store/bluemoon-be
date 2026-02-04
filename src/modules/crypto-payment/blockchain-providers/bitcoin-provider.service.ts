@@ -146,6 +146,48 @@ export class BitcoinProvider extends BaseBlockchainProvider {
     }
 
     /**
+     * Get transaction details by hash
+     * @param txHash - Transaction hash
+     * @returns Transaction details or null
+     */
+    async getTransaction(txHash: string): Promise<Transaction | null> {
+        this.logger.debug({ txHash }, 'Getting Bitcoin transaction details');
+
+        try {
+            const response = await this.tatumClient.get(
+                `/bitcoin/transaction/${txHash}`
+            );
+
+            if (!response.data) {
+                return null;
+            }
+
+            const tx = response.data;
+
+            // Extract recipient and amount (first output)
+            const firstOutput = tx.outputs?.[0];
+            const firstInput = tx.inputs?.[0];
+
+            const transaction: Transaction = {
+                hash: tx.hash,
+                from: firstInput?.coin?.address || '',
+                to: firstOutput?.address || '',
+                amount: firstOutput?.value?.toString() || '0',
+                confirmations: await this.getTransactionConfirmations(txHash),
+                blockNumber: tx.blockNumber || undefined,
+                timestamp: tx.timestamp || undefined,
+            };
+
+            return transaction;
+        } catch (error) {
+            if (error.response?.status === 404) {
+                return null;
+            }
+            this.handleTatumError(error, 'getTransaction');
+        }
+    }
+
+    /**
      * Get transaction confirmations
      * @param txHash - Transaction hash
      * @returns Number of confirmations
@@ -197,6 +239,52 @@ export class BitcoinProvider extends BaseBlockchainProvider {
                 return 0;
             }
             this.handleTatumError(error, 'getTransactionConfirmations');
+        }
+    }
+
+    /**
+     * Estimate network fee for a transaction
+     * @param from - Sender address
+     * @param to - Recipient address
+     * @param amount - Amount in BTC
+     * @returns Estimated fee in BTC
+     */
+    async estimateFee(
+        from: string,
+        to: string,
+        amount: string
+    ): Promise<string> {
+        this.logger.debug({ from, to, amount }, 'Estimating Bitcoin fee');
+
+        try {
+            // Get current recommended fee per byte from Tatum
+            const feeResponse = await this.tatumClient.get(
+                '/bitcoin/blockchain/fee'
+            );
+            const satoshisPerByte = feeResponse.data?.fast || 20; // Default to 20 sat/byte
+
+            // Estimate transaction size (typical: ~250 bytes for 1 input, 2 outputs)
+            const estimatedSize = 250;
+            const feeInSatoshis = satoshisPerByte * estimatedSize;
+            const feeInBTC = feeInSatoshis / 100000000; // Convert satoshis to BTC
+
+            this.logger.debug(
+                {
+                    satoshisPerByte,
+                    estimatedSize,
+                    feeInBTC,
+                },
+                'Bitcoin fee estimated'
+            );
+
+            return feeInBTC.toString();
+        } catch (error) {
+            this.logger.warn(
+                { error: error.message },
+                'Failed to estimate fee, using default'
+            );
+            // Default fallback fee
+            return '0.00001';
         }
     }
 

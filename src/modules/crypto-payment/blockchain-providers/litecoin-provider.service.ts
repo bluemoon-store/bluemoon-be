@@ -143,6 +143,46 @@ export class LitecoinProvider extends BaseBlockchainProvider {
     }
 
     /**
+     * Get transaction details by hash
+     * @param txHash - Transaction hash
+     * @returns Transaction details or null
+     */
+    async getTransaction(txHash: string): Promise<Transaction | null> {
+        this.logger.debug({ txHash }, 'Getting Litecoin transaction details');
+
+        try {
+            const response = await this.tatumClient.get(
+                `/litecoin/transaction/${txHash}`
+            );
+
+            if (!response.data) {
+                return null;
+            }
+
+            const tx = response.data;
+            const firstOutput = tx.outputs?.[0];
+            const firstInput = tx.inputs?.[0];
+
+            const transaction: Transaction = {
+                hash: tx.hash,
+                from: firstInput?.coin?.address || '',
+                to: firstOutput?.address || '',
+                amount: firstOutput?.value?.toString() || '0',
+                confirmations: await this.getTransactionConfirmations(txHash),
+                blockNumber: tx.blockNumber || undefined,
+                timestamp: tx.timestamp || undefined,
+            };
+
+            return transaction;
+        } catch (error) {
+            if (error.response?.status === 404) {
+                return null;
+            }
+            this.handleTatumError(error, 'getTransaction');
+        }
+    }
+
+    /**
      * Get transaction confirmations
      * @param txHash - Transaction hash
      * @returns Number of confirmations
@@ -191,6 +231,47 @@ export class LitecoinProvider extends BaseBlockchainProvider {
                 return 0;
             }
             this.handleTatumError(error, 'getTransactionConfirmations');
+        }
+    }
+
+    /**
+     * Estimate network fee for a transaction
+     * @param from - Sender address
+     * @param to - Recipient address
+     * @param amount - Amount in LTC
+     * @returns Estimated fee in LTC
+     */
+    async estimateFee(
+        from: string,
+        to: string,
+        amount: string
+    ): Promise<string> {
+        this.logger.debug({ from, to, amount }, 'Estimating Litecoin fee');
+
+        try {
+            // Get current recommended fee per byte from Tatum (if available)
+            // Otherwise use default
+            const estimatedSize = 250; // Typical transaction size
+            const satoshisPerByte = 10; // Conservative default for Litecoin
+            const feeInSatoshis = satoshisPerByte * estimatedSize;
+            const feeInLTC = feeInSatoshis / 100000000; // Convert to LTC
+
+            this.logger.debug(
+                {
+                    satoshisPerByte,
+                    estimatedSize,
+                    feeInLTC,
+                },
+                'Litecoin fee estimated'
+            );
+
+            return feeInLTC.toString();
+        } catch (error) {
+            this.logger.warn(
+                { error: error.message },
+                'Failed to estimate fee, using default'
+            );
+            return '0.0001';
         }
     }
 

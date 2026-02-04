@@ -64,10 +64,26 @@ export abstract class BaseBlockchainProvider implements IBlockchainProvider {
     ): Promise<Transaction | null>;
 
     /**
+     * Get transaction details by hash
+     * Must be implemented by subclasses
+     */
+    abstract getTransaction(txHash: string): Promise<Transaction | null>;
+
+    /**
      * Get transaction confirmations
      * Must be implemented by subclasses
      */
     abstract getTransactionConfirmations(txHash: string): Promise<number>;
+
+    /**
+     * Estimate network fee for a transaction
+     * Must be implemented by subclasses
+     */
+    abstract estimateFee(
+        from: string,
+        to: string,
+        amount: string
+    ): Promise<string>;
 
     /**
      * Send transaction

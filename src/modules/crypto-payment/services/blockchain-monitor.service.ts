@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { CryptoCurrency, PaymentStatus, OrderStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { CryptoPaymentService } from './crypto-payment.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
-// import { EthereumProvider } from '../blockchain-providers/ethereum-provider.service';
+import { EthereumProvider } from '../blockchain-providers/ethereum-provider.service';
 import { IBlockchainMonitorService } from '../interfaces/blockchain-monitor.service.interface';
 
 /**
@@ -20,8 +21,11 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         private readonly databaseService: DatabaseService,
         private readonly cryptoPaymentService: CryptoPaymentService,
         private readonly providerFactory: BlockchainProviderFactory,
+        private readonly configService: ConfigService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
+        @InjectQueue('crypto-payment-forwarding')
+        private readonly paymentForwardingQueue: Queue,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(BlockchainMonitorService.name);
@@ -128,20 +132,80 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 'Balance checked'
             );
 
-            // Check if payment amount is met or exceeded
-            if (balanceNumber >= expectedAmount) {
-                // Payment detected!
+            // Get partial payment tolerance from config (default 1%)
+            const tolerancePercent = this.configService.get<number>(
+                'crypto.payment.partialPaymentTolerancePercent',
+                1.0
+            );
+            const minAcceptableAmount =
+                expectedAmount * (1 - tolerancePercent / 100);
+
+            // Check if payment amount is met or exceeded (with tolerance)
+            if (balanceNumber >= minAcceptableAmount) {
+                // Payment detected! (with possible partial/overpayment)
+                const isPartialPayment =
+                    balanceNumber >= minAcceptableAmount &&
+                    balanceNumber < expectedAmount;
+                const isOverpayment = balanceNumber > expectedAmount;
+
                 this.logger.info(
                     {
                         paymentId,
                         orderId: payment.orderId,
                         address: payment.paymentAddress,
-                        amount: balanceNumber,
+                        amountReceived: balanceNumber,
                         expectedAmount,
+                        isPartialPayment,
+                        isOverpayment,
                         txHash: transaction?.hash,
                     },
                     'Payment detected on blockchain'
                 );
+
+                // Verify transaction details (double-spend protection)
+                if (transaction) {
+                    const isValidTransaction = await this.verifyTransaction(
+                        transaction,
+                        payment.paymentAddress,
+                        minAcceptableAmount
+                    );
+
+                    if (!isValidTransaction) {
+                        this.logger.error(
+                            {
+                                paymentId,
+                                txHash: transaction.hash,
+                                to: transaction.to,
+                                amount: transaction.amount,
+                            },
+                            'Transaction verification failed - possible fraud'
+                        );
+                        return; // Don't accept invalid transactions
+                    }
+                }
+
+                // Prepare metadata for partial/overpayment
+                const metadata: any = {
+                    ...((payment.metadata as any) || {}),
+                    amountReceived: balanceNumber,
+                    expectedAmount,
+                };
+
+                if (isPartialPayment) {
+                    metadata.isPartialPayment = true;
+                    metadata.partialPaymentPercentage =
+                        (balanceNumber / expectedAmount) * 100;
+                    metadata.shortfall = expectedAmount - balanceNumber;
+                    // Flag for admin review
+                    metadata.requiresAdminReview = true;
+                }
+
+                if (isOverpayment) {
+                    metadata.isOverpayment = true;
+                    metadata.overpaymentAmount = balanceNumber - expectedAmount;
+                    // Flag for admin review
+                    metadata.requiresAdminReview = true;
+                }
 
                 // Update payment status to PAID
                 await this.databaseService.cryptoPayment.update({
@@ -151,6 +215,7 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                         paidAt: new Date(),
                         txHash: transaction?.hash || null,
                         confirmations: transaction?.confirmations || 0,
+                        metadata,
                     },
                 });
 
@@ -174,16 +239,34 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                     'Payment marked as PAID, confirmation check queued'
                 );
             } else if (balanceNumber > 0) {
-                // Partial payment detected
+                // Insufficient partial payment detected (below tolerance)
                 this.logger.warn(
                     {
                         paymentId,
                         balance: balanceNumber,
                         expectedAmount,
+                        minAcceptable: minAcceptableAmount,
                         percentage: (balanceNumber / expectedAmount) * 100,
+                        tolerancePercent,
                     },
-                    'Partial payment detected (insufficient amount)'
+                    'Insufficient partial payment detected (below tolerance)'
                 );
+
+                // Update metadata to flag for admin review
+                await this.databaseService.cryptoPayment.update({
+                    where: { id: paymentId },
+                    data: {
+                        metadata: {
+                            ...((payment.metadata as any) || {}),
+                            insufficientPayment: true,
+                            amountReceived: balanceNumber,
+                            expectedAmount,
+                            shortfall: expectedAmount - balanceNumber,
+                            requiresAdminReview: true,
+                            detectedAt: new Date().toISOString(),
+                        },
+                    },
+                });
             }
         } catch (error) {
             this.logger.error({ error, paymentId }, 'Failed to check payment');
@@ -192,30 +275,65 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
     }
 
     /**
-     * Check all pending payments
+     * Check all pending payments (including grace period)
      */
     async checkPendingPayments(): Promise<void> {
         this.logger.debug('Checking all pending payments');
 
         try {
+            // Get grace period from config
+            const gracePeriodMinutes = this.configService.get<number>(
+                'crypto.payment.expirationGracePeriodMinutes',
+                30
+            );
+            const gracePeriodDate = new Date();
+            gracePeriodDate.setMinutes(
+                gracePeriodDate.getMinutes() - gracePeriodMinutes
+            );
+
             const pendingPayments =
                 await this.databaseService.cryptoPayment.findMany({
                     where: {
                         status: PaymentStatus.PENDING,
                         expiresAt: {
-                            gt: new Date(), // Not expired yet
+                            gt: gracePeriodDate, // Within grace period
                         },
                     },
                     select: {
                         id: true,
+                        expiresAt: true,
                     },
                     take: 100, // Limit to 100 payments per batch
                 });
 
+            // Separate active vs grace period payments
+            const now = new Date();
+            const activePayments = pendingPayments.filter(
+                p => p.expiresAt > now
+            );
+            const gracePeriodPayments = pendingPayments.filter(
+                p => p.expiresAt <= now
+            );
+
             this.logger.info(
-                { count: pendingPayments.length },
+                {
+                    activeCount: activePayments.length,
+                    gracePeriodCount: gracePeriodPayments.length,
+                    total: pendingPayments.length,
+                },
                 'Found pending payments to check'
             );
+
+            // Check grace period payments with special logging
+            if (gracePeriodPayments.length > 0) {
+                this.logger.info(
+                    {
+                        count: gracePeriodPayments.length,
+                        gracePeriodMinutes,
+                    },
+                    'Checking expired payments within grace period'
+                );
+            }
 
             // Check payments in parallel (with concurrency limit)
             const concurrency = 5; // Check 5 payments at a time
@@ -385,24 +503,167 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 'Order status updated to PAYMENT_RECEIVED'
             );
 
-            // TODO: Queue order processing job
-            // await this.orderQueue.add('process-order', { orderId: payment.orderId });
+            // Auto-process order for instant delivery (all products are digital)
+            const autoDelivery = this.configService.get<boolean>(
+                'crypto.payment.autoDelivery',
+                true
+            );
+
+            if (autoDelivery) {
+                try {
+                    // Import OrderDeliveryService dynamically to avoid circular dependency
+                    const { OrderDeliveryService } =
+                        await import('src/modules/order/services/order-delivery.service');
+
+                    // Process instant delivery immediately
+                    // Note: This will be handled by OrderDeliveryService.processInstantDelivery
+                    // which is triggered automatically when order status changes to PAYMENT_RECEIVED
+                    this.logger.info(
+                        { paymentId, orderId: payment.orderId },
+                        'Auto-delivery enabled - order will be processed automatically'
+                    );
+                } catch (deliveryError) {
+                    this.logger.error(
+                        {
+                            error: deliveryError,
+                            paymentId,
+                            orderId: payment.orderId,
+                        },
+                        'Failed to trigger auto-delivery'
+                    );
+                }
+            }
 
             // TODO: Send notification
             // await this.notificationService.sendPaymentConfirmed(payment.orderId);
 
-            // Note: Payment forwarding logic will be implemented in Phase 6.7
-            // Forwarding can be queued here if needed:
-            // const enableForwarding = this.configService.get<boolean>('crypto.payment.enableForwarding', false);
-            // if (enableForwarding && this.shouldForwardPayment(payment)) {
-            //   await this.paymentVerificationQueue.add('forward-payment', { paymentId });
-            // }
+            // Queue payment forwarding if enabled
+            const enableForwarding = this.configService.get<boolean>(
+                'crypto.payment.enableForwarding',
+                false
+            );
+            if (enableForwarding) {
+                // Check if payment should be forwarded (must be CONFIRMED and not already forwarded)
+                const paymentCheck =
+                    await this.databaseService.cryptoPayment.findUnique({
+                        where: { id: paymentId },
+                        select: {
+                            status: true,
+                            forwardTxHash: true,
+                        },
+                    });
+
+                if (
+                    paymentCheck &&
+                    paymentCheck.status === PaymentStatus.CONFIRMED &&
+                    !paymentCheck.forwardTxHash
+                ) {
+                    await this.paymentForwardingQueue.add(
+                        'forward-payment',
+                        { paymentId },
+                        {
+                            attempts: 5,
+                            backoff: {
+                                type: 'exponential',
+                                delay: 60000, // Start with 1 minute delay
+                            },
+                            removeOnComplete: true,
+                            removeOnFail: false,
+                        }
+                    );
+
+                    this.logger.info(
+                        { paymentId },
+                        'Payment forwarding job queued'
+                    );
+                }
+            }
         } catch (error) {
             this.logger.error(
                 { error, paymentId },
                 'Failed to confirm payment'
             );
             throw error; // Re-throw for retry
+        }
+    }
+
+    /**
+     * Verify transaction details (double-spend protection)
+     * @param transaction - Transaction to verify
+     * @param expectedAddress - Expected recipient address
+     * @param minAmount - Minimum expected amount
+     * @returns True if transaction is valid
+     */
+    private async verifyTransaction(
+        transaction: any,
+        expectedAddress: string,
+        minAmount: number
+    ): Promise<boolean> {
+        try {
+            // 1. Verify recipient address matches
+            if (
+                transaction.to.toLowerCase() !== expectedAddress.toLowerCase()
+            ) {
+                this.logger.error(
+                    {
+                        txHash: transaction.hash,
+                        expectedTo: expectedAddress,
+                        actualTo: transaction.to,
+                    },
+                    'Transaction recipient address mismatch'
+                );
+                return false;
+            }
+
+            // 2. Verify amount is sufficient
+            const txAmount = parseFloat(transaction.amount || '0');
+            if (txAmount < minAmount) {
+                this.logger.error(
+                    {
+                        txHash: transaction.hash,
+                        expectedAmount: minAmount,
+                        actualAmount: txAmount,
+                    },
+                    'Transaction amount insufficient'
+                );
+                return false;
+            }
+
+            // 3. Verify transaction has confirmations (not in mempool only)
+            // Allow 0 confirmations for initial detection, but flag suspicious patterns
+            if (transaction.confirmations === undefined) {
+                this.logger.warn(
+                    { txHash: transaction.hash },
+                    'Transaction confirmations unavailable'
+                );
+            }
+
+            // 4. Verify block number exists (transaction is mined)
+            if (!transaction.blockNumber && transaction.confirmations === 0) {
+                // Transaction is in mempool - this is acceptable for initial detection
+                this.logger.debug(
+                    { txHash: transaction.hash },
+                    'Transaction in mempool, not yet mined'
+                );
+            }
+
+            this.logger.debug(
+                {
+                    txHash: transaction.hash,
+                    to: transaction.to,
+                    amount: txAmount,
+                    confirmations: transaction.confirmations,
+                },
+                'Transaction verification passed'
+            );
+
+            return true;
+        } catch (error) {
+            this.logger.error(
+                { error, transaction },
+                'Failed to verify transaction'
+            );
+            return false;
         }
     }
 

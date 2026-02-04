@@ -89,14 +89,55 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 );
             }
 
-            // Check if payment already exists
+            // Rate limiting: Check if payment already exists (1 payment per order)
             if (order.cryptoPayment) {
                 this.logger.warn(
                     { orderId, paymentId: order.cryptoPayment.id },
-                    'Payment already exists for this order'
+                    'Payment already exists for this order - rate limit enforced'
                 );
-                // Return existing payment instead of creating new one
-                return this.mapToResponseDto(order.cryptoPayment, orderId);
+
+                // Check if existing payment is expired
+                const now = new Date();
+                if (now > order.cryptoPayment.expiresAt) {
+                    // Grace period check
+                    const gracePeriodMinutes = this.configService.get<number>(
+                        'crypto.payment.expirationGracePeriodMinutes',
+                        30
+                    );
+                    const gracePeriodDate = new Date(
+                        order.cryptoPayment.expiresAt
+                    );
+                    gracePeriodDate.setMinutes(
+                        gracePeriodDate.getMinutes() + gracePeriodMinutes
+                    );
+
+                    if (now > gracePeriodDate) {
+                        // Payment is expired and past grace period
+                        // User can create a new payment
+                        this.logger.info(
+                            { orderId, oldPaymentId: order.cryptoPayment.id },
+                            'Previous payment expired past grace period, allowing new payment'
+                        );
+                    } else {
+                        // Still within grace period - check for funds
+                        this.logger.warn(
+                            {
+                                orderId,
+                                paymentId: order.cryptoPayment.id,
+                                expiresAt: order.cryptoPayment.expiresAt,
+                            },
+                            'Payment within grace period - checking for late payment before creating new one'
+                        );
+                        // Return existing payment - grace period still active
+                        return this.mapToResponseDto(
+                            order.cryptoPayment,
+                            orderId
+                        );
+                    }
+                } else {
+                    // Payment not expired - return existing
+                    return this.mapToResponseDto(order.cryptoPayment, orderId);
+                }
             }
 
             // 2. Get exchange rate and calculate crypto amount

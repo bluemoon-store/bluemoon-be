@@ -45,10 +45,7 @@ export class EthereumProvider extends BaseBlockchainProvider {
      * @returns Balance in ETH (as string)
      */
     async getBalance(address: string): Promise<string> {
-        this.logger.debug(
-            { address, tokenContract },
-            'Getting Ethereum balance'
-        );
+        this.logger.debug({ address }, 'Getting Ethereum balance');
 
         try {
             // Native ETH balance using Tatum API
@@ -258,6 +255,41 @@ export class EthereumProvider extends BaseBlockchainProvider {
     }
 
     /**
+     * Get transaction details by hash
+     * @param txHash - Transaction hash
+     * @returns Transaction details or null
+     */
+    async getTransaction(txHash: string): Promise<Transaction | null> {
+        this.logger.debug({ txHash }, 'Getting Ethereum transaction details');
+
+        try {
+            const tx = await this.provider.getTransaction(txHash);
+            const receipt = await this.provider.getTransactionReceipt(txHash);
+
+            if (!tx) {
+                return null;
+            }
+
+            const amountEth = ethers.formatEther(tx.value || '0');
+
+            const transaction: Transaction = {
+                hash: tx.hash,
+                from: tx.from || '',
+                to: tx.to || '',
+                amount: amountEth,
+                confirmations: await this.getTransactionConfirmations(txHash),
+                blockNumber: receipt?.blockNumber || undefined,
+                timestamp: undefined, // Would need to fetch block to get timestamp
+            };
+
+            return transaction;
+        } catch (error) {
+            this.logger.warn({ error, txHash }, 'Failed to get transaction');
+            return null;
+        }
+    }
+
+    /**
      * Get transaction confirmations
      * @param txHash - Transaction hash
      * @returns Number of confirmations
@@ -297,6 +329,53 @@ export class EthereumProvider extends BaseBlockchainProvider {
                 'Failed to get transaction confirmations'
             );
             return 0;
+        }
+    }
+
+    /**
+     * Estimate network fee for a transaction
+     * @param from - Sender address
+     * @param to - Recipient address
+     * @param amount - Amount in ETH
+     * @returns Estimated fee in ETH
+     */
+    async estimateFee(
+        from: string,
+        to: string,
+        amount: string
+    ): Promise<string> {
+        this.logger.debug({ from, to, amount }, 'Estimating Ethereum fee');
+
+        try {
+            // Get current gas price
+            const feeData = await this.provider.getFeeData();
+            const gasPrice =
+                feeData.gasPrice || ethers.parseUnits('50', 'gwei'); // Default to 50 Gwei
+
+            // Estimate gas limit (21000 for ETH transfer, more for contracts)
+            const gasLimit = 21000n;
+
+            // Calculate fee
+            const feeWei = gasPrice * gasLimit;
+            const feeEth = ethers.formatEther(feeWei);
+
+            this.logger.debug(
+                {
+                    gasPrice: ethers.formatUnits(gasPrice, 'gwei'),
+                    gasLimit: gasLimit.toString(),
+                    feeEth,
+                },
+                'Ethereum fee estimated'
+            );
+
+            return feeEth;
+        } catch (error) {
+            this.logger.warn(
+                { error: error.message },
+                'Failed to estimate fee, using default'
+            );
+            // Default fallback fee (0.001 ETH)
+            return '0.001';
         }
     }
 

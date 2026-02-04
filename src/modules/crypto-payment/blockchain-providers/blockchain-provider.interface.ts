@@ -24,11 +24,27 @@ export interface IBlockchainProvider {
     getTransactionByAddress(address: string): Promise<Transaction | null>;
 
     /**
+     * Get transaction details by hash
+     * @param txHash - Transaction hash
+     * @returns Transaction details or null
+     */
+    getTransaction(txHash: string): Promise<Transaction | null>;
+
+    /**
      * Get transaction confirmations
      * @param txHash - Transaction hash
      * @returns Number of confirmations
      */
     getTransactionConfirmations(txHash: string): Promise<number>;
+
+    /**
+     * Estimate network fee for a transaction
+     * @param from - Sender address
+     * @param to - Recipient address
+     * @param amount - Amount to send
+     * @returns Estimated fee in cryptocurrency
+     */
+    estimateFee(from: string, to: string, amount: string): Promise<string>;
 
     /**
      * Send transaction

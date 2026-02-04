@@ -9,6 +9,7 @@ import { SystemWalletService } from './services/system-wallet.service';
 import { ExchangeRateService } from './services/exchange-rate.service';
 import { CryptoPaymentService } from './services/crypto-payment.service';
 import { BlockchainMonitorService } from './services/blockchain-monitor.service';
+import { PaymentForwardingService } from './services/payment-forwarding.service';
 
 // Blockchain Providers
 import { BitcoinProvider } from './blockchain-providers/bitcoin-provider.service';
@@ -19,6 +20,14 @@ import { BlockchainProviderFactory } from './blockchain-providers/blockchain-pro
 
 // Processors
 import { PaymentVerificationProcessor } from './processors/payment-verification.processor';
+import { PaymentForwardingProcessor } from './processors/payment-forwarding.processor';
+
+// Controllers
+import {
+    CryptoPaymentPublicController,
+    CryptoPublicController,
+} from './controllers/crypto-payment.public.controller';
+import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin.controller';
 
 @Module({
     imports: [
@@ -33,13 +42,18 @@ import { PaymentVerificationProcessor } from './processors/payment-verification.
             name: 'crypto-payment-forwarding',
         }),
     ],
-    controllers: [],
+    controllers: [
+        CryptoPaymentPublicController,
+        CryptoPublicController,
+        CryptoPaymentAdminController,
+    ],
     providers: [
         // Core Services
         SystemWalletService,
         ExchangeRateService,
         CryptoPaymentService,
         BlockchainMonitorService,
+        PaymentForwardingService,
         // Blockchain Providers
         BitcoinProvider,
         EthereumProvider,
@@ -49,12 +63,14 @@ import { PaymentVerificationProcessor } from './processors/payment-verification.
         BlockchainProviderFactory,
         // Processors
         PaymentVerificationProcessor,
+        PaymentForwardingProcessor,
     ],
     exports: [
         SystemWalletService,
         ExchangeRateService,
         CryptoPaymentService,
         BlockchainMonitorService,
+        PaymentForwardingService,
         BlockchainProviderFactory,
     ],
 })

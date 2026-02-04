@@ -13,6 +13,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { ProductListResponseDto } from 'src/modules/product/dtos/response/product.response';
+import { CryptoPaymentResponseDto } from 'src/modules/crypto-payment/dtos/response/crypto-payment.response';
 
 export class OrderItemResponseDto implements OrderItem {
     @ApiProperty({
@@ -169,6 +170,15 @@ export class OrderResponseDto implements Order {
     cancelledAt: Date | null;
 
     @ApiPropertyOptional({
+        example: faker.date.past().toISOString(),
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsDate()
+    deletedAt: Date | null;
+
+    @ApiPropertyOptional({
         type: [OrderItemResponseDto],
     })
     @Expose()
@@ -177,6 +187,16 @@ export class OrderResponseDto implements Order {
     @ValidateNested({ each: true })
     @Type(() => OrderItemResponseDto)
     items?: OrderItemResponseDto[];
+
+    @ApiPropertyOptional({
+        type: CryptoPaymentResponseDto,
+        description: 'Crypto payment details (if payment method is CRYPTO)',
+    })
+    @Expose()
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => CryptoPaymentResponseDto)
+    cryptoPayment?: CryptoPaymentResponseDto;
 }
 
 export class OrderDetailResponseDto extends OrderResponseDto {
