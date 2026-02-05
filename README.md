@@ -43,9 +43,6 @@ yarn generate
 
 # Run database migrations
 yarn migrate
-
-# (Optional) Seed email templates
-yarn seed:email
 ```
 
 ### 4. Start Development Server
@@ -290,17 +287,6 @@ yarn migrate:prod
 # Open Prisma Studio
 yarn studio
 ```
-
-### Background Jobs
-
-```bash
-# Seed email templates
-yarn seed:email
-
-# Remove email templates
-yarn rollback:email
-```
-
 
 ## 🚀 Deployment
 

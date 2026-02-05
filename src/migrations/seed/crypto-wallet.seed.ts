@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
+import { Command } from 'nestjs-command';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { CryptoCurrency } from '@prisma/client';
 
@@ -12,6 +13,10 @@ export class CryptoWalletSeedService {
         this.logger.setContext(CryptoWalletSeedService.name);
     }
 
+    @Command({
+        command: 'seed:crypto-wallet',
+        describe: 'Seed system wallet indexes for cryptocurrencies',
+    })
     async seed(): Promise<void> {
         this.logger.info('Seeding system wallet indexes...');
 
