@@ -172,9 +172,7 @@ model Order {
 
 enum OrderStatus {
   PENDING // Awaiting payment
-  PAYMENT_RECEIVED // Payment confirmed
-  PROCESSING // Admin processing
-  COMPLETED // Order delivered
+  COMPLETED // Order delivered (payment confirmed)
   CANCELLED // Order cancelled
   REFUNDED // Payment refunded
 }
@@ -198,47 +196,47 @@ model OrderItem {
 
 // Crypto Payment System
 model CryptoPayment {
-  id                    String         @id @default(uuid())
-  orderId               String         @unique @map("order_id")
-  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  orderId String @unique @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   // Cryptocurrency info
-  cryptocurrency        CryptoCurrency
-  network               String? // e.g., "mainnet", "ERC20", "BEP20", "TRC20"
+  cryptocurrency CryptoCurrency
+  network        String? // e.g., "mainnet", "ERC20", "BEP20", "TRC20"
 
   // Payment address (generated from system HD wallet)
-  paymentAddress        String         @map("payment_address")
-  derivationIndex       Int            @map("derivation_index")
-  derivationPath        String         @map("derivation_path")
-  encryptedPrivateKey   String         @map("encrypted_private_key") @db.Text
+  paymentAddress      String @map("payment_address")
+  derivationIndex     Int    @map("derivation_index")
+  derivationPath      String @map("derivation_path")
+  encryptedPrivateKey String @map("encrypted_private_key") @db.Text
 
   // Amount info
-  amount                Decimal        @db.Decimal(30, 18) // Crypto amount (support 18 decimals for ETH)
-  amountUsd             Decimal        @map("amount_usd") @db.Decimal(20, 2) // USD value at creation
-  exchangeRate          Decimal?       @map("exchange_rate") @db.Decimal(20, 8) // Rate at payment time
+  amount       Decimal  @db.Decimal(30, 18) // Crypto amount (support 18 decimals for ETH)
+  amountUsd    Decimal  @map("amount_usd") @db.Decimal(20, 2) // USD value at creation
+  exchangeRate Decimal? @map("exchange_rate") @db.Decimal(20, 8) // Rate at payment time
 
   // Platform wallet info
-  platformWalletAddress String         @map("platform_wallet_address")
+  platformWalletAddress String @map("platform_wallet_address")
 
   // Payment status
-  status                PaymentStatus  @default(PENDING)
+  status PaymentStatus @default(PENDING)
 
   // Transaction info
-  txHash                String?        @map("tx_hash") // Incoming transaction hash
-  forwardTxHash         String?        @map("forward_tx_hash") // Outgoing transaction hash
-  confirmations         Int            @default(0)
-  requiredConfirmations Int            @default(3) @map("required_confirmations")
+  txHash                String? @map("tx_hash") // Incoming transaction hash
+  forwardTxHash         String? @map("forward_tx_hash") // Outgoing transaction hash
+  confirmations         Int     @default(0)
+  requiredConfirmations Int     @default(3) @map("required_confirmations")
 
   // Timestamps
-  expiresAt             DateTime       @map("expires_at")
-  paidAt                DateTime?      @map("paid_at")
-  confirmedAt           DateTime?      @map("confirmed_at")
-  forwardedAt           DateTime?      @map("forwarded_at")
-  createdAt             DateTime       @default(now()) @map("created_at")
-  updatedAt             DateTime       @updatedAt @map("updated_at")
+  expiresAt   DateTime  @map("expires_at")
+  paidAt      DateTime? @map("paid_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  forwardedAt DateTime? @map("forwarded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Metadata
-  metadata              Json? // Additional info (network fee, gas price, etc.)
+  metadata Json? // Additional info (network fee, gas price, etc.)
 
   @@index([paymentAddress])
   @@index([status])

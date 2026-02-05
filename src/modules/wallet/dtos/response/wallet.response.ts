@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { UserWallet } from '@prisma/client';
-import { Expose } from 'class-transformer';
-import { IsString, IsDate, IsUUID } from 'class-validator';
+import { Prisma, UserWallet } from '@prisma/client';
+import { Expose, Type } from 'class-transformer';
+import { IsDate, IsUUID } from 'class-validator';
 
 export class WalletResponseDto implements UserWallet {
     @ApiProperty({
@@ -24,8 +24,8 @@ export class WalletResponseDto implements UserWallet {
         description: 'Current wallet balance in USD',
     })
     @Expose()
-    @IsString()
-    balance: any; // Prisma Decimal type (serialized as string)
+    @Type(() => String)
+    balance: Prisma.Decimal; // Prisma Decimal type (serialized as string)
 
     @ApiProperty({
         example: faker.date.past().toISOString(),

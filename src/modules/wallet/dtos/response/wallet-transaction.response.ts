@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { WalletTransaction, WalletTransactionType } from '@prisma/client';
-import { Expose } from 'class-transformer';
+import {
+    Prisma,
+    WalletTransaction,
+    WalletTransactionType,
+} from '@prisma/client';
+import { Expose, Type } from 'class-transformer';
 import { IsString, IsDate, IsUUID, IsEnum, IsOptional } from 'class-validator';
 
 export class WalletTransactionResponseDto implements WalletTransaction {
@@ -32,16 +36,16 @@ export class WalletTransactionResponseDto implements WalletTransaction {
         description: 'Transaction amount',
     })
     @Expose()
-    @IsString()
-    amount: any; // Prisma Decimal type (serialized as string)
+    @Type(() => String)
+    amount: Prisma.Decimal; // Prisma Decimal type (serialized as string)
 
     @ApiProperty({
         example: '150.00',
         description: 'Balance after transaction',
     })
     @Expose()
-    @IsString()
-    balance: any; // Prisma Decimal type (serialized as string)
+    @Type(() => String)
+    balance: Prisma.Decimal; // Prisma Decimal type (serialized as string)
 
     @ApiProperty({
         example: 'Deposit via admin',

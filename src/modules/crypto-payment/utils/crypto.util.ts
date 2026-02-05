@@ -1,6 +1,6 @@
 import { HDKey } from '@scure/bip32';
 import { mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
-import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english';
+import { wordlist as englishWordlist } from '@scure/bip39/wordlists/english.js';
 import * as bitcoin from 'bitcoinjs-lib';
 import { ethers } from 'ethers';
 import { fromHex } from 'tron-format-address';

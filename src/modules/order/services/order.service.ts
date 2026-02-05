@@ -231,7 +231,6 @@ export class OrderService implements IOrderService {
                     orderNumber,
                     userId,
                     totalAmount,
-                    paymentMethod: data.paymentMethod,
                 },
                 'Order created'
             );
@@ -455,11 +454,8 @@ export class OrderService implements IOrderService {
                 'Order status updated'
             );
 
-            // Process instant delivery if status changed to PAYMENT_RECEIVED or PROCESSING
-            if (
-                data.status === OrderStatus.PAYMENT_RECEIVED ||
-                data.status === OrderStatus.PROCESSING
-            ) {
+            // Process instant delivery if status changed to COMPLETED
+            if (data.status === OrderStatus.COMPLETED) {
                 try {
                     await this.deliveryService.processInstantDelivery(orderId);
                 } catch (deliveryError) {

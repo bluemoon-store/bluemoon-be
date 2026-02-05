@@ -8,8 +8,8 @@ import { CryptoCurrency, PaymentStatus, OrderStatus } from '@prisma/client';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { CryptoPaymentService } from './crypto-payment.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
-import { EthereumProvider } from '../blockchain-providers/ethereum-provider.service';
 import { IBlockchainMonitorService } from '../interfaces/blockchain-monitor.service.interface';
+import { OrderDeliveryService } from 'src/modules/order/services/order-delivery.service';
 
 /**
  * Blockchain Monitor Service
@@ -22,6 +22,7 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         private readonly cryptoPaymentService: CryptoPaymentService,
         private readonly providerFactory: BlockchainProviderFactory,
         private readonly configService: ConfigService,
+        private readonly deliveryService: OrderDeliveryService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
         @InjectQueue('crypto-payment-forwarding')
@@ -490,93 +491,72 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 'Payment confirmed'
             );
 
-            // Update order status to PAYMENT_RECEIVED
+            // Update order status to COMPLETED and trigger auto-delivery
             await this.databaseService.order.update({
                 where: { id: payment.orderId },
                 data: {
-                    status: OrderStatus.PAYMENT_RECEIVED,
+                    status: OrderStatus.COMPLETED,
+                    completedAt: new Date(),
                 },
             });
 
             this.logger.info(
                 { paymentId, orderId: payment.orderId },
-                'Order status updated to PAYMENT_RECEIVED'
+                'Order status updated to COMPLETED'
             );
 
             // Auto-process order for instant delivery (all products are digital)
-            const autoDelivery = this.configService.get<boolean>(
-                'crypto.payment.autoDelivery',
-                true
-            );
-
-            if (autoDelivery) {
-                try {
-                    // Import OrderDeliveryService dynamically to avoid circular dependency
-                    const { OrderDeliveryService } =
-                        await import('src/modules/order/services/order-delivery.service');
-
-                    // Process instant delivery immediately
-                    // Note: This will be handled by OrderDeliveryService.processInstantDelivery
-                    // which is triggered automatically when order status changes to PAYMENT_RECEIVED
-                    this.logger.info(
-                        { paymentId, orderId: payment.orderId },
-                        'Auto-delivery enabled - order will be processed automatically'
-                    );
-                } catch (deliveryError) {
-                    this.logger.error(
-                        {
-                            error: deliveryError,
-                            paymentId,
-                            orderId: payment.orderId,
-                        },
-                        'Failed to trigger auto-delivery'
-                    );
-                }
+            try {
+                await this.deliveryService.processInstantDelivery(
+                    payment.orderId
+                );
+            } catch (deliveryError) {
+                this.logger.error(
+                    {
+                        error: deliveryError,
+                        paymentId,
+                        orderId: payment.orderId,
+                    },
+                    'Failed to trigger auto-delivery'
+                );
             }
 
             // TODO: Send notification
             // await this.notificationService.sendPaymentConfirmed(payment.orderId);
 
-            // Queue payment forwarding if enabled
-            const enableForwarding = this.configService.get<boolean>(
-                'crypto.payment.enableForwarding',
-                false
-            );
-            if (enableForwarding) {
-                // Check if payment should be forwarded (must be CONFIRMED and not already forwarded)
-                const paymentCheck =
-                    await this.databaseService.cryptoPayment.findUnique({
-                        where: { id: paymentId },
-                        select: {
-                            status: true,
-                            forwardTxHash: true,
+            // Queue payment forwarding (must be CONFIRMED and not already forwarded)
+            const paymentCheck =
+                await this.databaseService.cryptoPayment.findUnique({
+                    where: { id: paymentId },
+                    select: {
+                        status: true,
+                        forwardTxHash: true,
+                    },
+                });
+
+            if (
+                paymentCheck &&
+                paymentCheck.status === PaymentStatus.CONFIRMED &&
+                !paymentCheck.forwardTxHash
+            ) {
+                await this.paymentForwardingQueue.add(
+                    'forward-payment',
+                    { paymentId },
+                    {
+                        attempts: 5,
+                        backoff: {
+                            type: 'exponential',
+                            delay: 60000, // Start with 1 minute delay
                         },
-                    });
+                        removeOnComplete: true,
+                        removeOnFail: false,
+                    }
+                );
 
-                if (
-                    paymentCheck &&
-                    paymentCheck.status === PaymentStatus.CONFIRMED &&
-                    !paymentCheck.forwardTxHash
-                ) {
-                    await this.paymentForwardingQueue.add(
-                        'forward-payment',
-                        { paymentId },
-                        {
-                            attempts: 5,
-                            backoff: {
-                                type: 'exponential',
-                                delay: 60000, // Start with 1 minute delay
-                            },
-                            removeOnComplete: true,
-                            removeOnFail: false,
-                        }
-                    );
-
-                    this.logger.info(
-                        { paymentId },
-                        'Payment forwarding job queued'
-                    );
-                }
+                this.logger.info(
+                    { paymentId },
+                    'Payment forwarding job queued'
+                );
             }
         } catch (error) {
             this.logger.error(

@@ -1,5 +1,10 @@
 import { Body, Controller, Get, HttpStatus, Param, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiExcludeController,
+    ApiOperation,
+    ApiTags,
+} from '@nestjs/swagger';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
@@ -90,6 +95,7 @@ export class CryptoPaymentPublicController {
     }
 }
 
+@ApiExcludeController()
 @ApiTags('public.crypto')
 @Controller({
     path: '/crypto',

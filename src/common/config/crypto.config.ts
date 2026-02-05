@@ -70,8 +70,6 @@ export default registerAs(
                 process.env.PAYMENT_MONITOR_INTERVAL_SECONDS || '60',
                 10
             ),
-            enableForwarding: process.env.ENABLE_PAYMENT_FORWARDING === 'true',
-            autoDelivery: process.env.ENABLE_AUTO_DELIVERY !== 'false', // default true
             partialPaymentTolerancePercent: parseFloat(
                 process.env.PARTIAL_PAYMENT_TOLERANCE_PERCENT || '1.0'
             ), // Accept if payment is within 1% of expected

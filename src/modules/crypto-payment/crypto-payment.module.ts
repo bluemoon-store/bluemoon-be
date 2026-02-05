@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { CommonModule } from 'src/common/common.module';
 import { CustomLoggerModule } from 'src/common/logger/logger.module';
+import { OrderModule } from 'src/modules/order/order.module';
 import { SystemWalletService } from './services/system-wallet.service';
 import { ExchangeRateService } from './services/exchange-rate.service';
 import { CryptoPaymentService } from './services/crypto-payment.service';
@@ -34,6 +35,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         ConfigModule,
         CommonModule, // Provides DatabaseService and CacheManager
         CustomLoggerModule, // Provides PinoLogger
+        OrderModule, // Provides OrderDeliveryService
         ScheduleModule.forRoot(), // For cron jobs
         BullModule.registerQueue({
             name: 'crypto-payment-verification',

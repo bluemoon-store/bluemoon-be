@@ -5,7 +5,7 @@ import { IsEnum } from 'class-validator';
 export class OrderStatusUpdateDto {
     @ApiProperty({
         enum: OrderStatus,
-        example: OrderStatus.PROCESSING,
+        example: OrderStatus.COMPLETED,
         description: 'New order status',
     })
     @IsEnum(OrderStatus)

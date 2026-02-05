@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { Order, OrderItem, OrderStatus } from '@prisma/client';
+import { Order, OrderItem, OrderStatus, Prisma } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import {
     IsString,
@@ -48,8 +48,8 @@ export class OrderItemResponseDto implements OrderItem {
         example: '99.99',
     })
     @Expose()
-    @IsString()
-    priceAtPurchase: any; // Prisma Decimal type
+    @Type(() => String)
+    priceAtPurchase: Prisma.Decimal; // Prisma Decimal type
 
     @ApiPropertyOptional({
         example: 'Your product key: ABC123XYZ',
@@ -127,8 +127,8 @@ export class OrderResponseDto implements Order {
         example: '199.98',
     })
     @Expose()
-    @IsString()
-    totalAmount: any; // Prisma Decimal type
+    @Type(() => String)
+    totalAmount: Prisma.Decimal; // Prisma Decimal type
 
     @ApiProperty({
         example: 'USD',

@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { DeliveryType, OrderStatus } from '@prisma/client';
+import { OrderStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
-import { AwsS3Service } from 'src/common/aws/services/aws.s3.service';
 
 import { OrderDeliverDto } from '../dtos/request/order.deliver.request';
 import { OrderResponseDto } from '../dtos/response/order.response';
@@ -14,7 +13,6 @@ import { IOrderDeliveryService } from '../interfaces/order-delivery.service.inte
 export class OrderDeliveryService implements IOrderDeliveryService {
     constructor(
         private readonly databaseService: DatabaseService,
-        private readonly awsS3Service: AwsS3Service,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderDeliveryService.name);
@@ -43,11 +41,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 );
             }
 
-            // Only process if order is PAYMENT_RECEIVED or PROCESSING
-            if (
-                order.status !== OrderStatus.PAYMENT_RECEIVED &&
-                order.status !== OrderStatus.PROCESSING
-            ) {
+            // Only process if order is COMPLETED
+            if (order.status !== OrderStatus.COMPLETED) {
                 throw new HttpException(
                     'order.error.invalidOrderStatusForDelivery',
                     HttpStatus.BAD_REQUEST
@@ -59,10 +54,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
 
             // Process each item
             for (const item of order.items) {
-                if (
-                    item.product.deliveryType === DeliveryType.INSTANT &&
-                    !item.deliveredContent
-                ) {
+                // With DeliveryType always INSTANT, simply deliver any undelivered items
+                if (!item.deliveredContent) {
                     // Use product's delivery content
                     const content =
                         item.product.deliveryContent ||
@@ -84,27 +77,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 }
             }
 
-            // Update order status to COMPLETED if all items are delivered
-            const allDelivered = order.items.every(
-                item => item.deliveredAt !== null
-            );
-            if (allDelivered) {
-                await this.databaseService.order.update({
-                    where: { id: orderId },
-                    data: {
-                        status: OrderStatus.COMPLETED,
-                        completedAt: now,
-                    },
-                });
-            } else {
-                // Update to PROCESSING if some items still need manual delivery
-                await this.databaseService.order.update({
-                    where: { id: orderId },
-                    data: {
-                        status: OrderStatus.PROCESSING,
-                    },
-                });
-            }
+            // All items should be delivered when order is COMPLETED
+            // Status remains COMPLETED
 
             this.logger.info(
                 {
@@ -172,11 +146,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 );
             }
 
-            // Only allow delivery if order is PAYMENT_RECEIVED or PROCESSING
-            if (
-                order.status !== OrderStatus.PAYMENT_RECEIVED &&
-                order.status !== OrderStatus.PROCESSING
-            ) {
+            // Only allow delivery if order is COMPLETED
+            if (order.status !== OrderStatus.COMPLETED) {
                 throw new HttpException(
                     'order.error.invalidOrderStatusForDelivery',
                     HttpStatus.BAD_REQUEST
@@ -219,13 +190,10 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 item => item.deliveredAt !== null
             );
 
-            // Update order status
+            // Update order status - all items should be delivered when COMPLETED
             const updateData: any = {};
             if (allDelivered) {
-                updateData.status = OrderStatus.COMPLETED;
                 updateData.completedAt = now;
-            } else {
-                updateData.status = OrderStatus.PROCESSING;
             }
 
             const finalOrder = await this.databaseService.order.update({
@@ -306,11 +274,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 );
             }
 
-            // Only return content if order is COMPLETED or PROCESSING
-            if (
-                order.status !== OrderStatus.COMPLETED &&
-                order.status !== OrderStatus.PROCESSING
-            ) {
+            // Only return content if order is COMPLETED
+            if (order.status !== OrderStatus.COMPLETED) {
                 throw new HttpException(
                     'order.error.orderNotDelivered',
                     HttpStatus.BAD_REQUEST
@@ -324,13 +289,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                         itemId: item.id,
                         productName: item.product.name,
                         content: item.deliveredContent!,
-                        downloadLink:
-                            item.product.deliveryType === DeliveryType.DOWNLOAD
-                                ? await this.generateDownloadLink(
-                                      orderId,
-                                      item.id
-                                  )
-                                : null,
+                        // DeliveryType is always INSTANT; no download links are needed
+                        downloadLink: null,
                         deliveredAt: item.deliveredAt!.toISOString(),
                     }))
             );
@@ -349,92 +309,6 @@ export class OrderDeliveryService implements IOrderDeliveryService {
             );
             throw new HttpException(
                 'order.error.getDeliveryContentFailed',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    /**
-     * Generate download link for order item
-     */
-    async generateDownloadLink(
-        orderId: string,
-        itemId: string
-    ): Promise<string> {
-        try {
-            const orderItem = await this.databaseService.orderItem.findUnique({
-                where: { id: itemId },
-                include: {
-                    order: true,
-                    product: true,
-                },
-            });
-
-            if (!orderItem) {
-                throw new HttpException(
-                    'order.error.orderItemNotFound',
-                    HttpStatus.NOT_FOUND
-                );
-            }
-
-            // Verify order belongs to user
-            if (orderItem.order.id !== orderId) {
-                throw new HttpException(
-                    'order.error.orderItemMismatch',
-                    HttpStatus.BAD_REQUEST
-                );
-            }
-
-            // Check if product has download content
-            if (orderItem.product.deliveryType !== DeliveryType.DOWNLOAD) {
-                throw new HttpException(
-                    'order.error.notDownloadable',
-                    HttpStatus.BAD_REQUEST
-                );
-            }
-
-            // If deliveryContent contains S3 key, generate presigned URL
-            if (orderItem.deliveredContent) {
-                // Check if it's an S3 key (starts with common prefixes)
-                if (
-                    orderItem.deliveredContent.startsWith('downloads/') ||
-                    orderItem.deliveredContent.startsWith('products/files/')
-                ) {
-                    // Generate presigned download URL (valid for 1 hour)
-                    const url = await this.awsS3Service.getPresignedUploadUrl(
-                        orderItem.deliveredContent,
-                        'application/octet-stream',
-                        3600
-                    );
-                    return url.url;
-                }
-
-                // If it's already a URL, return it
-                if (orderItem.deliveredContent.startsWith('http')) {
-                    return orderItem.deliveredContent;
-                }
-            }
-
-            // Fallback: use product's deliveryContent
-            if (orderItem.product.deliveryContent) {
-                if (orderItem.product.deliveryContent.startsWith('http')) {
-                    return orderItem.product.deliveryContent;
-                }
-            }
-
-            throw new HttpException(
-                'order.error.downloadLinkNotAvailable',
-                HttpStatus.NOT_FOUND
-            );
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            this.logger.error(
-                `Failed to generate download link: ${error.message}`
-            );
-            throw new HttpException(
-                'order.error.generateDownloadLinkFailed',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

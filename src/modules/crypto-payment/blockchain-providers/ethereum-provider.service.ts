@@ -31,8 +31,8 @@ export class EthereumProvider extends BaseBlockchainProvider {
         this.rpcUrl =
             configService.get<string>('crypto.rpc.ethereum') ||
             (this.isTestnet
-                ? 'https://sepolia.infura.io/v3/YOUR_KEY'
-                : 'https://mainnet.infura.io/v3/YOUR_KEY');
+                ? 'https://sepolia.infura.io/v3/d44d198494b34601a4d5ad128b76eb12'
+                : 'https://mainnet.infura.io/v3/d44d198494b34601a4d5ad128b76eb12');
 
         // Initialize ethers provider
         this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
@@ -59,7 +59,7 @@ export class EthereumProvider extends BaseBlockchainProvider {
             }
 
             // Tatum returns balance in Wei, convert to ETH
-            const balanceWei = response.data.balance;
+            const balanceWei = ethers.parseEther(response.data.balance);
             const balanceEth = ethers.formatEther(balanceWei);
 
             this.logger.debug(

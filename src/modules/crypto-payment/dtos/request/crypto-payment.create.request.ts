@@ -6,7 +6,7 @@ export class CreateCryptoPaymentDto {
     @ApiProperty({
         description: 'Cryptocurrency to use for payment',
         enum: CryptoCurrency,
-        example: CryptoCurrency.BTC,
+        example: CryptoCurrency.ETH,
     })
     @IsEnum(CryptoCurrency)
     @IsNotEmpty()

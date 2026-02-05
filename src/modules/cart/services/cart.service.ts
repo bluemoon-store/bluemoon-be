@@ -114,7 +114,7 @@ export class CartService implements ICartService {
             return {
                 ...cart,
                 ...totals,
-            } as CartResponseDto;
+            } as unknown as CartResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -179,7 +179,8 @@ export class CartService implements ICartService {
             }
 
             // Return updated cart
-            return this.getCart(userId);
+            const response = await this.getCart(userId);
+            return response;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

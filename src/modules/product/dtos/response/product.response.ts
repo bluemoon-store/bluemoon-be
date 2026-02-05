@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { DeliveryType, Product, ProductImage } from '@prisma/client';
+import { DeliveryType, Prisma, Product, ProductImage } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import {
     IsString,
@@ -118,8 +118,8 @@ export class ProductResponseDto implements Product {
         example: '99.99',
     })
     @Expose()
-    @IsString()
-    price: any; // Prisma Decimal type (serialized as string)
+    @Type(() => String)
+    price: Prisma.Decimal; // Prisma Decimal type
 
     @ApiProperty({
         example: 'USD',

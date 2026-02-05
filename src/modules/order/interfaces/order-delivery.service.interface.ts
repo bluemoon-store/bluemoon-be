@@ -12,5 +12,4 @@ export interface IOrderDeliveryService {
         orderId: string,
         userId: string
     ): Promise<OrderDeliveryResponseDto>;
-    generateDownloadLink(orderId: string, itemId: string): Promise<string>;
 }

@@ -59,6 +59,6 @@ import { ResponseModule } from './response/response.module';
             inject: [ConfigService],
         }),
     ],
-    exports: [DatabaseModule],
+    exports: [DatabaseModule, CacheModule],
 })
 export class CommonModule {}

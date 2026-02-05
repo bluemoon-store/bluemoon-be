@@ -77,20 +77,6 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 return payment.forwardTxHash || '';
             }
 
-            // Check if forwarding is enabled
-            const enableForwarding = this.configService.get<boolean>(
-                'crypto.payment.enableForwarding',
-                false
-            );
-
-            if (!enableForwarding) {
-                this.logger.info(
-                    { paymentId },
-                    'Payment forwarding is disabled, skipping'
-                );
-                return '';
-            }
-
             // Update status to FORWARDING
             await this.databaseService.cryptoPayment.update({
                 where: { id: paymentId },
@@ -408,16 +394,6 @@ export class PaymentForwardingService implements IPaymentForwardingService {
      */
     async shouldForwardPayment(paymentId: string): Promise<boolean> {
         try {
-            // Check if forwarding is enabled
-            const enableForwarding = this.configService.get<boolean>(
-                'crypto.payment.enableForwarding',
-                false
-            );
-
-            if (!enableForwarding) {
-                return false;
-            }
-
             // Get payment
             const payment = await this.databaseService.cryptoPayment.findUnique(
                 {

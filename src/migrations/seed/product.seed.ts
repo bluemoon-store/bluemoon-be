@@ -96,7 +96,7 @@ export class ProductSeedService {
                 slug: 'premium-digital-content-pack',
                 description:
                     'Instant delivery digital content including ebooks, guides, and resources. Delivered immediately after payment confirmation.',
-                price: '29.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 1000,
                 categoryId: categories[0].id,
@@ -110,7 +110,7 @@ export class ProductSeedService {
                 slug: 'digital-art-collection',
                 description:
                     'High-resolution digital art files for commercial use. Instant download after payment.',
-                price: '49.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 500,
                 categoryId: categories[0].id,
@@ -125,7 +125,7 @@ export class ProductSeedService {
                 slug: 'premium-software-license-key',
                 description:
                     'One-year license key for premium software. License key delivered instantly via email.',
-                price: '99.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 200,
                 categoryId: categories[1].id,
@@ -139,7 +139,7 @@ export class ProductSeedService {
                 slug: 'lifetime-software-license',
                 description:
                     'Lifetime license for premium software with all future updates included.',
-                price: '199.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 100,
                 categoryId: categories[1].id,
@@ -154,7 +154,7 @@ export class ProductSeedService {
                 slug: 'gaming-account-premium',
                 description:
                     'Premium gaming account with high-level characters and items. Account credentials delivered instantly.',
-                price: '79.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 50,
                 categoryId: categories[2].id,
@@ -168,7 +168,7 @@ export class ProductSeedService {
                 slug: 'in-game-currency-pack',
                 description:
                     'Large pack of in-game currency. Credits added to your account instantly.',
-                price: '39.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 1000,
                 categoryId: categories[2].id,
@@ -183,7 +183,7 @@ export class ProductSeedService {
                 slug: 'premium-streaming-account',
                 description:
                     'Premium streaming service account with 6 months access. Account details delivered instantly.',
-                price: '59.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 300,
                 categoryId: categories[3].id,
@@ -197,7 +197,7 @@ export class ProductSeedService {
                 slug: 'vpn-service-premium',
                 description:
                     'One-year premium VPN service subscription. Access credentials delivered instantly.',
-                price: '89.99',
+                price: '1.99',
                 currency: 'USD',
                 stockQuantity: 500,
                 categoryId: categories[3].id,

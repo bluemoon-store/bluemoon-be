@@ -7,9 +7,13 @@ import { useContainer } from 'class-validator';
 import compression from 'compression';
 import express from 'express';
 import { Logger } from 'nestjs-pino';
+import { getQueueToken } from '@nestjs/bull';
+import { createBullBoard } from '@bull-board/api';
+import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { ExpressAdapter as BullBoardExpressAdapter } from '@bull-board/express';
 
 import { AppModule } from './app/app.module';
-import { APP_ENVIRONMENT } from './app/enums/app.enum';
+import { APP_ENVIRONMENT, APP_BULL_QUEUES } from './app/enums/app.enum';
 import setupSwagger from './swagger';
 
 async function bootstrap(): Promise<void> {
@@ -27,6 +31,33 @@ async function bootstrap(): Promise<void> {
         const env = config.get('app.env');
         const host = config.getOrThrow('app.http.host');
         const port = config.getOrThrow('app.http.port');
+
+        // Bull Board - Queue dashboard (non-production only)
+        if (env !== APP_ENVIRONMENT.PRODUCTION) {
+            const serverAdapter = new BullBoardExpressAdapter();
+            serverAdapter.setBasePath('/admin/queues');
+
+            // Register all queues for monitoring
+            const queues = [
+                // Crypto Payment Queues
+                app.get(getQueueToken('crypto-payment-verification')),
+                app.get(getQueueToken('crypto-payment-forwarding')),
+                // Email & Notification Queues
+                app.get(getQueueToken(APP_BULL_QUEUES.EMAIL)),
+                app.get(getQueueToken(APP_BULL_QUEUES.NOTIFICATION)),
+            ];
+
+            createBullBoard({
+                queues: queues.map(queue => new BullAdapter(queue)),
+                serverAdapter,
+            });
+
+            app.use('/admin/queues', serverAdapter.getRouter());
+            logger.log('Bull Board available at /admin/queues');
+            logger.log(
+                `Registered ${queues.length} queues: crypto-payment-verification, crypto-payment-forwarding, ${APP_BULL_QUEUES.EMAIL}, ${APP_BULL_QUEUES.NOTIFICATION}`
+            );
+        }
 
         // Middleware
         app.use(compression());

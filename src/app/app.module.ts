@@ -10,6 +10,7 @@ import { OrderModule } from 'src/modules/order/order.module';
 import { WorkerModule } from 'src/workers/worker.module';
 
 import { HealthController } from './controllers/health.controller';
+import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
 @Module({
     imports: [
         // Shared Common Services
@@ -27,6 +28,7 @@ import { HealthController } from './controllers/health.controller';
         CartModule,
         WalletModule,
         OrderModule,
+        CryptoPaymentModule,
     ],
     controllers: [HealthController],
 })
