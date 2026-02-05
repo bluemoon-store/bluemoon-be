@@ -6,9 +6,7 @@
         "userDeleted": "User deleted successfully",
         "purchaseHistory": "Purchase history retrieved successfully",
         "userBanned": "User banned successfully",
-        "userUnbanned": "User unbanned successfully",
-        "dailySparksClaimed": "Daily sparks claimed successfully",
-        "referralCodeVerified": "Referral code verified successfully"
+        "userUnbanned": "User unbanned successfully"
     },
     "error": {
         "notFound": "User not found in database",
@@ -20,11 +18,6 @@
         "userNotBanned": "User is not banned",
         "failedToUnbanUser": "Failed to unban user",
         "failedToGetPurchaseHistory": "Failed to retrieve purchase history",
-        "dailySparksAlreadyClaimed": "Daily sparks already claimed today",
-        "invalidReferralCode": "Invalid referral code",
-        "failedToProcessReferral": "Failed to process referral",
-        "failedToAwardDailySparks": "Failed to award daily sparks",
-        "failedToVerifyReferralCode": "Failed to verify referral code",
         "failedToDeleteUser": "Failed to delete user"
     }
 }

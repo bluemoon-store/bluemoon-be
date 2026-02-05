@@ -90,7 +90,7 @@ export class WalletAdminController {
     })
     public async getUserTransactionHistory(
         @Param('userId') userId: string,
-        @Query(QueryTransformPipe) query: WalletTransactionHistoryQueryDto
+        @Query(new QueryTransformPipe()) query: WalletTransactionHistoryQueryDto
     ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>> {
         return this.walletService.getTransactionHistory(userId, {
             page: query.page,

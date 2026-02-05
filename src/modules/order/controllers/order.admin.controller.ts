@@ -50,7 +50,7 @@ export class OrderAdminController {
         messageKey: 'order.success.list',
     })
     public async getAllOrders(
-        @Query(QueryTransformPipe) query: OrderListQueryDto
+        @Query(new QueryTransformPipe()) query: OrderListQueryDto
     ): Promise<ApiPaginatedDataDto<OrderDetailResponseDto>> {
         return this.orderService.getAllOrders({
             page: query.page,

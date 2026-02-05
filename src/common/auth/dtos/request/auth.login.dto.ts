@@ -11,7 +11,7 @@ import {
 
 export class UserLoginDto {
     @ApiProperty({
-        example: faker.internet.email(),
+        example: 'nguyen@echodzns.com',
         required: true,
     })
     @IsEmail()
@@ -19,9 +19,7 @@ export class UserLoginDto {
     public email: string;
 
     @ApiProperty({
-        example: `${faker.string.alphanumeric(5).toLowerCase()}${faker.string
-            .alphanumeric(5)
-            .toUpperCase()}@@!${faker.number.int(1000)}`,
+        example: '6td6lPRZVC@@!827',
         required: true,
     })
     @IsString()

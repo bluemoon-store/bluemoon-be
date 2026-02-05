@@ -22,14 +22,4 @@ export class UserCreateDto extends UserLoginDto {
     @IsOptional()
     @Length(1, 50)
     public lastName?: string;
-
-    @ApiProperty({
-        example: faker.string.alphanumeric(8).toUpperCase(),
-        required: false,
-        description: 'Referral code from another user',
-    })
-    @IsString()
-    @IsOptional()
-    @Length(8, 8)
-    public referralCode?: string;
 }

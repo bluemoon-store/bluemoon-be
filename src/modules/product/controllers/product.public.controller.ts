@@ -38,7 +38,7 @@ export class ProductPublicController {
         messageKey: 'product.success.list',
     })
     public async list(
-        @Query(QueryTransformPipe) query: ProductListQueryDto
+        @Query(new QueryTransformPipe()) query: ProductListQueryDto
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({
             page: query.page,
@@ -72,7 +72,7 @@ export class ProductPublicController {
         messageKey: 'product.success.listCategories',
     })
     public async listCategories(
-        @Query(QueryTransformPipe) query: CategoryListQueryDto
+        @Query(new QueryTransformPipe()) query: CategoryListQueryDto
     ): Promise<ApiPaginatedDataDto<CategoryResponseDto>> {
         return this.categoryService.findAll({
             page: query.page,
@@ -105,7 +105,7 @@ export class ProductPublicController {
     })
     public async getProductsByCategory(
         @Param('id') categoryId: string,
-        @Query(QueryTransformPipe)
+        @Query(new QueryTransformPipe())
         query: Pick<ProductListQueryDto, 'page' | 'limit'>
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({

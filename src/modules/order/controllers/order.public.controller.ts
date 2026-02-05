@@ -62,7 +62,7 @@ export class OrderPublicController {
     })
     public async getOrderHistory(
         @AuthUser() user: IAuthUser,
-        @Query(QueryTransformPipe) query: OrderHistoryQueryDto
+        @Query(new QueryTransformPipe()) query: OrderHistoryQueryDto
     ): Promise<ApiPaginatedDataDto<OrderResponseDto>> {
         return this.orderService.getOrderHistory(user.userId, {
             page: query.page,

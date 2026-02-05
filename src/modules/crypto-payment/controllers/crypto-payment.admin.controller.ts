@@ -48,7 +48,7 @@ export class CryptoPaymentAdminController {
         messageKey: 'crypto-payment.success.listRetrieved',
     })
     public async getAllPayments(
-        @Query(QueryTransformPipe) query: CryptoPaymentListQueryDto
+        @Query(new QueryTransformPipe()) query: CryptoPaymentListQueryDto
     ): Promise<ApiPaginatedDataDto<CryptoPaymentResponseDto>> {
         const page = query.page || 1;
         const limit = query.limit || 10;
