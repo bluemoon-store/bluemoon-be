@@ -24,10 +24,8 @@ import { PaymentVerificationProcessor } from './processors/payment-verification.
 import { PaymentForwardingProcessor } from './processors/payment-forwarding.processor';
 
 // Controllers
-import {
-    CryptoPaymentPublicController,
-    CryptoPublicController,
-} from './controllers/crypto-payment.public.controller';
+import { CryptoPaymentPublicController } from './controllers/crypto-payment.public.controller';
+import { ExchangeRatePublicController } from './controllers/exchange-rate.public.controller';
 import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin.controller';
 
 @Module({
@@ -46,7 +44,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
     ],
     controllers: [
         CryptoPaymentPublicController,
-        CryptoPublicController,
+        ExchangeRatePublicController,
         CryptoPaymentAdminController,
     ],
     providers: [

@@ -5,7 +5,7 @@ import { Expose } from 'class-transformer';
 export class ExchangeRateResponseDto {
     @ApiProperty({
         description: 'Cryptocurrency',
-        enum: CryptoCurrency,
+        enum: Object.values(CryptoCurrency),
     })
     @Expose()
     cryptocurrency: CryptoCurrency;
