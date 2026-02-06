@@ -1,6 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength, IsEnum } from 'class-validator';
-import { CryptoCurrency } from '@prisma/client';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class OrderCreateDto {
     @ApiPropertyOptional({

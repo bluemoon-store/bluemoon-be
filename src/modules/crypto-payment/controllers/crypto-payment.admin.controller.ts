@@ -95,7 +95,7 @@ export class CryptoPaymentAdminController {
             try {
                 const paymentDto = await this.mapPaymentToDto(payment);
                 items.push(paymentDto);
-            } catch (error) {
+            } catch (_error) {
                 // Skip payments that fail to map
                 continue;
             }
@@ -260,7 +260,7 @@ export class CryptoPaymentAdminController {
                 parseFloat(payment.amount.toString()),
                 payment.cryptocurrency
             );
-        } catch (error) {
+        } catch (_error) {
             // QR code generation failed, continue without it
         }
 

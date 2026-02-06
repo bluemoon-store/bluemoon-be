@@ -10,7 +10,6 @@ import { CryptoCurrency, PaymentStatus } from '@prisma/client';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { SystemWalletService } from './system-wallet.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
-import { EthereumProvider } from '../blockchain-providers/ethereum-provider.service';
 import { IPaymentForwardingService } from '../interfaces/payment-forwarding.service.interface';
 
 /**
@@ -106,17 +105,19 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 payment.cryptocurrency
             );
 
-            // Calculate amount to forward (accounting for fees)
+            // Calculate amount to forward
+            // Use orderAmount from metadata if available (gas fee already included in total amount)
             const amountToForward = await this.calculateAmountToForward(
                 paymentId,
                 payment.cryptocurrency,
                 payment.paymentAddress,
-                parseFloat(payment.amount.toString())
+                parseFloat(payment.amount.toString()),
+                payment.metadata
             );
 
             let forwardTxHash: string;
 
-            // Handle ERC-20 tokens differently
+            // Forward payment
             if (
                 payment.cryptocurrency === CryptoCurrency.USDT_ERC20 ||
                 payment.cryptocurrency === CryptoCurrency.USDC_ERC20
@@ -128,7 +129,6 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                     amountToForward
                 );
             } else {
-                // Native cryptocurrency forwarding
                 forwardTxHash = await provider.sendTransaction(
                     payment.paymentAddress,
                     platformWalletAddress,
@@ -145,10 +145,6 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                     forwardTxHash: forwardTxHash,
                     forwardedAt: new Date(),
                     metadata: {
-                        ...((payment.metadata as any) || {}),
-                        forwardingFee:
-                            parseFloat(payment.amount.toString()) -
-                            amountToForward,
                         forwardedAmount: amountToForward,
                     },
                 },
@@ -168,91 +164,47 @@ export class PaymentForwardingService implements IPaymentForwardingService {
 
             return forwardTxHash;
         } catch (error) {
-            // Update status to FAILED if forwarding fails
             const errorMessage =
                 error instanceof Error ? error.message : 'Unknown error';
-            const maxRetries = this.configService.get<number>(
-                'crypto.payment.maxForwardingRetries',
-                5
-            );
 
             try {
-                const existingPayment =
+                const payment =
                     await this.databaseService.cryptoPayment.findUnique({
                         where: { id: paymentId },
                         select: {
                             metadata: true,
-                            cryptocurrency: true,
                             orderId: true,
                         },
                     });
 
-                const metadata = (existingPayment?.metadata as any) || {};
-                const retryCount = (metadata.forwardingRetryCount || 0) + 1;
-                const shouldAlert = retryCount >= maxRetries;
-
+                const metadata = (payment?.metadata as any) || {};
                 await this.databaseService.cryptoPayment.update({
                     where: { id: paymentId },
                     data: {
-                        status: PaymentStatus.FAILED,
+                        status: PaymentStatus.FORWARDING_FAILED,
                         metadata: {
                             ...metadata,
                             forwardingError: errorMessage,
                             forwardingFailedAt: new Date().toISOString(),
-                            forwardingRetryCount: retryCount,
-                            requiresAdminReview: shouldAlert,
-                            adminAlertSent: shouldAlert,
-                            lastError: {
-                                message: errorMessage,
-                                stack:
-                                    error instanceof Error
-                                        ? error.stack
-                                        : undefined,
-                                timestamp: new Date().toISOString(),
-                            },
                         },
                     },
                 });
 
-                // Log admin alert
-                if (shouldAlert) {
-                    this.logger.error(
-                        {
-                            paymentId,
-                            orderId: existingPayment.orderId,
-                            cryptocurrency: existingPayment?.cryptocurrency,
-                            retryCount,
-                            maxRetries,
-                            error: errorMessage,
-                            ALERT: 'ADMIN_ACTION_REQUIRED',
-                        },
-                        '🚨 ADMIN ALERT: Payment forwarding failed after max retries'
-                    );
-
-                    // TODO: Send actual notification (email, Slack, etc.)
-                    // await this.notificationService.sendAdminAlert({
-                    //     type: 'FORWARDING_FAILURE',
-                    //     paymentId,
-                    //     orderId: payment.orderId,
-                    //     error: errorMessage,
-                    //     retryCount,
-                    // });
-                }
+                this.logger.error(
+                    {
+                        paymentId,
+                        orderId: payment?.orderId,
+                        error: errorMessage,
+                        stack: error instanceof Error ? error.stack : undefined,
+                    },
+                    'Payment forwarding failed'
+                );
             } catch (updateError) {
                 this.logger.error(
                     { error: updateError, paymentId },
-                    'Failed to update payment status to FAILED'
+                    'Failed to update payment status after forwarding error'
                 );
             }
-
-            this.logger.error(
-                {
-                    error,
-                    paymentId,
-                    stack: error instanceof Error ? error.stack : undefined,
-                },
-                'Failed to forward payment'
-            );
 
             throw error;
         }
@@ -311,69 +263,89 @@ export class PaymentForwardingService implements IPaymentForwardingService {
     }
 
     /**
-     * Calculate amount to forward (accounting for network fees using dynamic estimation)
+     * Calculate amount to forward
+     * If orderAmount exists in metadata, use it (gas fee already included in total amount)
+     * Otherwise, fallback to old logic (balance - fee) for backward compatibility
      * @param paymentId - Payment ID
      * @param cryptocurrency - Cryptocurrency type
      * @param fromAddress - Source address
-     * @param totalAmount - Total amount received
-     * @returns Amount to forward after fees
+     * @param totalAmount - Total amount received (includes gas fee if new flow)
+     * @param metadata - Payment metadata (may contain orderAmount)
+     * @returns Amount to forward (order amount, not including gas fee)
      */
     private async calculateAmountToForward(
         paymentId: string,
         cryptocurrency: CryptoCurrency,
         fromAddress: string,
-        totalAmount: number
+        totalAmount: number,
+        metadata?: any
     ): Promise<number> {
         try {
-            // Use dynamic fee estimation from blockchain provider
+            // Check if orderAmount exists in metadata (new flow with gas fee upfront)
+            const orderAmount = metadata?.orderAmount;
+            if (
+                orderAmount &&
+                typeof orderAmount === 'number' &&
+                orderAmount > 0
+            ) {
+                this.logger.debug(
+                    {
+                        paymentId,
+                        cryptocurrency,
+                        orderAmount,
+                        totalAmount,
+                        estimatedGasFee: metadata?.estimatedGasFee,
+                    },
+                    'Using orderAmount from metadata (gas fee already included in total amount)'
+                );
+
+                // Return orderAmount (gas fee will be deducted from remaining balance)
+                return orderAmount;
+            }
+
+            // Fallback to old logic for backward compatibility
+            this.logger.debug(
+                { paymentId, cryptocurrency },
+                'Using legacy calculation (balance - fee) for backward compatibility'
+            );
+
+            const provider = this.providerFactory.getProvider(cryptocurrency);
+            const balanceStr = await provider.getBalance(fromAddress);
+            const actualBalance = parseFloat(balanceStr);
+
             const estimatedFee = await this.estimateForwardingFee(
                 paymentId,
                 fromAddress
             );
+            const baseFeeAmount = parseFloat(estimatedFee);
+            const safetyBufferMultiplier = 1.3;
+            const feeAmountWithBuffer = baseFeeAmount * safetyBufferMultiplier;
 
-            const feeAmount = parseFloat(estimatedFee);
-
-            // Calculate amount to forward (total - fee)
-            const amountToForward = Math.max(0, totalAmount - feeAmount);
+            const amountToForward = Math.max(
+                0,
+                actualBalance - feeAmountWithBuffer
+            );
 
             this.logger.debug(
                 {
                     paymentId,
                     cryptocurrency,
-                    totalAmount,
-                    estimatedFee: feeAmount,
+                    actualBalance,
+                    feeAmountWithBuffer,
                     amountToForward,
-                    feePercentage: (feeAmount / totalAmount) * 100,
                 },
-                'Calculated amount to forward using dynamic fee estimation'
+                'Calculated amount to forward using legacy method'
             );
 
-            // Safety check: ensure we're not forwarding more than received
-            if (amountToForward > totalAmount) {
+            if (actualBalance < feeAmountWithBuffer) {
                 throw new Error(
-                    `Calculated forward amount (${amountToForward}) exceeds total amount (${totalAmount})`
+                    `Insufficient balance for forwarding. Balance: ${actualBalance}, Required fee (with buffer): ${feeAmountWithBuffer}`
                 );
             }
 
-            // Safety check: ensure we have enough for fees
             if (amountToForward <= 0) {
                 throw new Error(
-                    `Insufficient balance for forwarding fees. Total: ${totalAmount}, Fee: ${feeAmount}`
-                );
-            }
-
-            // Warning if fee is unusually high (> 10% of amount)
-            const feePercentage = (feeAmount / totalAmount) * 100;
-            if (feePercentage > 10) {
-                this.logger.warn(
-                    {
-                        paymentId,
-                        cryptocurrency,
-                        feePercentage,
-                        feeAmount,
-                        totalAmount,
-                    },
-                    'Network fee is unusually high (>10% of amount)'
+                    `Insufficient balance for forwarding fees. Balance: ${actualBalance}, Fee (with buffer): ${feeAmountWithBuffer}`
                 );
             }
 

@@ -169,16 +169,32 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Calculated crypto amount'
             );
 
-            // 3. Generate unique payment address
+            // 3. Estimate gas forwarding fee and add to amount
+            const estimatedGasFee =
+                await this.estimateGasForwardingFee(cryptocurrency);
+            const totalAmount = cryptoAmount + estimatedGasFee;
+
+            this.logger.debug(
+                {
+                    orderId,
+                    cryptocurrency,
+                    orderAmount: cryptoAmount,
+                    estimatedGasFee,
+                    totalAmount,
+                },
+                'Added gas forwarding fee to payment amount'
+            );
+
+            // 4. Generate unique payment address
             const addressDetails =
                 await this.systemWalletService.generatePaymentAddress(
                     orderId,
                     cryptocurrency,
-                    cryptoAmount,
+                    totalAmount,
                     amountUsd
                 );
 
-            // 4. Get platform wallet address
+            // 5. Get platform wallet address
             const platformWalletAddress =
                 this.systemWalletService.getPlatformWalletAddress(
                     cryptocurrency
@@ -190,14 +206,14 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 );
             }
 
-            // 5. Determine required confirmations based on cryptocurrency
+            // 6. Determine required confirmations based on cryptocurrency
             const requiredConfirmations =
                 this.getRequiredConfirmations(cryptocurrency);
 
-            // 6. Determine network based on cryptocurrency
+            // 7. Determine network based on cryptocurrency
             const network = this.getNetwork(cryptocurrency);
 
-            // 7. Create payment record in database
+            // 8. Create payment record in database
             const payment = await this.databaseService.cryptoPayment.create({
                 data: {
                     orderId,
@@ -207,13 +223,17 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                     derivationIndex: addressDetails.derivationIndex,
                     derivationPath: addressDetails.derivationPath,
                     encryptedPrivateKey: addressDetails.encryptedPrivateKey,
-                    amount: new Prisma.Decimal(cryptoAmount),
+                    amount: new Prisma.Decimal(totalAmount),
                     amountUsd: new Prisma.Decimal(amountUsd),
                     exchangeRate: new Prisma.Decimal(exchangeRate),
                     platformWalletAddress,
                     status: PaymentStatus.PENDING,
                     requiredConfirmations,
                     expiresAt: addressDetails.expiresAt,
+                    metadata: {
+                        orderAmount: cryptoAmount, // Actual order amount (without gas)
+                        estimatedGasFee: estimatedGasFee, // Gas fee added upfront
+                    },
                 },
             });
 
@@ -229,21 +249,21 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Payment record created'
             );
 
-            // 8. Generate QR code
+            // 9. Generate QR code (use totalAmount - what customer needs to pay)
             const qrCode = await generatePaymentQRCode(
                 addressDetails.address,
-                cryptoAmount,
+                totalAmount,
                 cryptocurrency
             );
 
-            // 9. Generate payment URI
+            // 10. Generate payment URI (use totalAmount)
             const paymentUri = generatePaymentURI(
                 addressDetails.address,
-                cryptoAmount,
+                totalAmount,
                 cryptocurrency
             );
 
-            // 10. Queue verification job (check payment status periodically)
+            // 11. Queue verification job (check payment status periodically)
             await this.paymentVerificationQueue.add(
                 'verify-payment',
                 {
@@ -266,7 +286,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Payment verification job queued'
             );
 
-            // 11. Return payment details
+            // 12. Return payment details (amount includes gas fee)
             const timeRemaining = Math.max(
                 0,
                 Math.floor(
@@ -280,7 +300,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 cryptocurrency,
                 network,
                 paymentAddress: addressDetails.address,
-                amount: cryptoAmount.toString(),
+                amount: totalAmount.toString(), // Total amount including gas fee
                 amountUsd: amountUsd.toString(),
                 exchangeRate: exchangeRate.toString(),
                 qrCode,
@@ -505,6 +525,30 @@ export class CryptoPaymentService implements ICryptoPaymentService {
             this.logger.error({ error, paymentId }, 'Failed to expire payment');
             // Don't throw - expiration is not critical
         }
+    }
+
+    /**
+     * Estimate gas forwarding fee for a cryptocurrency
+     * Uses default fees with safety buffer
+     * @param cryptocurrency - Cryptocurrency type
+     * @returns Estimated gas fee
+     */
+    private async estimateGasForwardingFee(
+        cryptocurrency: CryptoCurrency
+    ): Promise<number> {
+        const defaultFees: Record<CryptoCurrency, number> = {
+            BTC: 0.00001,
+            ETH: 0.001,
+            LTC: 0.0001,
+            BCH: 0.00001,
+            USDT_ERC20: 0.0015, // ETH gas fee for ERC-20 transfer
+            USDT_TRC20: 0,
+            USDC_ERC20: 0.0015, // ETH gas fee for ERC-20 transfer
+        };
+
+        const baseFee = defaultFees[cryptocurrency] || 0.001;
+        // Add 50% safety buffer
+        return baseFee * 1.5;
     }
 
     /**

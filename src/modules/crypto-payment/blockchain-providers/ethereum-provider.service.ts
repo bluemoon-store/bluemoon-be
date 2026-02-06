@@ -512,7 +512,7 @@ export class EthereumProvider extends BaseBlockchainProvider {
      * @returns Transaction hash
      */
     async sendERC20TransactionPublic(
-        from: string,
+        _from: string,
         to: string,
         amount: string,
         privateKey: string,

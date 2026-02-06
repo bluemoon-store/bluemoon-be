@@ -263,6 +263,7 @@ enum PaymentStatus {
   CONFIRMED // Payment confirmed (order can proceed)
   FORWARDING // Forwarding to platform wallet
   FORWARDED // Successfully forwarded
+  FORWARDING_FAILED // Forwarding to platform wallet failed
   EXPIRED // Payment window expired (15 min)
   FAILED // Payment processing failed
 }
