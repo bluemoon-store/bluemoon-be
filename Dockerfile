@@ -9,9 +9,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Install dependencies with cache mount for faster rebuilds
-RUN --mount=type=cache,target=/root/.yarn \
-    --mount=type=cache,target=/app/.yarn/cache \
-    yarn install --frozen-lockfile --prefer-offline
+RUN yarn install --frozen-lockfile --prefer-offline
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
@@ -20,8 +18,8 @@ RUN yarn generate
 # Copy source code (this layer changes most frequently)
 COPY . .
 
-# Expose application port
-EXPOSE 3001
+# Build production artifacts
+RUN yarn build
 
-# Start development server with hot reload
-CMD ["yarn", "dev"]
+# Start application in production mode
+CMD ["yarn", "start"]

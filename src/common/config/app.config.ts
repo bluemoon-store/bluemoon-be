@@ -32,10 +32,12 @@ export default registerAs('app', (): Record<string, any> => {
         },
 
         http: {
-            host: process.env.HTTP_HOST ?? 'localhost',
-            port: process.env.HTTP_PORT
-                ? Number.parseInt(process.env.HTTP_PORT)
-                : 3000,
+            host: process.env.HTTP_HOST ?? '0.0.0.0',
+            port: process.env.PORT
+                ? Number.parseInt(process.env.PORT)
+                : process.env.HTTP_PORT
+                  ? Number.parseInt(process.env.HTTP_PORT)
+                  : 3000,
         },
 
         cors: corsConfig,
