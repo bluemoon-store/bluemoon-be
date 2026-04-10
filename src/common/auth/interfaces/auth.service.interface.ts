@@ -16,6 +16,7 @@ import {
 export interface IAuthService {
     login(data: UserLoginDto): Promise<AuthResponseDto>;
     signup(data: UserCreateDto): Promise<AuthResponseDto>;
+    logout(): Promise<{ success: boolean; message: string }>;
     refreshTokens(payload: IAuthUser): Promise<AuthRefreshResponseDto>;
     setupTwoFactor(
         userId: string,

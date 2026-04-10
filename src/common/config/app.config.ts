@@ -4,12 +4,20 @@ import { registerAs } from '@nestjs/config';
 import { APP_ENVIRONMENT } from 'src/app/enums/app.enum';
 
 export default registerAs('app', (): Record<string, any> => {
-    const corsOrigins = process.env.APP_CORS_ORIGINS
+    const rawOrigins = process.env.APP_CORS_ORIGINS
         ? process.env.APP_CORS_ORIGINS.split(',').map(origin => origin.trim())
-        : ['*'];
+        : [];
+
+    // `credentials: true` is incompatible with wildcard origin '*'.
+    // When APP_CORS_ORIGINS is '*' or unset, reflect the request Origin back (allows all
+    // origins while still supporting credentialed requests in development).
+    const isWildcard =
+        rawOrigins.length === 0 ||
+        (rawOrigins.length === 1 && rawOrigins[0] === '*');
+    const corsOrigin: CorsOptions['origin'] = isWildcard ? true : rawOrigins;
 
     const corsConfig: CorsOptions = {
-        origin: corsOrigins,
+        origin: corsOrigin,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
         credentials: true,

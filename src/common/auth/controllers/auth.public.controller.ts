@@ -3,6 +3,7 @@ import {
     Controller,
     Delete,
     Get,
+    HttpCode,
     HttpStatus,
     Post,
     UseGuards,
@@ -63,14 +64,27 @@ export class AuthPublicController {
         return this.authService.signup(payload);
     }
 
+    @Post('logout')
+    @UseGuards(JwtAccessGuard)
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'User logout' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.logout',
+    })
+    public logout(): Promise<{ success: boolean; message: string }> {
+        return this.authService.logout();
+    }
+
     @Get('refresh-token')
     @PublicRoute()
     @UseGuards(JwtRefreshGuard)
+    @HttpCode(HttpStatus.OK)
     @ApiBearerAuth('refreshToken')
     @ApiOperation({ summary: 'Refresh token' })
     @DocResponse({
         serialization: AuthRefreshResponseDto,
-        httpStatus: HttpStatus.CREATED,
+        httpStatus: HttpStatus.OK,
         messageKey: 'auth.success.refreshToken',
     })
     public refreshTokens(

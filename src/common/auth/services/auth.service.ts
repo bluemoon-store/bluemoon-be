@@ -184,6 +184,13 @@ export class AuthService implements IAuthService {
         }
     }
 
+    public async logout(): Promise<{ success: boolean; message: string }> {
+        return {
+            success: true,
+            message: 'auth.success.logout',
+        };
+    }
+
     public async refreshTokens(
         payload: IAuthUser
     ): Promise<AuthRefreshResponseDto> {
