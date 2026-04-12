@@ -97,17 +97,16 @@ Create a `.env` file based on `.env.docker` template. All environment variables 
 | -------------- | ---------------------------- | ---------------------------------------------------- | -------- |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db?schema=public` | Yes      |
 
-### AWS Configuration
+### Supabase Storage
 
-| Variable                      | Description                      | Example       | Required           |
-| ----------------------------- | -------------------------------- | ------------- | ------------------ |
-| `AWS_ACCESS_KEY`              | AWS IAM access key               | -             | For AWS features   |
-| `AWS_SECRET_KEY`              | AWS IAM secret key               | -             | For AWS features   |
-| `AWS_S3_REGION`               | S3 bucket region                 | `us-east-1`   | For S3 uploads     |
-| `AWS_S3_BUCKET`               | S3 bucket name                   | `my-bucket`   | For S3 uploads     |
-| `AWS_S3_PRESIGN_LINK_EXPIRES` | Pre-signed URL expiration (sec)  | `1200`        | No                 |
-| `AWS_SES_REGION`              | SES service region               | `us-east-1`   | For email service  |
-| `AWS_SES_SOURCE_EMAIL`        | Verified sender email            | `no-reply@example.com` | For email service |
+| Variable                          | Description                                   | Example                          | Required |
+| --------------------------------- | --------------------------------------------- | -------------------------------- | -------- |
+| `SUPABASE_URL`                    | Supabase project URL                          | `https://xxx.supabase.co`        | Yes\*    |
+| `SUPABASE_SERVICE_ROLE_KEY`       | Service role key (server only, never in FE) | -                                | Yes\*    |
+| `SUPABASE_STORAGE_BUCKET`         | Storage bucket id                             | `uploads`                        | Yes\*    |
+| `SUPABASE_STORAGE_PRESIGN_EXPIRES`| Requested presign TTL in seconds (max 7200)   | `1200`                           | No       |
+
+\*Required when using storage presign or server-side uploads.
 
 ### Redis Configuration
 

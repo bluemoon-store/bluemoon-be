@@ -32,8 +32,5 @@
         "^@grpc/proto-loader$": "<rootDir>/test/mocks/proto-loader.mock.ts"
     },
     "modulePathIgnorePatterns": ["<rootDir>/dist"],
-    "testPathIgnorePatterns": [
-        "<rootDir>/test/modules/post.service.spec.ts",
-        "<rootDir>/test/common/file.service.spec.ts"
-    ]
+    "testPathIgnorePatterns": ["<rootDir>/test/modules/post.service.spec.ts"]
 }

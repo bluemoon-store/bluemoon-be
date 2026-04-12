@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from 'src/common/database/database.module';
 import { HelperModule } from 'src/common/helper/helper.module';
-import { AwsModule } from 'src/common/aws/aws.module';
+import { StorageModule } from 'src/common/storage/storage.module';
 import { WalletModule } from 'src/modules/wallet/wallet.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 
@@ -15,7 +15,7 @@ import { OrderDeliveryService } from './services/order-delivery.service';
     imports: [
         DatabaseModule,
         HelperModule,
-        AwsModule,
+        StorageModule,
         WalletModule,
         CartModule,
     ],

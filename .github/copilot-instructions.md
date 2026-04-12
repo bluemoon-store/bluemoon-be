@@ -80,9 +80,9 @@ Responses automatically wrap via `ResponseInterceptor` into:
 - **Scheduling**: Use `@nestjs/schedule` in `src/workers/schedulers/` with `@Cron()` decorators
 - **Registration**: Import `BullModule.registerQueue()` in feature modules that enqueue jobs
 
-### 6. File Upload (AWS S3)
-- **Service**: `AwsS3Service` from `src/common/aws/` provides pre-signed URLs
-- **Pattern**: Frontend uploads directly to S3, backend stores only the S3 key
+### 6. File Upload (Supabase Storage)
+- **Service**: `SupabaseStorageService` from `src/common/storage/` provides signed upload URLs and server uploads
+- **Pattern**: Frontend uploads using the signed URL from the API; backend stores only the object key/path
 - **Example**: `PostImage` model stores `key` field, related to Post via Prisma relation
 
 ### 7. Testing
