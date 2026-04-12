@@ -103,7 +103,8 @@ Create a `.env` file based on `.env.docker` template. All environment variables 
 | --------------------------------- | --------------------------------------------- | -------------------------------- | -------- |
 | `SUPABASE_URL`                    | Supabase project URL                          | `https://xxx.supabase.co`        | Yes\*    |
 | `SUPABASE_SERVICE_ROLE_KEY`       | Service role key (server only, never in FE) | -                                | Yes\*    |
-| `SUPABASE_STORAGE_BUCKET`         | Storage bucket id                             | `uploads`                        | Yes\*    |
+| `SUPABASE_STORAGE_BUCKET_USER_UPLOADS` | Bucket for user uploads / presigned PUT       | `user-uploads`                   | Yes\*    |
+| `SUPABASE_STORAGE_BUCKET_PUBLIC_ASSETS` | Optional public bucket (e.g. branding assets) | `public-assets`                | No       |
 | `SUPABASE_STORAGE_PRESIGN_EXPIRES`| Requested presign TTL in seconds (max 7200)   | `1200`                           | No       |
 
 \*Required when using storage presign or server-side uploads.

@@ -20,7 +20,8 @@ describe('SupabaseStorageService', () => {
     const mockConfig = {
         'supabase.url': 'https://test.supabase.co',
         'supabase.serviceRoleKey': 'test-service-role',
-        'supabase.storage.bucket': 'test-bucket',
+        'supabase.storage.userUploadsBucket': 'test-bucket',
+        'supabase.storage.publicAssetsBucket': 'public-bucket',
         'supabase.storage.presignExpires': 3600,
     };
 
@@ -93,7 +94,10 @@ describe('SupabaseStorageService', () => {
         );
 
         expect(loggerMock.info).toHaveBeenCalledWith(
-            { bucket: 'test-bucket' },
+            {
+                userUploadsBucket: 'test-bucket',
+                publicAssetsBucket: 'public-bucket',
+            },
             'Supabase storage service initialized'
         );
     });
@@ -221,7 +225,21 @@ describe('SupabaseStorageService', () => {
             const url = service.getPublicUrl('folder/x.png');
 
             expect(url).toBe(publicUrl);
+            expect(mockFrom).toHaveBeenCalledWith('test-bucket');
             expect(mockGetPublicUrl).toHaveBeenCalledWith('folder/x.png');
+        });
+
+        it('should use public assets bucket when requested', () => {
+            const publicUrl =
+                'https://test.supabase.co/storage/v1/object/public/public-bucket/logo.png';
+            mockGetPublicUrl.mockReturnValue({
+                data: { publicUrl },
+            });
+
+            const url = service.getPublicUrl('logo.png', 'publicAssets');
+
+            expect(url).toBe(publicUrl);
+            expect(mockFrom).toHaveBeenCalledWith('public-bucket');
         });
     });
 });

@@ -8,10 +8,13 @@ import { IStorageService } from '../interfaces/storage.service.interface';
 /** Supabase signed upload URLs are valid for at most two hours. */
 const MAX_SIGNED_UPLOAD_EXPIRES_SEC = 7200;
 
+export type SupabaseStorageBucketKind = 'userUploads' | 'publicAssets';
+
 @Injectable()
 export class SupabaseStorageService implements IStorageService {
     private readonly client: SupabaseClient;
-    private readonly bucket: string;
+    private readonly userUploadsBucket: string;
+    private readonly publicAssetsBucket?: string;
     private readonly linkExpire: number;
 
     constructor(
@@ -32,16 +35,39 @@ export class SupabaseStorageService implements IStorageService {
             },
         });
 
-        this.bucket = this.configService.get<string>('supabase.storage.bucket');
+        this.userUploadsBucket = this.configService.get<string>(
+            'supabase.storage.userUploadsBucket'
+        );
+        if (!this.userUploadsBucket) {
+            throw new Error('SUPABASE_STORAGE_BUCKET_USER_UPLOADS is required');
+        }
+        this.publicAssetsBucket = this.configService.get<string | undefined>(
+            'supabase.storage.publicAssetsBucket'
+        );
         this.linkExpire = this.configService.get<number>(
             'supabase.storage.presignExpires',
             3600
         );
 
         this.logger.info(
-            { bucket: this.bucket },
+            {
+                userUploadsBucket: this.userUploadsBucket,
+                publicAssetsBucket: this.publicAssetsBucket ?? null,
+            },
             'Supabase storage service initialized'
         );
+    }
+
+    private resolveBucketName(kind: SupabaseStorageBucketKind): string {
+        if (kind === 'publicAssets') {
+            if (!this.publicAssetsBucket) {
+                throw new Error(
+                    'SUPABASE_STORAGE_BUCKET_PUBLIC_ASSETS is not set'
+                );
+            }
+            return this.publicAssetsBucket;
+        }
+        return this.userUploadsBucket;
     }
 
     async getPresignedUploadUrl(
@@ -57,7 +83,7 @@ export class SupabaseStorageService implements IStorageService {
             );
 
             const { data, error } = await this.client.storage
-                .from(this.bucket)
+                .from(this.userUploadsBucket)
                 .createSignedUploadUrl(key);
 
             if (error) {
@@ -85,7 +111,7 @@ export class SupabaseStorageService implements IStorageService {
     ): Promise<void> {
         try {
             const { error } = await this.client.storage
-                .from(this.bucket)
+                .from(this.userUploadsBucket)
                 .upload(key, body, {
                     contentType,
                     upsert: true,
@@ -107,10 +133,16 @@ export class SupabaseStorageService implements IStorageService {
         }
     }
 
-    getPublicUrl(key: string): string {
-        const { data } = this.client.storage
-            .from(this.bucket)
-            .getPublicUrl(key);
+    /**
+     * @param key - Object path within the bucket
+     * @param bucketKind - `userUploads` (default) or `publicAssets` if configured
+     */
+    getPublicUrl(
+        key: string,
+        bucketKind: SupabaseStorageBucketKind = 'userUploads'
+    ): string {
+        const bucket = this.resolveBucketName(bucketKind);
+        const { data } = this.client.storage.from(bucket).getPublicUrl(key);
 
         return data.publicUrl;
     }
