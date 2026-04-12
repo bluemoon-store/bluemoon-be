@@ -12,7 +12,7 @@ import {
     IsArray,
     ValidateNested,
 } from 'class-validator';
-import { ProductListResponseDto } from 'src/modules/product/dtos/response/product.response';
+import { ProductResponseDto } from 'src/modules/product/dtos/response/product.response';
 import { CryptoPaymentResponseDto } from 'src/modules/crypto-payment/dtos/response/crypto-payment.response';
 
 export class OrderItemResponseDto implements OrderItem {
@@ -52,6 +52,42 @@ export class OrderItemResponseDto implements OrderItem {
     priceAtPurchase: Prisma.Decimal; // Prisma Decimal type
 
     @ApiPropertyOptional({
+        example: null,
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsUUID()
+    variantId: string | null;
+
+    @ApiPropertyOptional({
+        example: '$50 Points | Fully Unlocked',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    variantLabel: string | null;
+
+    @ApiPropertyOptional({
+        example: 'AB',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    regionLabel: string | null;
+
+    @ApiPropertyOptional({
+        example: 'CA',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    regionCountry: string | null;
+
+    @ApiPropertyOptional({
         example: 'Your product key: ABC123XYZ',
         nullable: true,
     })
@@ -84,13 +120,13 @@ export class OrderItemResponseDto implements OrderItem {
     updatedAt: Date;
 
     @ApiPropertyOptional({
-        type: ProductListResponseDto,
+        type: ProductResponseDto,
     })
     @Expose()
     @IsOptional()
-    @Type(() => ProductListResponseDto)
+    @Type(() => ProductResponseDto)
     @ValidateNested()
-    product?: ProductListResponseDto;
+    product?: ProductResponseDto;
 }
 
 export class OrderResponseDto implements Order {

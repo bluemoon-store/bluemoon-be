@@ -90,7 +90,31 @@ export class OrderService implements IOrderService {
                 );
             }
 
-            if (product.stockQuantity < item.quantity) {
+            if (item.variantId) {
+                const variant =
+                    await this.databaseService.productVariant.findFirst({
+                        where: {
+                            id: item.variantId,
+                            productId: item.productId,
+                            deletedAt: null,
+                            isActive: true,
+                        },
+                    });
+
+                if (!variant) {
+                    throw new HttpException(
+                        `order.error.variantInvalid: ${product.name}`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                if (variant.stockQuantity < item.quantity) {
+                    throw new HttpException(
+                        `order.error.insufficientStock: ${product.name}`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+            } else if (product.stockQuantity < item.quantity) {
                 throw new HttpException(
                     `order.error.insufficientStock: ${product.name}`,
                     HttpStatus.BAD_REQUEST
@@ -165,30 +189,56 @@ export class OrderService implements IOrderService {
                 const orderItems = [];
                 for (const cartItem of cart.items) {
                     const product = cartItem.product;
-                    const price =
+                    const basePrice =
                         typeof product.price === 'string'
                             ? product.price
                             : product.price.toString();
 
-                    // Create order item
+                    const priceAtPurchase =
+                        cartItem.unitPrice != null
+                            ? cartItem.unitPrice.toString()
+                            : basePrice;
+
+                    let variantLabel: string | null = null;
+                    if (cartItem.variantId) {
+                        const v = await tx.productVariant.findUnique({
+                            where: { id: cartItem.variantId },
+                        });
+                        variantLabel = v?.label ?? null;
+                    }
+
                     const orderItem = await tx.orderItem.create({
                         data: {
                             orderId: newOrder.id,
                             productId: cartItem.productId,
                             quantity: cartItem.quantity,
-                            priceAtPurchase: price,
+                            priceAtPurchase,
+                            variantId: cartItem.variantId,
+                            variantLabel,
+                            regionLabel: cartItem.regionLabel || null,
+                            regionCountry: cartItem.regionCountry || null,
                         },
                     });
 
-                    // Update product stock
-                    await tx.product.update({
-                        where: { id: cartItem.productId },
-                        data: {
-                            stockQuantity: {
-                                decrement: cartItem.quantity,
+                    if (cartItem.variantId) {
+                        await tx.productVariant.update({
+                            where: { id: cartItem.variantId },
+                            data: {
+                                stockQuantity: {
+                                    decrement: cartItem.quantity,
+                                },
                             },
-                        },
-                    });
+                        });
+                    } else {
+                        await tx.product.update({
+                            where: { id: cartItem.productId },
+                            data: {
+                                stockQuantity: {
+                                    decrement: cartItem.quantity,
+                                },
+                            },
+                        });
+                    }
 
                     orderItems.push(orderItem);
                 }

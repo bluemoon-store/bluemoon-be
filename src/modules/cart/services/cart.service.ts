@@ -19,12 +19,14 @@ export class CartService implements ICartService {
     }
 
     /**
-     * Validate product before adding to cart
+     * Validate product (and optional variant) before adding to cart.
+     * Returns unit price snapshot for the line.
      */
-    private async validateProduct(
+    private async validateProductLine(
         productId: string,
-        quantity: number
-    ): Promise<void> {
+        quantity: number,
+        variantId?: string | null
+    ): Promise<{ unitPrice: string }> {
         const product = await this.databaseService.product.findFirst({
             where: {
                 id: productId,
@@ -46,12 +48,53 @@ export class CartService implements ICartService {
             );
         }
 
+        if (variantId) {
+            const variant = await this.databaseService.productVariant.findFirst(
+                {
+                    where: {
+                        id: variantId,
+                        productId,
+                        deletedAt: null,
+                        isActive: true,
+                    },
+                }
+            );
+
+            if (!variant) {
+                throw new HttpException(
+                    'cart.error.variantNotFound',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            if (variant.stockQuantity < quantity) {
+                throw new HttpException(
+                    'cart.error.insufficientStock',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            return {
+                unitPrice:
+                    typeof variant.price === 'string'
+                        ? variant.price
+                        : variant.price.toString(),
+            };
+        }
+
         if (product.stockQuantity < quantity) {
             throw new HttpException(
                 'cart.error.insufficientStock',
                 HttpStatus.BAD_REQUEST
             );
         }
+
+        return {
+            unitPrice:
+                typeof product.price === 'string'
+                    ? product.price
+                    : product.price.toString(),
+        };
     }
 
     /**
@@ -142,16 +185,26 @@ export class CartService implements ICartService {
         data: CartAddItemDto
     ): Promise<CartResponseDto> {
         try {
-            await this.validateProduct(data.productId, data.quantity);
+            const { unitPrice } = await this.validateProductLine(
+                data.productId,
+                data.quantity,
+                data.variantId
+            );
 
             // Get or create cart
             const cart = await this.getOrCreateCart(userId);
+
+            const regionLabel = data.regionLabel ?? '';
+            const regionCountry = data.regionCountry ?? '';
 
             // Check if item already exists in cart
             const existingItem = await this.databaseService.cartItem.findFirst({
                 where: {
                     cartId: cart.id,
                     productId: data.productId,
+                    variantId: data.variantId ?? null,
+                    regionLabel,
+                    regionCountry,
                 },
                 include: {
                     product: true,
@@ -162,11 +215,18 @@ export class CartService implements ICartService {
                 // Update quantity
                 const newQuantity = existingItem.quantity + data.quantity;
 
-                await this.validateProduct(data.productId, newQuantity);
+                await this.validateProductLine(
+                    data.productId,
+                    newQuantity,
+                    data.variantId
+                );
 
                 await this.databaseService.cartItem.update({
                     where: { id: existingItem.id },
-                    data: { quantity: newQuantity },
+                    data: {
+                        quantity: newQuantity,
+                        unitPrice,
+                    },
                 });
             } else {
                 await this.databaseService.cartItem.create({
@@ -174,6 +234,10 @@ export class CartService implements ICartService {
                         cartId: cart.id,
                         productId: data.productId,
                         quantity: data.quantity,
+                        variantId: data.variantId ?? null,
+                        regionLabel,
+                        regionCountry,
+                        unitPrice,
                     },
                 });
             }
@@ -223,7 +287,11 @@ export class CartService implements ICartService {
             }
 
             // Validate product and stock
-            await this.validateProduct(cartItem.productId, data.quantity);
+            await this.validateProductLine(
+                cartItem.productId,
+                data.quantity,
+                cartItem.variantId
+            );
 
             // Update quantity
             await this.databaseService.cartItem.update({

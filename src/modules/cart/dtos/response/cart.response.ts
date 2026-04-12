@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { Cart, CartItem } from '@prisma/client';
+import { Cart, CartItem, Prisma } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import {
     IsString,
@@ -11,7 +11,7 @@ import {
     ValidateNested,
     IsOptional,
 } from 'class-validator';
-import { ProductListResponseDto } from 'src/modules/product/dtos/response/product.response';
+import { ProductResponseDto } from 'src/modules/product/dtos/response/product.response';
 
 export class CartItemResponseDto implements CartItem {
     @ApiProperty({
@@ -42,6 +42,38 @@ export class CartItemResponseDto implements CartItem {
     @IsInt()
     quantity: number;
 
+    @ApiPropertyOptional({
+        example: null,
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsUUID()
+    variantId: string | null;
+
+    @ApiProperty({
+        example: '',
+    })
+    @Expose()
+    @IsString()
+    regionLabel: string;
+
+    @ApiProperty({
+        example: '',
+    })
+    @Expose()
+    @IsString()
+    regionCountry: string;
+
+    @ApiPropertyOptional({
+        example: null,
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @Type(() => String)
+    unitPrice: Prisma.Decimal | null;
+
     @ApiProperty({
         example: faker.date.past().toISOString(),
     })
@@ -57,13 +89,13 @@ export class CartItemResponseDto implements CartItem {
     updatedAt: Date;
 
     @ApiPropertyOptional({
-        type: ProductListResponseDto,
+        type: ProductResponseDto,
     })
     @Expose()
     @IsOptional()
-    @Type(() => ProductListResponseDto)
+    @Type(() => ProductResponseDto)
     @ValidateNested()
-    product?: ProductListResponseDto;
+    product?: ProductResponseDto;
 }
 
 export class CartResponseDto implements Cart {

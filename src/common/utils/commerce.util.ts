@@ -1,6 +1,23 @@
+import { Prisma } from '@prisma/client';
+
 /**
  * Commerce utilities for cart and order (line items with product price/quantity).
  */
+
+function coercePrice(
+    value: string | number | Prisma.Decimal | unknown
+): number {
+    if (value === null || value === undefined) {
+        return 0;
+    }
+    if (typeof value === 'string') {
+        return parseFloat(value);
+    }
+    if (typeof value === 'number') {
+        return value;
+    }
+    return Number(value);
+}
 
 /**
  * Item shape for total calculation (cart item or order item with product).
@@ -8,6 +25,7 @@
  */
 export interface CommerceLineItem {
     quantity: number;
+    unitPrice?: string | number | Prisma.Decimal | null;
     product?: {
         price?: string | number | unknown;
         currency?: string;
@@ -42,12 +60,15 @@ export function calculateLineItemsTotals(
     let totalItems = 0;
 
     for (const item of items) {
-        if (item.product && item.product.price) {
-            const price =
-                typeof item.product.price === 'string'
-                    ? parseFloat(item.product.price)
-                    : Number(item.product.price);
-            totalAmount += price * item.quantity;
+        const lineUnit =
+            item.unitPrice != null && item.unitPrice !== undefined
+                ? coercePrice(item.unitPrice)
+                : item.product?.price != null
+                  ? coercePrice(item.product.price)
+                  : 0;
+
+        if (lineUnit > 0) {
+            totalAmount += lineUnit * item.quantity;
             totalItems += item.quantity;
         }
     }

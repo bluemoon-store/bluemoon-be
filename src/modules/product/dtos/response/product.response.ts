@@ -85,6 +85,86 @@ export class ProductImageResponseDto implements ProductImage {
     deletedAt: Date | null;
 }
 
+export class ProductVariantResponseDto {
+    @ApiProperty({ example: faker.string.uuid() })
+    @Expose()
+    @IsUUID()
+    id: string;
+
+    @ApiProperty({ example: faker.string.uuid() })
+    @Expose()
+    @IsUUID()
+    productId: string;
+
+    @ApiProperty({ example: '$50 Points | Fully Unlocked' })
+    @Expose()
+    @IsString()
+    label: string;
+
+    @ApiProperty({ example: '99.99' })
+    @Expose()
+    @Type(() => String)
+    price: Prisma.Decimal;
+
+    @ApiProperty({ example: 'USD' })
+    @Expose()
+    @IsString()
+    currency: string;
+
+    @ApiProperty({ example: 10 })
+    @Expose()
+    @IsInt()
+    stockQuantity: number;
+
+    @ApiProperty({ example: true })
+    @Expose()
+    @IsBoolean()
+    isActive: boolean;
+
+    @ApiProperty({ example: 0 })
+    @Expose()
+    @IsInt()
+    sortOrder: number;
+
+    @ApiPropertyOptional({ example: null, nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsDate()
+    deletedAt: Date | null;
+}
+
+export class ProductRegionResponseDto {
+    @ApiProperty({ example: faker.string.uuid() })
+    @Expose()
+    @IsUUID()
+    id: string;
+
+    @ApiProperty({ example: faker.string.uuid() })
+    @Expose()
+    @IsUUID()
+    productId: string;
+
+    @ApiProperty({ example: 'AB' })
+    @Expose()
+    @IsString()
+    label: string;
+
+    @ApiProperty({ example: 'CA' })
+    @Expose()
+    @IsString()
+    countryCode: string;
+
+    @ApiProperty({ example: true })
+    @Expose()
+    @IsBoolean()
+    isActive: boolean;
+
+    @ApiProperty({ example: 0 })
+    @Expose()
+    @IsInt()
+    sortOrder: number;
+}
+
 export class ProductResponseDto implements Product {
     @ApiProperty({
         example: faker.string.uuid(),
@@ -119,7 +199,7 @@ export class ProductResponseDto implements Product {
     })
     @Expose()
     @Type(() => String)
-    price: Prisma.Decimal; // Prisma Decimal type
+    price: Prisma.Decimal;
 
     @ApiProperty({
         example: 'USD',
@@ -149,6 +229,11 @@ export class ProductResponseDto implements Product {
     @IsBoolean()
     isFeatured: boolean;
 
+    @ApiProperty({ example: 0 })
+    @Expose()
+    @IsInt()
+    sortOrder: number;
+
     @ApiProperty({
         example: faker.string.uuid(),
     })
@@ -172,6 +257,62 @@ export class ProductResponseDto implements Product {
     @IsOptional()
     @IsString()
     deliveryContent: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    shortNotice: string | null;
+
+    @ApiProperty({ example: false })
+    @Expose()
+    @IsBoolean()
+    isHot: boolean;
+
+    @ApiProperty({ example: false })
+    @Expose()
+    @IsBoolean()
+    isNew: boolean;
+
+    @ApiProperty({ example: false })
+    @Expose()
+    @IsBoolean()
+    isNFA: boolean;
+
+    @ApiProperty({ example: false })
+    @Expose()
+    @IsBoolean()
+    isRestocked: boolean;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsDate()
+    launchedAt: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsDate()
+    restockedAt: Date | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    countryOfOrigin: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    redeemProcess: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    warrantyText: string | null;
 
     @ApiProperty({
         example: faker.date.past().toISOString(),
@@ -214,6 +355,26 @@ export class ProductResponseDto implements Product {
     @ValidateNested({ each: true })
     @Type(() => ProductImageResponseDto)
     images?: ProductImageResponseDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductVariantResponseDto],
+    })
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductVariantResponseDto)
+    variants?: ProductVariantResponseDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductRegionResponseDto],
+    })
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductRegionResponseDto)
+    regions?: ProductRegionResponseDto[];
 }
 
 export class ProductListResponseDto extends ProductResponseDto {
@@ -235,4 +396,72 @@ export class ProductListResponseDto extends ProductResponseDto {
     @ValidateNested({ each: true })
     @Type(() => ProductImageResponseDto)
     images?: ProductImageResponseDto[];
+
+    @ApiPropertyOptional({
+        description: 'Primary image URL for cards',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    primaryImageUrl: string | null;
+
+    @ApiProperty({
+        description: 'Minimum active variant price, or base product price',
+        example: '49.99000000',
+    })
+    @Expose()
+    @IsString()
+    fromPrice: string;
+
+    @ApiProperty({
+        description: 'Display tags derived from flags',
+        example: ['Hot', 'New'],
+        type: [String],
+    })
+    @Expose()
+    @IsArray()
+    @IsString({ each: true })
+    tags: string[];
+}
+
+export class ProductDetailResponseDto extends ProductListResponseDto {
+    @ApiPropertyOptional({
+        description: 'Hero image (same as primary for now)',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    heroImageUrl: string | null;
+
+    @ApiPropertyOptional({
+        type: [ProductVariantResponseDto],
+    })
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductVariantResponseDto)
+    variants?: ProductVariantResponseDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductRegionResponseDto],
+    })
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductRegionResponseDto)
+    regions?: ProductRegionResponseDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductListResponseDto],
+    })
+    @Expose()
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductListResponseDto)
+    related?: ProductListResponseDto[];
 }

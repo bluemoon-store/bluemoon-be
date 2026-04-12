@@ -28,6 +28,12 @@ import { ProductSearchDto } from '../dtos/request/product.search.request';
 import { ProductListQueryDto } from '../dtos/request/product.list.request';
 import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
+    AdminProductRelatedSetDto,
+    AdminProductRegionCreateDto,
+    AdminProductVariantCreateDto,
+    AdminProductVariantUpdateDto,
+} from '../dtos/request/product.admin.subresource.request';
+import {
     ProductResponseDto,
     ProductListResponseDto,
 } from '../dtos/response/product.response';
@@ -45,8 +51,6 @@ export class ProductAdminController {
         private readonly productService: ProductService,
         private readonly categoryService: ProductCategoryService
     ) {}
-
-    // Product CRUD Operations
 
     @Post()
     @AllowedRoles([Role.ADMIN, Role.MANAGER])
@@ -79,8 +83,12 @@ export class ProductAdminController {
             page: query.page,
             limit: query.limit,
             categoryId: query.categoryId,
+            categorySlug: query.categorySlug,
             isActive: query.isActive,
             isFeatured: query.isFeatured,
+            isHot: query.isHot,
+            isNew: query.isNew,
+            isRestocked: query.isRestocked,
         });
     }
 
@@ -99,151 +107,7 @@ export class ProductAdminController {
         return this.productService.search(query);
     }
 
-    @Get(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Get product by ID (admin)' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.productFound',
-    })
-    public async getById(@Param('id') id: string): Promise<ProductResponseDto> {
-        return this.productService.findOne(id);
-    }
-
-    @Put(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Update product' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.updated',
-    })
-    public async update(
-        @Param('id') id: string,
-        @Body() payload: ProductUpdateDto
-    ): Promise<ProductResponseDto> {
-        return this.productService.update(id, payload);
-    }
-
-    @Delete(':id')
-    @AllowedRoles([Role.ADMIN])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Delete product' })
-    @DocGenericResponse({
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.productDeleted',
-    })
-    public async delete(
-        @Param('id') id: string
-    ): Promise<ApiGenericResponseDto> {
-        return this.productService.delete(id);
-    }
-
-    @Put(':id/stock')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Update product stock' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.stockUpdated',
-    })
-    public async updateStock(
-        @Param('id') id: string,
-        @Body('stockQuantity') stockQuantity: number
-    ): Promise<ProductResponseDto> {
-        return this.productService.updateStock(id, stockQuantity);
-    }
-
-    @Put(':id/toggle-active')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Toggle product active status' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.activeToggled',
-    })
-    public async toggleActive(
-        @Param('id') id: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.toggleActive(id);
-    }
-
-    @Put(':id/toggle-featured')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Toggle product featured status' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.featuredToggled',
-    })
-    public async toggleFeatured(
-        @Param('id') id: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.toggleFeatured(id);
-    }
-
-    // Image Management
-
-    @Post(':id/images')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Add image to product' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.imageAdded',
-    })
-    public async addImage(
-        @Param('id') productId: string,
-        @Body('imageKey') imageKey: string,
-        @Body('isPrimary') isPrimary?: boolean
-    ): Promise<ProductResponseDto> {
-        return this.productService.addImage(
-            productId,
-            imageKey,
-            isPrimary ?? false
-        );
-    }
-
-    @Delete(':id/images/:imageId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Remove image from product' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.imageRemoved',
-    })
-    public async removeImage(
-        @Param('id') productId: string,
-        @Param('imageId') imageId: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.removeImage(productId, imageId);
-    }
-
-    @Put(':id/images/:imageId/primary')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Set image as primary' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.primaryImageSet',
-    })
-    public async setPrimaryImage(
-        @Param('id') productId: string,
-        @Param('imageId') imageId: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.setPrimaryImage(productId, imageId);
-    }
-
-    // Category CRUD Operations
+    // Categories (must be registered before :id routes)
 
     @Post('categories')
     @AllowedRoles([Role.ADMIN])
@@ -337,5 +201,251 @@ export class ProductAdminController {
         @Param('id') id: string
     ): Promise<CategoryResponseDto> {
         return this.categoryService.toggleActive(id);
+    }
+
+    // Variants / regions / related
+
+    @Post(':id/variants')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Add product variant' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async addVariant(
+        @Param('id') productId: string,
+        @Body() payload: AdminProductVariantCreateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.addVariant(productId, payload);
+    }
+
+    @Put(':id/variants/:variantId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update product variant' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async updateVariant(
+        @Param('id') productId: string,
+        @Param('variantId') variantId: string,
+        @Body() payload: AdminProductVariantUpdateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.updateVariant(productId, variantId, payload);
+    }
+
+    @Delete(':id/variants/:variantId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Remove product variant (soft delete)' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async deleteVariant(
+        @Param('id') productId: string,
+        @Param('variantId') variantId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.deleteVariant(productId, variantId);
+    }
+
+    @Post(':id/regions')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Add product region' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async addRegion(
+        @Param('id') productId: string,
+        @Body() payload: AdminProductRegionCreateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.addRegion(productId, payload);
+    }
+
+    @Delete(':id/regions/:regionId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Remove product region' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async deleteRegion(
+        @Param('id') productId: string,
+        @Param('regionId') regionId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.deleteRegion(productId, regionId);
+    }
+
+    @Put(':id/related')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Set related products' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async setRelated(
+        @Param('id') productId: string,
+        @Body() payload: AdminProductRelatedSetDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.setRelatedProducts(
+            productId,
+            payload.relatedProductIds
+        );
+    }
+
+    // Product by ID and CRUD
+
+    @Get(':id')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get product by ID (admin)' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.productFound',
+    })
+    public async getById(@Param('id') id: string): Promise<ProductResponseDto> {
+        return this.productService.findOne(id);
+    }
+
+    @Put(':id')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.updated',
+    })
+    public async update(
+        @Param('id') id: string,
+        @Body() payload: ProductUpdateDto
+    ): Promise<ProductResponseDto> {
+        return this.productService.update(id, payload);
+    }
+
+    @Delete(':id')
+    @AllowedRoles([Role.ADMIN])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Delete product' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.productDeleted',
+    })
+    public async delete(
+        @Param('id') id: string
+    ): Promise<ApiGenericResponseDto> {
+        return this.productService.delete(id);
+    }
+
+    @Put(':id/stock')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Update product stock' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.stockUpdated',
+    })
+    public async updateStock(
+        @Param('id') id: string,
+        @Body('stockQuantity') stockQuantity: number
+    ): Promise<ProductResponseDto> {
+        return this.productService.updateStock(id, stockQuantity);
+    }
+
+    @Put(':id/toggle-active')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Toggle product active status' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.activeToggled',
+    })
+    public async toggleActive(
+        @Param('id') id: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.toggleActive(id);
+    }
+
+    @Put(':id/toggle-featured')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Toggle product featured status' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.featuredToggled',
+    })
+    public async toggleFeatured(
+        @Param('id') id: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.toggleFeatured(id);
+    }
+
+    @Post(':id/images')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Add image to product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.imageAdded',
+    })
+    public async addImage(
+        @Param('id') productId: string,
+        @Body('imageKey') imageKey: string,
+        @Body('isPrimary') isPrimary?: boolean
+    ): Promise<ProductResponseDto> {
+        return this.productService.addImage(
+            productId,
+            imageKey,
+            isPrimary ?? false
+        );
+    }
+
+    @Delete(':id/images/:imageId')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Remove image from product' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.imageRemoved',
+    })
+    public async removeImage(
+        @Param('id') productId: string,
+        @Param('imageId') imageId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.removeImage(productId, imageId);
+    }
+
+    @Put(':id/images/:imageId/primary')
+    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Set image as primary' })
+    @DocResponse({
+        serialization: ProductResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.primaryImageSet',
+    })
+    public async setPrimaryImage(
+        @Param('id') productId: string,
+        @Param('imageId') imageId: string
+    ): Promise<ProductResponseDto> {
+        return this.productService.setPrimaryImage(productId, imageId);
     }
 }

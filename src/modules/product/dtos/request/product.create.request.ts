@@ -43,6 +43,59 @@ export class ProductImageDto {
     sortOrder?: number;
 }
 
+export class ProductVariantInputDto {
+    @ApiProperty({ example: '$50 Points | Fully Unlocked' })
+    @IsString()
+    label: string;
+
+    @ApiProperty({ example: '99.99' })
+    @IsString()
+    price: string;
+
+    @ApiPropertyOptional({ example: 'USD', default: 'USD' })
+    @IsOptional()
+    @IsString()
+    currency?: string;
+
+    @ApiPropertyOptional({ example: 0, default: 0 })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    stockQuantity?: number;
+
+    @ApiPropertyOptional({ example: true, default: true })
+    @IsOptional()
+    @IsBoolean()
+    isActive?: boolean;
+
+    @ApiPropertyOptional({ example: 0, default: 0 })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    sortOrder?: number;
+}
+
+export class ProductRegionInputDto {
+    @ApiProperty({ example: 'AB' })
+    @IsString()
+    label: string;
+
+    @ApiProperty({ example: 'CA' })
+    @IsString()
+    countryCode: string;
+
+    @ApiPropertyOptional({ example: true, default: true })
+    @IsOptional()
+    @IsBoolean()
+    isActive?: boolean;
+
+    @ApiPropertyOptional({ example: 0, default: 0 })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    sortOrder?: number;
+}
+
 export class ProductCreateDto {
     @ApiProperty({
         example: faker.commerce.productName(),
@@ -114,6 +167,16 @@ export class ProductCreateDto {
     @IsBoolean()
     isFeatured?: boolean;
 
+    @ApiPropertyOptional({
+        example: 0,
+        default: 0,
+        description: 'Display sort order (carousels)',
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    sortOrder?: number;
+
     @ApiProperty({
         example: faker.string.uuid(),
         description: 'Category ID',
@@ -138,6 +201,54 @@ export class ProductCreateDto {
     @IsString()
     deliveryContent?: string;
 
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    shortNotice?: string;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isHot?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isNew?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isNFA?: boolean;
+
+    @ApiPropertyOptional({ default: false })
+    @IsOptional()
+    @IsBoolean()
+    isRestocked?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    launchedAt?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    restockedAt?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    countryOfOrigin?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    redeemProcess?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    warrantyText?: string;
+
     @ApiPropertyOptional({
         type: [ProductImageDto],
         description: 'Product images',
@@ -147,4 +258,24 @@ export class ProductCreateDto {
     @ValidateNested({ each: true })
     @Type(() => ProductImageDto)
     images?: ProductImageDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductVariantInputDto],
+        description: 'Purchasable variants',
+    })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductVariantInputDto)
+    variants?: ProductVariantInputDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductRegionInputDto],
+        description: 'Available regions / states',
+    })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductRegionInputDto)
+    regions?: ProductRegionInputDto[];
 }
