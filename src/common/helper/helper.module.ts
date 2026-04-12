@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 import { AwsModule } from '../aws/aws.module';
+import { EmailModule } from '../email/email.module';
 
 import { HelperEmailService } from './services/helper.email.service';
 import { HelperEncryptionService } from './services/helper.encryption.service';
@@ -10,7 +11,7 @@ import { HelperPrismaQueryBuilderService } from './services/helper.query.builder
 import { HelperQueryService } from './services/helper.query.service';
 
 @Module({
-    imports: [AwsModule],
+    imports: [AwsModule, EmailModule],
     providers: [
         JwtService,
         HelperEncryptionService,

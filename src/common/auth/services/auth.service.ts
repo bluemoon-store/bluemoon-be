@@ -8,6 +8,11 @@ import * as QRCode from 'qrcode';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    ISendEmailBasePayload,
+    IWelcomeEmailDataPayload,
+} from 'src/common/helper/interfaces/email.interface';
 
 import { HelperEncryptionService } from '../../helper/services/helper.encryption.service';
 import { IAuthUser } from '../../request/interfaces/request.interface';
@@ -158,17 +163,16 @@ export class AuthService implements IAuthService {
                 userId: createdUser.id,
             });
 
-            // TODO: Uncomment this when the email service is ready
-            // this.emailQueue.add(
-            //     AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL,
-            //     {
-            //         data: {
-            //             userName: createdUser.userName,
-            //         },
-            //         toEmails: [email],
-            //     } as ISendEmailBasePayload<IWelcomeEmailDataPayload>,
-            //     { delay: 15000 }
-            // );
+            this.emailQueue.add(
+                EMAIL_TEMPLATES.WELCOME_EMAIL,
+                {
+                    data: {
+                        userName: createdUser.userName,
+                    },
+                    toEmails: [email],
+                } as ISendEmailBasePayload<IWelcomeEmailDataPayload>,
+                { delay: 15000 }
+            );
 
             // Trigger welcome notification
             // this.notificationQueue.add('welcome', {

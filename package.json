@@ -32,7 +32,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.932.0",
-    "@aws-sdk/client-ses": "^3.932.0",
     "@aws-sdk/s3-request-presigner": "^3.932.0",
     "@bull-board/api": "^6.16.4",
     "@bull-board/express": "^6.16.4",
@@ -84,6 +83,7 @@
     "pino-pretty": "^13.1.2",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
+    "resend": "^6.10.0",
     "rxjs": "^7.8.2",
     "speakeasy": "^2.0.0",
     "swagger-ui-express": "^5.0.1",

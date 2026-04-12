@@ -1,5 +1,6 @@
 import { HttpException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { UserUpdateDto } from 'src/modules/user/dtos/request/user.update.request';
@@ -73,7 +74,7 @@ describe('UserService', () => {
                 deletedAt: new Date(),
             });
 
-            const result = await service.deleteUser('123');
+            const result = await service.deleteUser('123', '123', Role.USER);
 
             expect(result).toEqual({
                 success: true,

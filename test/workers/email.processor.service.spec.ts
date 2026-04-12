@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Job } from 'bull';
 import { PinoLogger } from 'nestjs-pino';
 
-import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
     ISendEmailBasePayload,
     IWelcomeEmailDataPayload,
@@ -62,7 +62,7 @@ describe('EmailProcessorWorkerService', () => {
 
             expect(helperEmailServiceMock.sendEmail).toHaveBeenCalledWith({
                 emails: jobData.toEmails,
-                emailType: AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL,
+                emailType: EMAIL_TEMPLATES.WELCOME_EMAIL,
                 payload: jobData.data,
             });
         });

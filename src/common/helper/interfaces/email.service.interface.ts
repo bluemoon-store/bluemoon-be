@@ -1,9 +1,9 @@
-import { SendTemplatedEmailCommandOutput } from '@aws-sdk/client-ses';
-
 import { ISendEmailParams } from './email.interface';
 
+export interface IEmailSendResult {
+    messageId: string;
+}
+
 export interface IHelperEmailService {
-    sendEmail(
-        payload: ISendEmailParams
-    ): Promise<SendTemplatedEmailCommandOutput>;
+    sendEmail(payload: ISendEmailParams): Promise<IEmailSendResult>;
 }

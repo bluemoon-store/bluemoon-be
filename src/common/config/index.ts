@@ -5,6 +5,7 @@ import CryptoConfig from './crypto.config';
 import DocConfig from './doc.config';
 import FirebaseConfig from './firebase.config';
 import RedisConfig from './redis.config';
+import ResendConfig from './resend.config';
 
 export default [
     AppConfig,
@@ -14,4 +15,5 @@ export default [
     DocConfig,
     FirebaseConfig,
     CryptoConfig,
+    ResendConfig,
 ];

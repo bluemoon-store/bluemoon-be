@@ -306,6 +306,45 @@ docker run -d -p 3001:3001 --env-file .env --name nestjs-app your-registry/jinx.
 docker-compose up -d --build
 ```
 
+### Railway Deployment
+
+```bash
+# 1) Install CLI and login
+npm i -g @railway/cli@latest
+railway login
+
+# 2) Init/link project
+railway init
+# or: railway link --project <PROJECT_ID>
+
+# 3) Deploy current service
+railway up
+```
+
+Recommended Railway service commands:
+
+- Build Command: `yarn install --frozen-lockfile && yarn build`
+- Start Command: `yarn start`
+
+Required environment variables (minimum):
+
+```env
+APP_ENV=production
+HTTP_HOST=0.0.0.0
+# HTTP_PORT is optional on Railway because PORT is injected automatically
+DATABASE_URL=postgresql://...
+REDIS_HOST=redis.railway.internal
+REDIS_PORT=6379
+REDIS_PASSWORD=...
+REDIS_ENABLE_TLS=false
+```
+
+Notes:
+
+- Railway does not deploy directly from `docker-compose.yml`; create separate services instead.
+- Use Railway private Redis hostname (`redis.railway.internal`) for backend-to-Redis connection.
+- If you split API and worker, deploy them as 2 services from the same repo with different start commands.
+
 ### Cloud Deployment Examples
 
 #### AWS ECS

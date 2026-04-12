@@ -1,7 +1,7 @@
-import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 
 export interface ISendEmailParams {
-    emailType: AWS_SES_EMAIL_TEMPLATES;
+    emailType: EMAIL_TEMPLATES;
     emails: string[];
     payload: Record<string, any>;
 }

@@ -1,42 +1,80 @@
-import { SendTemplatedEmailCommandOutput } from '@aws-sdk/client-ses';
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 
-import { AwsSESService } from '../../aws/services/aws.ses.service';
+import { Injectable } from '@nestjs/common';
+import * as Handlebars from 'handlebars';
+import { PinoLogger } from 'nestjs-pino';
+
+import {
+    EMAIL_TEMPLATES,
+    EMAIL_TEMPLATE_SUBJECTS,
+} from 'src/common/email/enums/email-template.enum';
+import { ResendService } from 'src/common/email/services/resend.service';
+
 import { ISendEmailParams } from '../interfaces/email.interface';
-import { IHelperEmailService } from '../interfaces/email.service.interface';
+import {
+    IEmailSendResult,
+    IHelperEmailService,
+} from '../interfaces/email.service.interface';
 
 @Injectable()
 export class HelperEmailService implements IHelperEmailService {
-    private readonly logger = new Logger(HelperEmailService.name);
-    private readonly fromEmail: string;
+    private readonly compiledTemplates = new Map<
+        EMAIL_TEMPLATES,
+        Handlebars.TemplateDelegate
+    >();
 
     constructor(
-        private readonly awsSESService: AwsSESService,
-        private readonly configService: ConfigService
+        private readonly resendService: ResendService,
+        private readonly logger: PinoLogger
     ) {
-        this.fromEmail = this.configService.get<string>('aws.ses.sourceEmail');
+        this.logger.setContext(HelperEmailService.name);
     }
 
     async sendEmail({
         emailType,
         emails,
         payload,
-    }: ISendEmailParams): Promise<SendTemplatedEmailCommandOutput> {
-        const templateName = emailType;
-        const recipients = emails;
+    }: ISendEmailParams): Promise<IEmailSendResult> {
+        const subject = this.resolveSubject(emailType);
+        const html = this.renderTemplate(emailType, payload ?? {});
 
-        try {
-            const response = await this.awsSESService.send({
-                templateName,
-                recipients,
-                sender: this.fromEmail,
-                templateData: payload,
-            });
+        return this.resendService.send({
+            to: emails,
+            subject,
+            html,
+        });
+    }
 
-            return response;
-        } catch (error) {
-            throw error;
+    private resolveSubject(emailType: EMAIL_TEMPLATES): string {
+        const subjects: Record<EMAIL_TEMPLATES, string> = {
+            [EMAIL_TEMPLATES.WELCOME_EMAIL]:
+                EMAIL_TEMPLATE_SUBJECTS.WELCOME_EMAIL,
+        };
+        const subject = subjects[emailType];
+        if (!subject) {
+            throw new Error(`Unknown email template: ${emailType}`);
         }
+        return subject;
+    }
+
+    private renderTemplate(
+        emailType: EMAIL_TEMPLATES,
+        payload: Record<string, any>
+    ): string {
+        let compiled = this.compiledTemplates.get(emailType);
+
+        if (!compiled) {
+            const templatePath = path.join(
+                __dirname,
+                '../../email/templates',
+                `${emailType}.hbs`
+            );
+            const source = fs.readFileSync(templatePath, 'utf8');
+            compiled = Handlebars.compile(source);
+            this.compiledTemplates.set(emailType, compiled);
+        }
+
+        return compiled(payload);
     }
 }

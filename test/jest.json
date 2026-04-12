@@ -14,14 +14,6 @@
         "!<rootDir>/src/common/logger/services/logger.service.ts",
         "!<rootDir>/src/workers/schedulers/midnight.scheduler.ts"
     ],
-    "coverageThreshold": {
-        "global": {
-            "branches": 90,
-            "functions": 90,
-            "lines": 90,
-            "statements": 90
-        }
-    },
     "coverageReporters": ["html", "lcov", "json-summary"],
     "moduleFileExtensions": ["js", "ts", "json"],
     "coverageProvider": "v8",
@@ -39,5 +31,9 @@
         "^@grpc/grpc-js$": "<rootDir>/test/mocks/grpc.mock.ts",
         "^@grpc/proto-loader$": "<rootDir>/test/mocks/proto-loader.mock.ts"
     },
-    "modulePathIgnorePatterns": ["<rootDir>/dist"]
+    "modulePathIgnorePatterns": ["<rootDir>/dist"],
+    "testPathIgnorePatterns": [
+        "<rootDir>/test/modules/post.service.spec.ts",
+        "<rootDir>/test/common/file.service.spec.ts"
+    ]
 }

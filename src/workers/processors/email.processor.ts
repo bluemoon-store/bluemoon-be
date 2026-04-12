@@ -3,7 +3,7 @@ import { Job } from 'bull';
 import { PinoLogger } from 'nestjs-pino';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
-import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
     ISendEmailBasePayload,
     IWelcomeEmailDataPayload,
@@ -19,7 +19,7 @@ export class EmailProcessorWorker {
         this.logger.setContext(EmailProcessorWorker.name);
     }
 
-    @Process(AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL)
+    @Process(EMAIL_TEMPLATES.WELCOME_EMAIL)
     async processWelcomeEmails(
         job: Job<ISendEmailBasePayload<IWelcomeEmailDataPayload>>
     ) {
@@ -33,7 +33,7 @@ export class EmailProcessorWorker {
         try {
             await this.helperEmailService.sendEmail({
                 emails: toEmails,
-                emailType: AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL,
+                emailType: EMAIL_TEMPLATES.WELCOME_EMAIL,
                 payload: data,
             });
 

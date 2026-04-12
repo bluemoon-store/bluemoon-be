@@ -7,6 +7,8 @@ import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { AuthService } from 'src/common/auth/services/auth.service';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
+import { UserService } from 'src/modules/user/services/user.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 describe('AuthService', () => {
     let service: AuthService;
@@ -28,6 +30,16 @@ describe('AuthService', () => {
         add: jest.fn(),
     };
 
+    const mockNotificationQueue = {
+        add: jest.fn(),
+    };
+
+    const mockUserService = {};
+
+    const mockWalletService = {
+        createWallet: jest.fn().mockResolvedValue(undefined),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -37,9 +49,15 @@ describe('AuthService', () => {
                     provide: HelperEncryptionService,
                     useValue: mockHelperEncryptionService,
                 },
+                { provide: UserService, useValue: mockUserService },
+                { provide: WalletService, useValue: mockWalletService },
                 {
                     provide: getQueueToken(APP_BULL_QUEUES.EMAIL),
                     useValue: mockEmailQueue,
+                },
+                {
+                    provide: getQueueToken(APP_BULL_QUEUES.NOTIFICATION),
+                    useValue: mockNotificationQueue,
                 },
             ],
         }).compile();
