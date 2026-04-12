@@ -6,6 +6,8 @@ import {
     HttpCode,
     HttpStatus,
     Post,
+    Put,
+    Query,
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -18,10 +20,18 @@ import { JwtAccessGuard } from 'src/common/request/guards/jwt.access.guard';
 import { JwtRefreshGuard } from 'src/common/request/guards/jwt.refresh.guard';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 
-import { UserLoginDto } from '../dtos/request/auth.login.dto';
-import { UserCreateDto } from '../dtos/request/auth.signup.dto';
+import { TwoFactorDisableDto } from '../dtos/request/auth.2fa.disable.dto';
 import { TwoFactorSetupDto } from '../dtos/request/auth.2fa.setup.dto';
+import { TwoFactorVerifyLoginDto } from '../dtos/request/auth.2fa.verify-login.dto';
 import { TwoFactorVerifyDto } from '../dtos/request/auth.2fa.verify.dto';
+import { ChangePasswordDto } from '../dtos/request/auth.change-password.dto';
+import { ForgotPasswordDto } from '../dtos/request/auth.forgot-password.dto';
+import { UserLoginDto } from '../dtos/request/auth.login.dto';
+import { ResetPasswordLinkDto } from '../dtos/request/auth.reset-password-link.dto';
+import { ResetPasswordDto } from '../dtos/request/auth.reset-password.dto';
+import { UserCreateDto } from '../dtos/request/auth.signup.dto';
+import { VerifyEmailQueryDto } from '../dtos/request/auth.verify-email.query.dto';
+import { VerifyOtpDto } from '../dtos/request/auth.verify-otp.dto';
 import {
     TwoFactorSetupResponseDto,
     TwoFactorVerifyResponseDto,
@@ -29,6 +39,9 @@ import {
 import {
     AuthRefreshResponseDto,
     AuthResponseDto,
+    AuthSuccessResponseDto,
+    LoginResponseSerializerDto,
+    TwoFactorChallengeResponseDto,
 } from '../dtos/response/auth.response.dto';
 import { AuthService } from '../services/auth.service';
 
@@ -42,14 +55,36 @@ export class AuthPublicController {
 
     @Post('login')
     @PublicRoute()
-    @ApiOperation({ summary: 'User login' })
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'User login',
+        description:
+            'Returns tokens when 2FA is off. When 2FA is on, returns requiresTwoFactor and twoFactorToken; complete login via POST /auth/2fa/verify-login.',
+    })
+    @DocResponse({
+        serialization: LoginResponseSerializerDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.login',
+    })
+    public login(
+        @Body() payload: UserLoginDto
+    ): Promise<AuthResponseDto | TwoFactorChallengeResponseDto> {
+        return this.authService.login(payload);
+    }
+
+    @Post('2fa/verify-login')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Complete login with TOTP after password step' })
     @DocResponse({
         serialization: AuthResponseDto,
         httpStatus: HttpStatus.OK,
         messageKey: 'auth.success.login',
     })
-    public login(@Body() payload: UserLoginDto): Promise<AuthResponseDto> {
-        return this.authService.login(payload);
+    public verifyTwoFactorLogin(
+        @Body() payload: TwoFactorVerifyLoginDto
+    ): Promise<AuthResponseDto> {
+        return this.authService.verifyTwoFactorLogin(payload);
     }
 
     @Post('signup')
@@ -62,6 +97,129 @@ export class AuthPublicController {
     })
     public signup(@Body() payload: UserCreateDto): Promise<AuthResponseDto> {
         return this.authService.signup(payload);
+    }
+
+    @Post('forgot-password')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Request password reset OTP' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.forgotPassword',
+    })
+    public forgotPassword(
+        @Body() payload: ForgotPasswordDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.forgotPassword(payload);
+    }
+
+    @Post('forgot-password-link')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Request password reset link (email)' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.forgotPassword',
+    })
+    public forgotPasswordLink(
+        @Body() payload: ForgotPasswordDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.forgotPasswordLink(payload);
+    }
+
+    @Post('verify-otp')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Verify password reset OTP' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.otpVerified',
+    })
+    public verifyOtp(
+        @Body() payload: VerifyOtpDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.verifyOtp(payload);
+    }
+
+    @Post('reset-password')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Reset password with OTP' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.passwordReset',
+    })
+    public resetPassword(
+        @Body() payload: ResetPasswordDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.resetPassword(payload);
+    }
+
+    @Post('reset-password-link')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Reset password with token from email link' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.passwordReset',
+    })
+    public resetPasswordLink(
+        @Body() payload: ResetPasswordLinkDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.resetPasswordLink(payload);
+    }
+
+    @Put('change-password')
+    @UseGuards(JwtAccessGuard)
+    @ApiBearerAuth('accessToken')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Change password (authenticated)' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.passwordChanged',
+    })
+    public changePassword(
+        @AuthUser() user: IAuthUser,
+        @Body() payload: ChangePasswordDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.changePassword(user.userId, payload);
+    }
+
+    @Post('send-verification-email')
+    @UseGuards(JwtAccessGuard)
+    @ApiBearerAuth('accessToken')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Send email verification link' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.verificationEmailSent',
+    })
+    public sendVerificationEmail(
+        @AuthUser() user: IAuthUser
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.sendVerificationEmail(user.userId);
+    }
+
+    @Get('verify-email')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Verify email via token from link' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.emailVerified',
+    })
+    public verifyEmail(
+        @Query() query: VerifyEmailQueryDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.verifyEmail(query.token);
     }
 
     @Post('logout')
@@ -135,7 +293,7 @@ export class AuthPublicController {
     })
     public disableTwoFactor(
         @AuthUser() user: IAuthUser,
-        @Body() payload: TwoFactorVerifyDto
+        @Body() payload: TwoFactorDisableDto
     ): Promise<{ success: boolean; message: string }> {
         return this.authService.disableTwoFactor(user.userId, payload);
     }

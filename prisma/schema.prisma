@@ -41,6 +41,11 @@ model User {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
 
+  passwordResetOtp               String?   @map("password_reset_otp")
+  passwordResetOtpExpiry         DateTime? @map("password_reset_otp_expiry")
+  emailVerificationToken         String?   @map("email_verification_token")
+  emailVerificationTokenExpiry   DateTime? @map("email_verification_token_expiry")
+
   @@map("users")
 }
 

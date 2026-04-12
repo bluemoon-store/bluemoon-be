@@ -13,6 +13,7 @@ import {
 export class ResendService implements IResendService {
     private readonly resend: Resend;
     private readonly defaultFrom: string;
+    private readonly testMode: boolean;
 
     constructor(
         private readonly configService: ConfigService,
@@ -23,17 +24,32 @@ export class ResendService implements IResendService {
         const apiKey = this.configService.getOrThrow<string>('resend.apiKey');
         this.defaultFrom =
             this.configService.getOrThrow<string>('resend.fromEmail');
+        this.testMode =
+            this.configService.get<boolean>('resend.testMode') ?? false;
+        if (this.testMode) {
+            this.logger.warn(
+                'Resend test mode active — recipients will be redirected'
+            );
+        }
 
         this.resend = new Resend(apiKey);
         this.logger.info('Resend service initialized');
     }
 
+    private toTestRecipient(email: string): string {
+        const localPart = email.split('@')[0];
+        return `delivered+${localPart}@resend.dev`;
+    }
+
     async send(params: IResendSendParams): Promise<IResendSendResult> {
         const from = params.from ?? this.defaultFrom;
+        const to = this.testMode
+            ? params.to.map(email => this.toTestRecipient(email))
+            : params.to;
 
         const { data, error } = await this.resend.emails.send({
             from,
-            to: params.to,
+            to,
             subject: params.subject,
             html: params.html,
             ...(params.replyTo !== undefined
@@ -50,7 +66,7 @@ export class ResendService implements IResendService {
         }
 
         this.logger.info(
-            { messageId: data.id, recipients: params.to.length },
+            { messageId: data.id, recipients: to.length, to },
             'Email sent via Resend'
         );
 

@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { UserUpdateDto } from 'src/modules/user/dtos/request/user.update.request';
 import { UserService } from 'src/modules/user/services/user.service';
 
@@ -16,11 +17,19 @@ describe('UserService', () => {
         },
     };
 
+    const mockHelperEncryptionService = {
+        match: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 UserService,
                 { provide: DatabaseService, useValue: mockPrismaService },
+                {
+                    provide: HelperEncryptionService,
+                    useValue: mockHelperEncryptionService,
+                },
             ],
         }).compile();
 
@@ -60,26 +69,47 @@ describe('UserService', () => {
         it('should throw an error if user is not found', async () => {
             mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-            await expect(service.deleteUser('non-existent-id')).rejects.toThrow(
-                HttpException
-            );
+            await expect(
+                service.deleteUser('non-existent-id', 'actor', Role.USER, 'pw')
+            ).rejects.toThrow(HttpException);
         });
 
         it('should soft delete the user and return success message', async () => {
-            const mockUser = { id: '123', firstName: 'John', lastName: 'Doe' };
+            const mockUser = {
+                id: '123',
+                firstName: 'John',
+                lastName: 'Doe',
+                password: 'hashed',
+            };
 
             mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+            mockHelperEncryptionService.match.mockResolvedValue(true);
             mockPrismaService.user.update.mockResolvedValue({
                 ...mockUser,
                 deletedAt: new Date(),
             });
 
-            const result = await service.deleteUser('123', '123', Role.USER);
+            const result = await service.deleteUser(
+                '123',
+                '123',
+                Role.USER,
+                'correct-password'
+            );
 
             expect(result).toEqual({
                 success: true,
                 message: 'user.success.userDeleted',
             });
+        });
+
+        it('should reject self-delete when password does not match', async () => {
+            const mockUser = { id: '123', password: 'hashed' };
+            mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+            mockHelperEncryptionService.match.mockResolvedValue(false);
+
+            await expect(
+                service.deleteUser('123', '123', Role.USER, 'wrong')
+            ).rejects.toThrow(HttpException);
         });
     });
 

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import { IsString } from 'class-validator';
 
 export class TwoFactorSetupResponseDto {
@@ -6,6 +7,7 @@ export class TwoFactorSetupResponseDto {
         example: 'JBSWY3DPEHPK3PXP',
         description: 'Secret key for TOTP (to be stored securely)',
     })
+    @Expose()
     @IsString()
     public secret: string;
 
@@ -13,6 +15,7 @@ export class TwoFactorSetupResponseDto {
         example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
         description: 'QR code data URL for easy setup',
     })
+    @Expose()
     @IsString()
     public qrCode: string;
 
@@ -21,6 +24,7 @@ export class TwoFactorSetupResponseDto {
             'otpauth://totp/Jinx.to:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Jinx.to',
         description: 'TOTP URI for manual entry',
     })
+    @Expose()
     @IsString()
     public otpAuthUrl: string;
 }
@@ -30,10 +34,12 @@ export class TwoFactorVerifyResponseDto {
         example: true,
         description: 'Whether 2FA was successfully enabled',
     })
+    @Expose()
     public success: boolean;
 
     @ApiProperty({
         example: 'auth.success.twoFactorEnabled',
     })
+    @Expose()
     public message: string;
 }

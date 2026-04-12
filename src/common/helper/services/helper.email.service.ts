@@ -50,6 +50,12 @@ export class HelperEmailService implements IHelperEmailService {
         const subjects: Record<EMAIL_TEMPLATES, string> = {
             [EMAIL_TEMPLATES.WELCOME_EMAIL]:
                 EMAIL_TEMPLATE_SUBJECTS.WELCOME_EMAIL,
+            [EMAIL_TEMPLATES.FORGOT_PASSWORD_OTP]:
+                EMAIL_TEMPLATE_SUBJECTS.FORGOT_PASSWORD_OTP,
+            [EMAIL_TEMPLATES.VERIFY_EMAIL]:
+                EMAIL_TEMPLATE_SUBJECTS.VERIFY_EMAIL,
+            [EMAIL_TEMPLATES.RESET_PASSWORD_LINK]:
+                EMAIL_TEMPLATE_SUBJECTS.RESET_PASSWORD_LINK,
         };
         const subject = subjects[emailType];
         if (!subject) {

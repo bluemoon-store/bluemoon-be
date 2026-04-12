@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 
+import { UnauthorizedException } from '@nestjs/common';
+
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 
@@ -33,6 +35,7 @@ describe('HelperEncryptionService', () => {
 
         jwtServiceMock = {
             signAsync: jest.fn(),
+            verifyAsync: jest.fn(),
         } as any;
 
         module = await Test.createTestingModule({
@@ -567,6 +570,55 @@ describe('HelperEncryptionService', () => {
             });
             expect(hash).toBe('hashedPassword');
             expect(isValid).toBe(true);
+        });
+    });
+
+    describe('createTwoFactorToken', () => {
+        it('should sign a 5m 2fa-challenge JWT with access secret', async () => {
+            jwtServiceMock.signAsync.mockResolvedValue('challenge-jwt');
+
+            const token = await service.createTwoFactorToken('user-uuid');
+
+            expect(token).toBe('challenge-jwt');
+            expect(jwtServiceMock.signAsync).toHaveBeenCalledWith(
+                { userId: 'user-uuid', type: '2fa-challenge' },
+                { secret: 'accessTokenSecret', expiresIn: '5m' }
+            );
+        });
+    });
+
+    describe('verifyTwoFactorToken', () => {
+        it('should return userId for valid challenge token', async () => {
+            jwtServiceMock.verifyAsync.mockResolvedValue({
+                userId: 'user-uuid',
+                type: '2fa-challenge',
+            });
+
+            const result = await service.verifyTwoFactorToken('tok');
+
+            expect(result).toEqual({ userId: 'user-uuid' });
+            expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith('tok', {
+                secret: 'accessTokenSecret',
+            });
+        });
+
+        it('should throw UnauthorizedException when type is wrong', async () => {
+            jwtServiceMock.verifyAsync.mockResolvedValue({
+                userId: 'user-uuid',
+                type: 'other',
+            });
+
+            await expect(service.verifyTwoFactorToken('tok')).rejects.toThrow(
+                UnauthorizedException
+            );
+        });
+
+        it('should throw UnauthorizedException when verify fails', async () => {
+            jwtServiceMock.verifyAsync.mockRejectedValue(new Error('expired'));
+
+            await expect(service.verifyTwoFactorToken('tok')).rejects.toThrow(
+                UnauthorizedException
+            );
         });
     });
 });

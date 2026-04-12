@@ -1,19 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 
-export class UserLoginDto {
+export class ResetPasswordLinkDto {
     @ApiProperty({
-        example: 'nguyen@echodzns.com',
+        example: '550e8400-e29b-41d4-a716-446655440000',
         required: true,
     })
-    @IsEmail()
+    @IsString()
     @IsNotEmpty()
-    public email: string;
+    @MinLength(36)
+    public token: string;
 
-    @ApiProperty({
-        example: '6td6lPRZVC@@!827',
-        required: true,
-    })
+    @ApiProperty({ example: 'NewStr0ng!Pass', required: true })
     @IsString()
     @IsNotEmpty()
     @Matches(
@@ -23,5 +21,5 @@ export class UserLoginDto {
                 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character',
         }
     )
-    public password: string;
+    public newPassword: string;
 }

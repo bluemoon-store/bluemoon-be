@@ -7,6 +7,7 @@ import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
+import { DeleteAccountDto } from '../dtos/request/user.delete.request';
 import { UserUpdateDto } from '../dtos/request/user.update.request';
 import {
     UserGetProfileResponseDto,
@@ -60,9 +61,15 @@ export class UserPublicController {
         messageKey: 'user.success.userDeleted',
     })
     public async deleteSelf(
-        @AuthUser() user: IAuthUser
+        @AuthUser() user: IAuthUser,
+        @Body() payload: DeleteAccountDto
     ): Promise<ApiGenericResponseDto> {
-        return this.userService.deleteUser(user.userId, user.userId, user.role);
+        return this.userService.deleteUser(
+            user.userId,
+            user.userId,
+            user.role,
+            payload.password
+        );
     }
 
     @Get('purchases')

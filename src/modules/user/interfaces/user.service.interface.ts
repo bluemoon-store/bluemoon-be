@@ -19,7 +19,8 @@ export interface IUserService {
     deleteUser(
         userId: string,
         currentUserId: string,
-        currentUserRole: Role
+        currentUserRole: Role,
+        password?: string
     ): Promise<ApiGenericResponseDto>;
     getProfile(userId: string): Promise<UserGetProfileResponseDto>;
     banUser(userId: string, data: UserBanDto): Promise<ApiGenericResponseDto>;

@@ -6,7 +6,7 @@ import {
 } from 'node:crypto';
 import { promisify } from 'node:util';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
@@ -19,6 +19,13 @@ import {
     IEncryptDataPayload,
 } from '../interfaces/encryption.interface';
 import { IHelperEncryptionService } from '../interfaces/encryption.service.interface';
+
+const TWO_FACTOR_CHALLENGE_JWT_TYPE = '2fa-challenge' as const;
+
+type TwoFactorChallengePayload = {
+    userId: string;
+    type: typeof TWO_FACTOR_CHALLENGE_JWT_TYPE;
+};
 
 @Injectable()
 export class HelperEncryptionService implements IHelperEncryptionService {
@@ -74,6 +81,46 @@ export class HelperEncryptionService implements IHelperEncryptionService {
             secret: this.refreshTokenSecret,
             expiresIn: this.refreshTokenExpire as StringValue,
         });
+    }
+
+    public createTwoFactorToken(userId: string): Promise<string> {
+        const payload: TwoFactorChallengePayload = {
+            userId,
+            type: TWO_FACTOR_CHALLENGE_JWT_TYPE,
+        };
+        return this.jwtService.signAsync(payload, {
+            secret: this.accessTokenSecret,
+            expiresIn: '5m',
+        });
+    }
+
+    public async verifyTwoFactorToken(token: string): Promise<{
+        userId: string;
+    }> {
+        try {
+            const payload = await this.jwtService.verifyAsync<
+                TwoFactorChallengePayload & Record<string, unknown>
+            >(token, {
+                secret: this.accessTokenSecret,
+            });
+            if (
+                payload.type !== TWO_FACTOR_CHALLENGE_JWT_TYPE ||
+                typeof payload.userId !== 'string' ||
+                !payload.userId
+            ) {
+                throw new UnauthorizedException(
+                    'auth.error.twoFactorChallengeInvalid'
+                );
+            }
+            return { userId: payload.userId };
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            throw new UnauthorizedException(
+                'auth.error.twoFactorChallengeInvalid'
+            );
+        }
     }
 
     public createHash(password: string): Promise<string> {

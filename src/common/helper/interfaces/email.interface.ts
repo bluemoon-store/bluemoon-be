@@ -14,3 +14,18 @@ export interface ISendEmailBasePayload<T> {
 export interface IWelcomeEmailDataPayload {
     userName: string;
 }
+
+export interface IForgotPasswordOtpPayload {
+    otp: string;
+    userName: string;
+}
+
+export interface IResetPasswordLinkPayload {
+    resetUrl: string;
+    userName: string;
+}
+
+export interface IVerifyEmailPayload {
+    verificationUrl: string;
+    userName: string;
+}

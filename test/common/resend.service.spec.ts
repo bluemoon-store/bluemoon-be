@@ -24,6 +24,10 @@ describe('ResendService', () => {
             };
             return config[key];
         }),
+        get: jest.fn((key: string) => {
+            if (key === 'resend.testMode') return false;
+            return undefined;
+        }),
     };
 
     beforeEach(async () => {
@@ -152,6 +156,60 @@ describe('ResendService', () => {
                 unknown
             >;
             expect(call.replyTo).toBeUndefined();
+        });
+
+        describe('with testMode enabled', () => {
+            beforeEach(async () => {
+                (mockConfigService.get as jest.Mock).mockImplementation(
+                    (key: string) =>
+                        key === 'resend.testMode' ? true : undefined
+                );
+
+                const module: TestingModule = await Test.createTestingModule({
+                    providers: [
+                        ResendService,
+                        {
+                            provide: ConfigService,
+                            useValue: mockConfigService,
+                        },
+                        { provide: PinoLogger, useValue: loggerMock },
+                    ],
+                }).compile();
+
+                service = module.get<ResendService>(ResendService);
+            });
+
+            afterEach(() => {
+                (mockConfigService.get as jest.Mock).mockImplementation(
+                    (key: string) =>
+                        key === 'resend.testMode' ? false : undefined
+                );
+            });
+
+            it('redirects recipients to delivered+local@resend.dev', async () => {
+                mockEmailsSend.mockResolvedValue({
+                    data: { id: 'msg_test' },
+                    error: null,
+                });
+
+                await service.send({
+                    to: ['dinhnguyenkhanh@gmail.com', 'alice@company.io'],
+                    subject: 'S',
+                    html: '<p>x</p>',
+                });
+
+                expect(mockEmailsSend).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        to: [
+                            'delivered+dinhnguyenkhanh@resend.dev',
+                            'delivered+alice@resend.dev',
+                        ],
+                    })
+                );
+                expect(loggerMock.warn).toHaveBeenCalledWith(
+                    'Resend test mode active — recipients will be redirected'
+                );
+            });
         });
     });
 });

@@ -2,12 +2,14 @@
     <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-        <title>Welcome Email</title>
+        <title>Verify your email</title>
     </head>
     <body>
         <main>
-            <h2>Welcome, {{userName}}!</h2>
-            <p>Welcome to our platform!</p>
+            <h2>Hi {{userName}},</h2>
+            <p>Please verify your email address by clicking the link below:</p>
+            <p><a href='{{verificationUrl}}'>Verify email</a></p>
+            <p>This link expires in <strong>24 hours</strong>.</p>
         </main>
 
         <footer>

@@ -7,6 +7,7 @@ import {
 import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
 import { UserUpdateDto } from '../dtos/request/user.update.request';
@@ -20,7 +21,10 @@ import { IUserService } from '../interfaces/user.service.interface';
 
 @Injectable()
 export class UserService implements IUserService {
-    constructor(private readonly databaseService: DatabaseService) {}
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly helperEncryptionService: HelperEncryptionService
+    ) {}
 
     async updateUser(
         userId: string,
@@ -49,7 +53,8 @@ export class UserService implements IUserService {
     async deleteUser(
         userId: string,
         currentUserId: string,
-        currentUserRole: Role
+        currentUserRole: Role,
+        password?: string
     ): Promise<ApiGenericResponseDto> {
         try {
             const user = await this.databaseService.user.findUnique({
@@ -66,6 +71,31 @@ export class UserService implements IUserService {
                 throw new ForbiddenException(
                     'auth.error.insufficientPermissions'
                 );
+            }
+
+            const isAdminDeletingAnotherUser =
+                currentUserRole === Role.ADMIN && currentUserId !== userId;
+
+            if (!isAdminDeletingAnotherUser) {
+                if (!password) {
+                    throw new HttpException(
+                        'auth.error.invalidPassword',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                const passwordMatched =
+                    await this.helperEncryptionService.match(
+                        user.password,
+                        password
+                    );
+
+                if (!passwordMatched) {
+                    throw new HttpException(
+                        'auth.error.invalidPassword',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
             }
 
             await this.databaseService.user.update({

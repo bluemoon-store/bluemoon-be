@@ -90,6 +90,14 @@ export class UserResponseDto implements Partial<User> {
     isVerified: boolean;
 
     @ApiProperty({
+        example: false,
+        description: 'Whether TOTP two-factor authentication is enabled',
+    })
+    @Expose()
+    @IsBoolean()
+    twoFactorEnabled: boolean;
+
+    @ApiProperty({
         example: faker.date.birthdate().toISOString(),
         required: false,
         nullable: true,
