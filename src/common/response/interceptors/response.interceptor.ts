@@ -10,8 +10,10 @@ import { Observable, map } from 'rxjs';
 
 import {
     DOC_RESPONSE_MESSAGE_META_KEY,
+    DOC_RESPONSE_PAGINATED_META_KEY,
     DOC_RESPONSE_SERIALIZATION_META_KEY,
 } from 'src/common/doc/constants/doc.constant';
+import { ApiPaginationMetadataDto } from '../dtos/response.paginated.dto';
 import { MessageService } from 'src/common/message/services/message.service';
 
 import { ApiGenericResponseDto } from '../dtos/response.generic.dto';
@@ -36,15 +38,46 @@ export class ResponseInterceptor implements NestInterceptor {
                         context.getHandler()
                     );
 
+                const isPaginatedResponse =
+                    this.reflector.get<boolean>(
+                        DOC_RESPONSE_PAGINATED_META_KEY,
+                        context.getHandler()
+                    ) === true;
+
                 const messageKey = this.reflector.get(
                     DOC_RESPONSE_MESSAGE_META_KEY,
                     context.getHandler()
                 );
 
                 const data = classSerialization
-                    ? plainToInstance(classSerialization, responseBody, {
-                          excludeExtraneousValues: true,
-                      })
+                    ? isPaginatedResponse &&
+                      responseBody &&
+                      typeof responseBody === 'object' &&
+                      Array.isArray(
+                          (responseBody as { items?: unknown }).items
+                      ) &&
+                      (responseBody as { metadata?: unknown }).metadata !==
+                          undefined &&
+                      typeof (responseBody as { metadata?: unknown })
+                          .metadata === 'object'
+                        ? {
+                              items: (
+                                  responseBody as { items: unknown[] }
+                              ).items.map(item =>
+                                  plainToInstance(classSerialization, item, {
+                                      excludeExtraneousValues: true,
+                                  })
+                              ),
+                              metadata: plainToInstance(
+                                  ApiPaginationMetadataDto,
+                                  (responseBody as { metadata: unknown })
+                                      .metadata,
+                                  { excludeExtraneousValues: true }
+                              ),
+                          }
+                        : plainToInstance(classSerialization, responseBody, {
+                              excludeExtraneousValues: true,
+                          })
                     : responseBody;
 
                 // Translate response message

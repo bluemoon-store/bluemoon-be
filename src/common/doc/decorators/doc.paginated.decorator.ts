@@ -10,6 +10,7 @@ import { IResponseDocOptions } from 'src/common/response/interfaces/response.int
 
 import {
     DOC_RESPONSE_MESSAGE_META_KEY,
+    DOC_RESPONSE_PAGINATED_META_KEY,
     DOC_RESPONSE_SERIALIZATION_META_KEY,
 } from '../constants/doc.constant';
 
@@ -63,6 +64,7 @@ export function DocPaginatedResponse<T>(
             schema,
         }),
         SetMetadata(DOC_RESPONSE_SERIALIZATION_META_KEY, serialization),
+        SetMetadata(DOC_RESPONSE_PAGINATED_META_KEY, true),
         SetMetadata(DOC_RESPONSE_MESSAGE_META_KEY, messageKey),
     ];
 
