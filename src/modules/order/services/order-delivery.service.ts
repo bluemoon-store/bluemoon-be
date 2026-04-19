@@ -109,7 +109,7 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                         },
                     },
                 },
-            }) as Promise<OrderResponseDto>;
+            }) as unknown as Promise<OrderResponseDto>;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -231,7 +231,7 @@ export class OrderDeliveryService implements IOrderDeliveryService {
             // TODO: Send delivery notification email/push notification
             // this.notificationService.sendDeliveryNotification(order.userId, orderId);
 
-            return finalOrder as OrderResponseDto;
+            return finalOrder as unknown as OrderResponseDto;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;

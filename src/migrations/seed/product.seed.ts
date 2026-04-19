@@ -104,6 +104,18 @@ export class ProductSeedService {
                 deliveryContent:
                     'Thank you for your purchase! Your digital content pack includes:\n\n1. Premium Ebook Collection (PDF)\n2. Video Tutorial Series Access\n3. Resource Library Access\n4. Bonus Materials\n\nAccess your content at: https://example.com/content/[ORDER_ID]',
                 isFeatured: true,
+                sortOrder: 1,
+                shortNotice: 'Instant delivery — full content library access.',
+                isHot: true,
+                isNew: false,
+                isNFA: false,
+                isRestocked: true,
+                launchedAt: new Date('2025-06-01T00:00:00.000Z'),
+                restockedAt: new Date('2026-04-01T00:00:00.000Z'),
+                redeemProcess:
+                    '<p>After payment confirms, open your order email and use the download link within 24 hours.</p>',
+                warrantyText:
+                    '<p>Digital goods: replacement or refund if the link fails within 7 days of purchase.</p>',
             },
             {
                 name: 'Digital Art Collection',
@@ -118,6 +130,17 @@ export class ProductSeedService {
                 deliveryContent:
                     'Your digital art collection download link:\nhttps://example.com/downloads/art/[ORDER_ID]\n\nPassword: ART2024',
                 isFeatured: false,
+                sortOrder: 2,
+                shortNotice: 'Commercial-use art pack.',
+                isHot: false,
+                isNew: true,
+                isNFA: false,
+                isRestocked: false,
+                launchedAt: new Date('2026-03-15T00:00:00.000Z'),
+                redeemProcess:
+                    '<p>Use the download link in your email; password is included in the same message.</p>',
+                warrantyText:
+                    '<p>Files are provided as-is; contact support for corrupted downloads.</p>',
             },
             // Software Licenses Category
             {
@@ -221,6 +244,49 @@ export class ProductSeedService {
                 const product = await this.databaseService.product.create({
                     data: prodData,
                 });
+
+                await this.databaseService.productVariant.create({
+                    data: {
+                        productId: product.id,
+                        label: '$50 Points | Fully Unlocked',
+                        price: prodData.price,
+                        currency: prodData.currency,
+                        stockQuantity: prodData.stockQuantity,
+                        sortOrder: 0,
+                    },
+                });
+
+                await this.databaseService.productVariant.create({
+                    data: {
+                        productId: product.id,
+                        label: '$100 Points | Premium Tier',
+                        price: '3.99',
+                        currency: prodData.currency,
+                        stockQuantity: Math.max(
+                            1,
+                            Math.floor(prodData.stockQuantity / 2)
+                        ),
+                        sortOrder: 1,
+                    },
+                });
+
+                await this.databaseService.productRegion.createMany({
+                    data: [
+                        {
+                            productId: product.id,
+                            label: 'AB',
+                            countryCode: 'CA',
+                            sortOrder: 0,
+                        },
+                        {
+                            productId: product.id,
+                            label: 'NY',
+                            countryCode: 'US',
+                            sortOrder: 1,
+                        },
+                    ],
+                });
+
                 products.push(product);
                 this.logger.info(`Created product: ${prodData.name}`);
             }

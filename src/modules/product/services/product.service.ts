@@ -14,9 +14,66 @@ import { ProductSearchDto } from '../dtos/request/product.search.request';
 import {
     ProductResponseDto,
     ProductListResponseDto,
+    ProductDetailResponseDto,
 } from '../dtos/response/product.response';
 import { IProductService } from '../interfaces/product.service.interface';
-import { generateSlug } from '../utils/product.util';
+import {
+    buildProductTags,
+    computeFromPrice,
+    computePrimaryImageUrl,
+    generateSlug,
+} from '../utils/product.util';
+import {
+    AdminProductRegionCreateDto,
+    AdminProductVariantCreateDto,
+    AdminProductVariantUpdateDto,
+} from '../dtos/request/product.admin.subresource.request';
+
+const productImageOrderBy = [
+    { isPrimary: 'desc' as const },
+    { sortOrder: 'asc' as const },
+];
+
+const listInclude = {
+    category: true,
+    images: {
+        where: { deletedAt: null },
+        orderBy: productImageOrderBy,
+    },
+    variants: {
+        where: { deletedAt: null },
+        orderBy: { sortOrder: 'asc' as const },
+    },
+} satisfies Prisma.ProductInclude;
+
+const detailInclude = {
+    ...listInclude,
+    regions: {
+        orderBy: { sortOrder: 'asc' as const },
+    },
+    relatedFrom: {
+        include: {
+            relatedProduct: {
+                include: listInclude,
+            },
+        },
+    },
+} satisfies Prisma.ProductInclude;
+
+const adminInclude = {
+    category: true,
+    images: {
+        where: { deletedAt: null },
+        orderBy: productImageOrderBy,
+    },
+    variants: {
+        where: { deletedAt: null },
+        orderBy: { sortOrder: 'asc' as const },
+    },
+    regions: {
+        orderBy: { sortOrder: 'asc' as const },
+    },
+} satisfies Prisma.ProductInclude;
 
 @Injectable()
 export class ProductService implements IProductService {
@@ -26,6 +83,57 @@ export class ProductService implements IProductService {
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(ProductService.name);
+    }
+
+    private mapToListDto(
+        product: Prisma.ProductGetPayload<{ include: typeof listInclude }>
+    ): ProductListResponseDto {
+        const primaryImageUrl = computePrimaryImageUrl(product.images);
+        const fromPrice = computeFromPrice(product.price, product.variants);
+        const tags = buildProductTags(product);
+        const { variants: _variants, ...rest } = product;
+        return {
+            ...rest,
+            primaryImageUrl,
+            fromPrice,
+            tags,
+        } as ProductListResponseDto;
+    }
+
+    private mapToDetailDto(
+        product: Prisma.ProductGetPayload<{ include: typeof detailInclude }>
+    ): ProductDetailResponseDto {
+        const list = this.mapToListDto(product);
+        const related = product.relatedFrom
+            .filter(
+                row =>
+                    row.relatedProduct &&
+                    row.relatedProduct.deletedAt === null &&
+                    row.relatedProduct.isActive
+            )
+            .map(row =>
+                this.mapToListDto(
+                    row.relatedProduct as Prisma.ProductGetPayload<{
+                        include: typeof listInclude;
+                    }>
+                )
+            )
+            .slice(0, 20);
+        return {
+            ...list,
+            heroImageUrl: list.primaryImageUrl,
+            regions: product.regions.filter(r => r.isActive),
+            variants: product.variants.filter(
+                v => v.isActive && v.deletedAt === null
+            ),
+            related,
+        };
+    }
+
+    private mapToAdminDto(
+        product: Prisma.ProductGetPayload<{ include: typeof adminInclude }>
+    ): ProductResponseDto {
+        return { ...product } as ProductResponseDto;
     }
 
     private async ensureUniqueSlug(
@@ -53,6 +161,68 @@ export class ProductService implements IProductService {
         }
     }
 
+    private buildListWhere(
+        options: {
+            categoryId?: string;
+            categorySlug?: string;
+            isActive?: boolean;
+            isFeatured?: boolean;
+            isHot?: boolean;
+            isNew?: boolean;
+            isRestocked?: boolean;
+        },
+        base: Prisma.ProductWhereInput = { deletedAt: null }
+    ): Prisma.ProductWhereInput {
+        const where: Prisma.ProductWhereInput = { ...base };
+
+        if (options.categoryId) {
+            where.categoryId = options.categoryId;
+        }
+
+        if (options.categorySlug) {
+            where.category = { slug: options.categorySlug };
+        }
+
+        if (options.isActive !== undefined) {
+            where.isActive = options.isActive;
+        }
+
+        if (options.isFeatured !== undefined) {
+            where.isFeatured = options.isFeatured;
+        }
+
+        if (options.isHot !== undefined) {
+            where.isHot = options.isHot;
+        }
+
+        if (options.isNew !== undefined) {
+            where.isNew = options.isNew;
+        }
+
+        if (options.isRestocked !== undefined) {
+            where.isRestocked = options.isRestocked;
+        }
+
+        return where;
+    }
+
+    private listOrderBy(options: {
+        isHot?: boolean;
+        isNew?: boolean;
+        isRestocked?: boolean;
+    }): Prisma.ProductOrderByWithRelationInput[] {
+        if (options.isRestocked) {
+            return [{ restockedAt: 'desc' }, { sortOrder: 'asc' }];
+        }
+        if (options.isNew) {
+            return [{ launchedAt: 'desc' }, { sortOrder: 'asc' }];
+        }
+        if (options.isHot) {
+            return [{ sortOrder: 'asc' }, { createdAt: 'desc' }];
+        }
+        return [{ isFeatured: 'desc' }, { createdAt: 'desc' }];
+    }
+
     async create(data: ProductCreateDto): Promise<ProductResponseDto> {
         try {
             const category =
@@ -70,12 +240,10 @@ export class ProductService implements IProductService {
                 );
             }
 
-            // Generate slug if not provided
             const slug = data.slug
                 ? await this.ensureUniqueSlug(generateSlug(data.slug))
                 : await this.ensureUniqueSlug(generateSlug(data.name));
 
-            // Create product
             const product = await this.databaseService.product.create({
                 data: {
                     name: data.name,
@@ -86,20 +254,48 @@ export class ProductService implements IProductService {
                     stockQuantity: data.stockQuantity ?? 0,
                     isActive: data.isActive ?? true,
                     isFeatured: data.isFeatured ?? false,
+                    sortOrder: data.sortOrder ?? 0,
                     categoryId: data.categoryId,
                     deliveryType: data.deliveryType ?? 'INSTANT',
                     deliveryContent: data.deliveryContent,
+                    shortNotice: data.shortNotice,
+                    isHot: data.isHot ?? false,
+                    isNew: data.isNew ?? false,
+                    isNFA: data.isNFA ?? false,
+                    isRestocked: data.isRestocked ?? false,
+                    launchedAt: data.launchedAt,
+                    restockedAt: data.restockedAt,
+                    countryOfOrigin: data.countryOfOrigin,
+                    redeemProcess: data.redeemProcess,
+                    warrantyText: data.warrantyText,
+                    variants: data.variants?.length
+                        ? {
+                              create: data.variants.map((v, i) => ({
+                                  label: v.label,
+                                  price: v.price,
+                                  currency: v.currency ?? 'USD',
+                                  stockQuantity: v.stockQuantity ?? 0,
+                                  isActive: v.isActive ?? true,
+                                  sortOrder: v.sortOrder ?? i,
+                              })),
+                          }
+                        : undefined,
+                    regions: data.regions?.length
+                        ? {
+                              createMany: {
+                                  data: data.regions.map((r, i) => ({
+                                      label: r.label,
+                                      countryCode: r.countryCode,
+                                      isActive: r.isActive ?? true,
+                                      sortOrder: r.sortOrder ?? i,
+                                  })),
+                              },
+                          }
+                        : undefined,
                 },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
-            // Create images if provided
             if (data.images && data.images.length > 0) {
                 const imageData = data.images.map((img, index) => ({
                     productId: product.id,
@@ -108,13 +304,11 @@ export class ProductService implements IProductService {
                     sortOrder: img.sortOrder ?? index,
                 }));
 
-                // Ensure only one primary image
                 if (imageData.some(img => img.isPrimary)) {
                     await this.databaseService.productImage.createMany({
                         data: imageData,
                     });
                 } else {
-                    // Set first image as primary if none specified
                     imageData[0].isPrimary = true;
                     await this.databaseService.productImage.createMany({
                         data: imageData,
@@ -122,24 +316,13 @@ export class ProductService implements IProductService {
                 }
             }
 
-            // Fetch product with images
-            const productWithImages =
-                await this.databaseService.product.findUnique({
-                    where: { id: product.id },
-                    include: {
-                        category: true,
-                        images: {
-                            where: { deletedAt: null },
-                            orderBy: [
-                                { isPrimary: 'desc' },
-                                { sortOrder: 'asc' },
-                            ],
-                        },
-                    },
-                });
+            const full = await this.databaseService.product.findUnique({
+                where: { id: product.id },
+                include: adminInclude,
+            });
 
             this.logger.info({ productId: product.id }, 'Product created');
-            return productWithImages as ProductResponseDto;
+            return this.mapToAdminDto(full!);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -156,53 +339,51 @@ export class ProductService implements IProductService {
         page?: number;
         limit?: number;
         categoryId?: string;
+        categorySlug?: string;
         isActive?: boolean;
         isFeatured?: boolean;
+        isHot?: boolean;
+        isNew?: boolean;
+        isRestocked?: boolean;
     }): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         try {
-            const where: Prisma.ProductWhereInput = {
-                deletedAt: null,
+            const where = this.buildListWhere({
+                categoryId: options?.categoryId,
+                categorySlug: options?.categorySlug,
+                isActive: options?.isActive,
+                isFeatured: options?.isFeatured,
+                isHot: options?.isHot,
+                isNew: options?.isNew,
+                isRestocked: options?.isRestocked,
+            });
+
+            const orderBy = this.listOrderBy({
+                isHot: options?.isHot,
+                isNew: options?.isNew,
+                isRestocked: options?.isRestocked,
+            });
+
+            type ListPayload = Prisma.ProductGetPayload<{
+                include: typeof listInclude;
+            }>;
+
+            const result = await this.paginationService.paginate<ListPayload>(
+                this.databaseService.product,
+                {
+                    page: options?.page ?? 1,
+                    limit: options?.limit ?? 10,
+                },
+                {
+                    where,
+                    include: listInclude,
+                    orderBy: orderBy as OrderByInput[],
+                }
+            );
+
+            return {
+                ...result,
+                items: result.items.map(p => this.mapToListDto(p)),
             };
-
-            if (options?.categoryId) {
-                where.categoryId = options.categoryId;
-            }
-
-            if (options?.isActive !== undefined) {
-                where.isActive = options.isActive;
-            }
-
-            if (options?.isFeatured !== undefined) {
-                where.isFeatured = options.isFeatured;
-            }
-
-            const result =
-                await this.paginationService.paginate<ProductListResponseDto>(
-                    this.databaseService.product,
-                    {
-                        page: options?.page ?? 1,
-                        limit: options?.limit ?? 10,
-                    },
-                    {
-                        where,
-                        include: {
-                            category: true,
-                            images: {
-                                where: { deletedAt: null },
-                                orderBy: [
-                                    { isPrimary: 'desc' },
-                                    { sortOrder: 'asc' },
-                                ],
-                            },
-                        },
-                        orderBy: [
-                            { isFeatured: 'desc' as const },
-                            { createdAt: 'desc' as const },
-                        ],
-                    }
-                );
-
-            return result;
         } catch (error) {
             this.logger.error(`Failed to list products: ${error.message}`);
             throw new HttpException(
@@ -216,26 +397,16 @@ export class ProductService implements IProductService {
         query: ProductSearchDto
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         try {
-            const where: Prisma.ProductWhereInput = {
-                deletedAt: null,
-            };
+            const where = this.buildListWhere({
+                categoryId: query.categoryId,
+                categorySlug: query.categorySlug,
+                isActive: query.isActive,
+                isFeatured: query.isFeatured,
+                isHot: query.isHot,
+                isNew: query.isNew,
+                isRestocked: query.isRestocked,
+            });
 
-            // Category filter
-            if (query.categoryId) {
-                where.categoryId = query.categoryId;
-            }
-
-            // Active status filter
-            if (query.isActive !== undefined) {
-                where.isActive = query.isActive;
-            }
-
-            // Featured filter
-            if (query.isFeatured !== undefined) {
-                where.isFeatured = query.isFeatured;
-            }
-
-            // Price range filter
             if (query.minPrice !== undefined || query.maxPrice !== undefined) {
                 where.price = {};
                 if (query.minPrice !== undefined) {
@@ -246,7 +417,6 @@ export class ProductService implements IProductService {
                 }
             }
 
-            // Search query
             if (query.searchQuery) {
                 where.OR = [
                     {
@@ -270,7 +440,6 @@ export class ProductService implements IProductService {
                 ];
             }
 
-            // Build order by
             let orderBy: Prisma.ProductOrderByWithRelationInput[] = [];
             if (query.sortBy) {
                 const sortOrder = query.sortOrder === 'desc' ? 'desc' : 'asc';
@@ -278,36 +447,34 @@ export class ProductService implements IProductService {
                     [query.sortBy]: sortOrder,
                 } as Prisma.ProductOrderByWithRelationInput);
             } else {
-                orderBy = [
-                    { isFeatured: 'desc' as const },
-                    { createdAt: 'desc' as const },
-                ];
+                orderBy = this.listOrderBy({
+                    isHot: query.isHot,
+                    isNew: query.isNew,
+                    isRestocked: query.isRestocked,
+                });
             }
 
-            const result =
-                await this.paginationService.paginate<ProductListResponseDto>(
-                    this.databaseService.product,
-                    {
-                        page: query.page ?? 1,
-                        limit: query.limit ?? 10,
-                    },
-                    {
-                        where,
-                        include: {
-                            category: true,
-                            images: {
-                                where: { deletedAt: null },
-                                orderBy: [
-                                    { isPrimary: 'desc' },
-                                    { sortOrder: 'asc' },
-                                ],
-                            },
-                        },
-                        orderBy: orderBy as OrderByInput[],
-                    }
-                );
+            type ListPayload = Prisma.ProductGetPayload<{
+                include: typeof listInclude;
+            }>;
 
-            return result;
+            const result = await this.paginationService.paginate<ListPayload>(
+                this.databaseService.product,
+                {
+                    page: query.page ?? 1,
+                    limit: query.limit ?? 10,
+                },
+                {
+                    where,
+                    include: listInclude,
+                    orderBy: orderBy as OrderByInput[],
+                }
+            );
+
+            return {
+                ...result,
+                items: result.items.map(p => this.mapToListDto(p)),
+            };
         } catch (error) {
             this.logger.error(`Failed to search products: ${error.message}`);
             throw new HttpException(
@@ -324,13 +491,7 @@ export class ProductService implements IProductService {
                     id,
                     deletedAt: null,
                 },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
             if (!product) {
@@ -340,7 +501,7 @@ export class ProductService implements IProductService {
                 );
             }
 
-            return product as ProductResponseDto;
+            return this.mapToAdminDto(product);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -353,20 +514,14 @@ export class ProductService implements IProductService {
         }
     }
 
-    async findBySlug(slug: string): Promise<ProductResponseDto> {
+    async findBySlug(slug: string): Promise<ProductDetailResponseDto> {
         try {
             const product = await this.databaseService.product.findFirst({
                 where: {
                     slug,
                     deletedAt: null,
                 },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: detailInclude,
             });
 
             if (!product) {
@@ -376,7 +531,7 @@ export class ProductService implements IProductService {
                 );
             }
 
-            return product as ProductResponseDto;
+            return this.mapToDetailDto(product);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -389,6 +544,130 @@ export class ProductService implements IProductService {
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    private async syncVariants(
+        productId: string,
+        variants: ProductUpdateDto['variants']
+    ): Promise<void> {
+        if (!variants) {
+            return;
+        }
+
+        const existing = await this.databaseService.productVariant.findMany({
+            where: { productId, deletedAt: null },
+        });
+
+        const incomingWithId = new Set(
+            variants.filter(v => v.id).map(v => v.id as string)
+        );
+
+        for (const row of existing) {
+            if (!incomingWithId.has(row.id)) {
+                await this.databaseService.productVariant.update({
+                    where: { id: row.id },
+                    data: { deletedAt: new Date() },
+                });
+            }
+        }
+
+        for (const v of variants) {
+            if (v.id) {
+                const updated =
+                    await this.databaseService.productVariant.updateMany({
+                        where: { id: v.id, productId },
+                        data: {
+                            label: v.label,
+                            price: v.price,
+                            currency: v.currency ?? 'USD',
+                            stockQuantity: v.stockQuantity ?? 0,
+                            isActive: v.isActive ?? true,
+                            sortOrder: v.sortOrder ?? 0,
+                        },
+                    });
+                if (updated.count === 0) {
+                    throw new HttpException(
+                        'product.error.variantNotFound',
+                        HttpStatus.NOT_FOUND
+                    );
+                }
+            } else {
+                await this.databaseService.productVariant.create({
+                    data: {
+                        productId,
+                        label: v.label,
+                        price: v.price,
+                        currency: v.currency ?? 'USD',
+                        stockQuantity: v.stockQuantity ?? 0,
+                        isActive: v.isActive ?? true,
+                        sortOrder: v.sortOrder ?? 0,
+                    },
+                });
+            }
+        }
+    }
+
+    private async syncRegions(
+        productId: string,
+        regions: ProductUpdateDto['regions']
+    ): Promise<void> {
+        if (!regions) {
+            return;
+        }
+
+        await this.databaseService.productRegion.deleteMany({
+            where: { productId },
+        });
+
+        if (regions.length === 0) {
+            return;
+        }
+
+        await this.databaseService.productRegion.createMany({
+            data: regions.map((r, i) => ({
+                productId,
+                label: r.label,
+                countryCode: r.countryCode,
+                isActive: r.isActive ?? true,
+                sortOrder: r.sortOrder ?? i,
+            })),
+        });
+    }
+
+    private async syncRelated(
+        productId: string,
+        relatedProductIds: string[] | undefined
+    ): Promise<void> {
+        if (relatedProductIds === undefined) {
+            return;
+        }
+
+        const unique = [
+            ...new Set(relatedProductIds.filter(id => id && id !== productId)),
+        ];
+
+        await this.databaseService.productRelated.deleteMany({
+            where: { productId },
+        });
+
+        if (unique.length === 0) {
+            return;
+        }
+
+        const existing = await this.databaseService.product.findMany({
+            where: { id: { in: unique }, deletedAt: null },
+            select: { id: true },
+        });
+        const allowed = new Set(existing.map(p => p.id));
+
+        await this.databaseService.productRelated.createMany({
+            data: unique
+                .filter(id => allowed.has(id))
+                .map(relatedProductId => ({
+                    productId,
+                    relatedProductId,
+                })),
+        });
     }
 
     async update(
@@ -422,25 +701,69 @@ export class ProductService implements IProductService {
                 slug = await this.ensureUniqueSlug(generateSlug(data.slug), id);
             }
 
-            const updateData: any = { ...data };
+            const { variants, regions, relatedProductIds, ...rest } =
+                data as ProductUpdateDto & Record<string, unknown>;
+
+            const updateData: Prisma.ProductUpdateInput = {};
+
+            const assignScalar = <K extends keyof Prisma.ProductUpdateInput>(
+                key: K,
+                value: Prisma.ProductUpdateInput[K]
+            ) => {
+                if (value !== undefined) {
+                    updateData[key] = value;
+                }
+            };
+
+            assignScalar('name', rest.name);
+            assignScalar('description', rest.description);
+            assignScalar('price', rest.price);
+            assignScalar('currency', rest.currency);
+            assignScalar('stockQuantity', rest.stockQuantity);
+            assignScalar('isActive', rest.isActive);
+            assignScalar('isFeatured', rest.isFeatured);
+            assignScalar('sortOrder', rest.sortOrder);
+            assignScalar('deliveryType', rest.deliveryType);
+            assignScalar('deliveryContent', rest.deliveryContent);
+            assignScalar('shortNotice', rest.shortNotice);
+            assignScalar('isHot', rest.isHot);
+            assignScalar('isNew', rest.isNew);
+            assignScalar('isNFA', rest.isNFA);
+            assignScalar('isRestocked', rest.isRestocked);
+            assignScalar('launchedAt', rest.launchedAt);
+            assignScalar('restockedAt', rest.restockedAt);
+            assignScalar('countryOfOrigin', rest.countryOfOrigin);
+            assignScalar('redeemProcess', rest.redeemProcess);
+            assignScalar('warrantyText', rest.warrantyText);
+
             if (slug) {
                 updateData.slug = slug;
             }
 
-            const product = await this.databaseService.product.update({
+            if (rest.categoryId !== undefined) {
+                updateData.category = {
+                    connect: { id: rest.categoryId },
+                };
+            }
+
+            await this.databaseService.$transaction([
+                this.databaseService.product.update({
+                    where: { id },
+                    data: updateData,
+                }),
+            ]);
+
+            await this.syncVariants(id, variants);
+            await this.syncRegions(id, regions);
+            await this.syncRelated(id, relatedProductIds);
+
+            const product = await this.databaseService.product.findUnique({
                 where: { id },
-                data: updateData,
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
             this.logger.info({ productId: id }, 'Product updated');
-            return product as ProductResponseDto;
+            return this.mapToAdminDto(product!);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -470,7 +793,6 @@ export class ProductService implements IProductService {
                 );
             }
 
-            // Soft delete product and images
             await this.databaseService.$transaction([
                 this.databaseService.product.update({
                     where: { id },
@@ -514,20 +836,14 @@ export class ProductService implements IProductService {
             const product = await this.databaseService.product.update({
                 where: { id },
                 data: { stockQuantity },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
             this.logger.info(
                 { productId: id, stockQuantity },
                 'Product stock updated'
             );
-            return product as ProductResponseDto;
+            return this.mapToAdminDto(product);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -549,20 +865,14 @@ export class ProductService implements IProductService {
                 data: {
                     isActive: !product.isActive,
                 },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
             this.logger.info(
                 { productId: id, isActive: updated.isActive },
                 'Product active status toggled'
             );
-            return updated as ProductResponseDto;
+            return this.mapToAdminDto(updated);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -586,20 +896,14 @@ export class ProductService implements IProductService {
                 data: {
                     isFeatured: !product.isFeatured,
                 },
-                include: {
-                    category: true,
-                    images: {
-                        where: { deletedAt: null },
-                        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
-                    },
-                },
+                include: adminInclude,
             });
 
             this.logger.info(
                 { productId: id, isFeatured: updated.isFeatured },
                 'Product featured status toggled'
             );
-            return updated as ProductResponseDto;
+            return this.mapToAdminDto(updated);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -622,7 +926,6 @@ export class ProductService implements IProductService {
         try {
             await this.findOne(productId);
 
-            // If setting as primary, unset other primary images
             if (isPrimary) {
                 await this.databaseService.productImage.updateMany({
                     where: {
@@ -634,7 +937,6 @@ export class ProductService implements IProductService {
                 });
             }
 
-            // Get max sort order
             const maxSortOrder =
                 await this.databaseService.productImage.findFirst({
                     where: {
@@ -647,7 +949,6 @@ export class ProductService implements IProductService {
 
             const sortOrder = maxSortOrder ? maxSortOrder.sortOrder + 1 : 0;
 
-            // Create image
             await this.databaseService.productImage.create({
                 data: {
                     productId,
@@ -657,7 +958,6 @@ export class ProductService implements IProductService {
                 },
             });
 
-            // Return updated product
             return this.findOne(productId);
         } catch (error) {
             if (error instanceof HttpException) {
@@ -678,7 +978,6 @@ export class ProductService implements IProductService {
         try {
             await this.findOne(productId);
 
-            // Verify image exists and belongs to product
             const image = await this.databaseService.productImage.findFirst({
                 where: {
                     id: imageId,
@@ -694,13 +993,11 @@ export class ProductService implements IProductService {
                 );
             }
 
-            // Soft delete image
             await this.databaseService.productImage.update({
                 where: { id: imageId },
                 data: { deletedAt: new Date() },
             });
 
-            // If it was primary, set first remaining image as primary
             if (image.isPrimary) {
                 const nextImage =
                     await this.databaseService.productImage.findFirst({
@@ -719,7 +1016,6 @@ export class ProductService implements IProductService {
                 }
             }
 
-            // Return updated product
             return this.findOne(productId);
         } catch (error) {
             if (error instanceof HttpException) {
@@ -755,7 +1051,6 @@ export class ProductService implements IProductService {
                 );
             }
 
-            // Unset all primary images
             await this.databaseService.productImage.updateMany({
                 where: {
                     productId,
@@ -765,13 +1060,11 @@ export class ProductService implements IProductService {
                 data: { isPrimary: false },
             });
 
-            // Set this image as primary
             await this.databaseService.productImage.update({
                 where: { id: imageId },
                 data: { isPrimary: true },
             });
 
-            // Return updated product
             return this.findOne(productId);
         } catch (error) {
             if (error instanceof HttpException) {
@@ -783,5 +1076,123 @@ export class ProductService implements IProductService {
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    async addVariant(
+        productId: string,
+        dto: AdminProductVariantCreateDto
+    ): Promise<ProductResponseDto> {
+        await this.findOne(productId);
+        await this.databaseService.productVariant.create({
+            data: {
+                productId,
+                label: dto.label,
+                price: dto.price,
+                currency: dto.currency ?? 'USD',
+                stockQuantity: dto.stockQuantity ?? 0,
+                isActive: dto.isActive ?? true,
+                sortOrder: dto.sortOrder ?? 0,
+            },
+        });
+        return this.findOne(productId);
+    }
+
+    async updateVariant(
+        productId: string,
+        variantId: string,
+        dto: AdminProductVariantUpdateDto
+    ): Promise<ProductResponseDto> {
+        await this.findOne(productId);
+        const v = await this.databaseService.productVariant.findFirst({
+            where: { id: variantId, productId, deletedAt: null },
+        });
+        if (!v) {
+            throw new HttpException(
+                'product.error.variantNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await this.databaseService.productVariant.update({
+            where: { id: variantId },
+            data: {
+                ...(dto.label !== undefined && { label: dto.label }),
+                ...(dto.price !== undefined && { price: dto.price }),
+                ...(dto.currency !== undefined && { currency: dto.currency }),
+                ...(dto.stockQuantity !== undefined && {
+                    stockQuantity: dto.stockQuantity,
+                }),
+                ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+                ...(dto.sortOrder !== undefined && {
+                    sortOrder: dto.sortOrder,
+                }),
+            },
+        });
+        return this.findOne(productId);
+    }
+
+    async deleteVariant(
+        productId: string,
+        variantId: string
+    ): Promise<ProductResponseDto> {
+        await this.findOne(productId);
+        const v = await this.databaseService.productVariant.findFirst({
+            where: { id: variantId, productId, deletedAt: null },
+        });
+        if (!v) {
+            throw new HttpException(
+                'product.error.variantNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await this.databaseService.productVariant.update({
+            where: { id: variantId },
+            data: { deletedAt: new Date() },
+        });
+        return this.findOne(productId);
+    }
+
+    async addRegion(
+        productId: string,
+        dto: AdminProductRegionCreateDto
+    ): Promise<ProductResponseDto> {
+        await this.findOne(productId);
+        await this.databaseService.productRegion.create({
+            data: {
+                productId,
+                label: dto.label,
+                countryCode: dto.countryCode,
+                isActive: dto.isActive ?? true,
+                sortOrder: dto.sortOrder ?? 0,
+            },
+        });
+        return this.findOne(productId);
+    }
+
+    async deleteRegion(
+        productId: string,
+        regionId: string
+    ): Promise<ProductResponseDto> {
+        await this.findOne(productId);
+        const r = await this.databaseService.productRegion.findFirst({
+            where: { id: regionId, productId },
+        });
+        if (!r) {
+            throw new HttpException(
+                'product.error.regionNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await this.databaseService.productRegion.delete({
+            where: { id: regionId },
+        });
+        return this.findOne(productId);
+    }
+
+    async setRelatedProducts(
+        productId: string,
+        relatedProductIds: string[]
+    ): Promise<ProductResponseDto> {
+        await this.syncRelated(productId, relatedProductIds);
+        return this.findOne(productId);
     }
 }

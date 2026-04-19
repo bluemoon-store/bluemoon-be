@@ -13,6 +13,7 @@ import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
     ProductResponseDto,
     ProductListResponseDto,
+    ProductDetailResponseDto,
 } from '../dtos/response/product.response';
 import { CategoryResponseDto } from '../dtos/response/category.response';
 import { ProductService } from '../services/product.service';
@@ -44,8 +45,12 @@ export class ProductPublicController {
             page: query.page,
             limit: query.limit,
             categoryId: query.categoryId,
-            isActive: query.isActive,
+            categorySlug: query.categorySlug,
+            isActive: query.isActive ?? true,
             isFeatured: query.isFeatured,
+            isHot: query.isHot,
+            isNew: query.isNew,
+            isRestocked: query.isRestocked,
         });
     }
 
@@ -60,7 +65,11 @@ export class ProductPublicController {
     public async search(
         @Query() query: ProductSearchDto
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
-        return this.productService.search(query);
+        const q = { ...query };
+        if (q.isActive === undefined) {
+            q.isActive = true;
+        }
+        return this.productService.search(q);
     }
 
     @Get('categories')
@@ -112,8 +121,22 @@ export class ProductPublicController {
             page: query.page,
             limit: query.limit,
             categoryId,
-            isActive: true, // Only show active products
+            isActive: true,
         });
+    }
+
+    @Get('slug/:slug')
+    @PublicRoute()
+    @ApiOperation({ summary: 'Get product by slug (detail)' })
+    @DocResponse({
+        serialization: ProductDetailResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'product.success.productFound',
+    })
+    public async getBySlug(
+        @Param('slug') slug: string
+    ): Promise<ProductDetailResponseDto> {
+        return this.productService.findBySlug(slug);
     }
 
     @Get(':id')
@@ -126,19 +149,5 @@ export class ProductPublicController {
     })
     public async getById(@Param('id') id: string): Promise<ProductResponseDto> {
         return this.productService.findOne(id);
-    }
-
-    @Get('slug/:slug')
-    @PublicRoute()
-    @ApiOperation({ summary: 'Get product by slug' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.productFound',
-    })
-    public async getBySlug(
-        @Param('slug') slug: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.findBySlug(slug);
     }
 }

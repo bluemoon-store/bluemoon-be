@@ -35,6 +35,14 @@ export class ProductListQueryDto {
     categoryId?: string;
 
     @ApiPropertyOptional({
+        description: 'Filter by category slug',
+        example: 'gaming-items',
+    })
+    @IsOptional()
+    @IsString()
+    categorySlug?: string;
+
+    @ApiPropertyOptional({
         description: 'Filter by active status',
         example: true,
         type: Boolean,
@@ -53,4 +61,31 @@ export class ProductListQueryDto {
     @Type(() => Boolean)
     @IsBoolean()
     isFeatured?: boolean;
+
+    @ApiPropertyOptional({
+        description: 'Hot selling products',
+        type: Boolean,
+    })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    isHot?: boolean;
+
+    @ApiPropertyOptional({
+        description: 'Newly launched products',
+        type: Boolean,
+    })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    isNew?: boolean;
+
+    @ApiPropertyOptional({
+        description: 'Freshly restocked products',
+        type: Boolean,
+    })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    isRestocked?: boolean;
 }

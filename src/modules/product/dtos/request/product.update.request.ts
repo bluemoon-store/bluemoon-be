@@ -10,7 +10,23 @@ import {
     Min,
     MaxLength,
     IsEnum,
+    IsArray,
+    ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+    ProductRegionInputDto,
+    ProductVariantInputDto,
+} from './product.create.request';
+
+export class ProductVariantUpdateInputDto extends ProductVariantInputDto {
+    @ApiPropertyOptional({
+        description: 'Existing variant ID (omit to create)',
+    })
+    @IsOptional()
+    @IsUUID()
+    id?: string;
+}
 
 export class ProductUpdateDto {
     @ApiPropertyOptional({
@@ -83,6 +99,15 @@ export class ProductUpdateDto {
     isFeatured?: boolean;
 
     @ApiPropertyOptional({
+        example: 0,
+        description: 'Display sort order',
+    })
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    sortOrder?: number;
+
+    @ApiPropertyOptional({
         example: faker.string.uuid(),
         description: 'Category ID',
     })
@@ -105,4 +130,81 @@ export class ProductUpdateDto {
     @IsOptional()
     @IsString()
     deliveryContent?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    shortNotice?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    isHot?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    isNew?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    isNFA?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsBoolean()
+    isRestocked?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    launchedAt?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    restockedAt?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    countryOfOrigin?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    redeemProcess?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    warrantyText?: string;
+
+    @ApiPropertyOptional({
+        type: [ProductVariantUpdateInputDto],
+        description: 'Replace/sync variants when provided',
+    })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductVariantUpdateInputDto)
+    variants?: ProductVariantUpdateInputDto[];
+
+    @ApiPropertyOptional({
+        type: [ProductRegionInputDto],
+        description: 'Replace regions when provided',
+    })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ProductRegionInputDto)
+    regions?: ProductRegionInputDto[];
+
+    @ApiPropertyOptional({
+        type: [String],
+        description: 'Related product IDs (replaces existing)',
+    })
+    @IsOptional()
+    @IsArray()
+    @IsUUID('4', { each: true })
+    relatedProductIds?: string[];
 }

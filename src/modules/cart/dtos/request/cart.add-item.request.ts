@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { IsUUID, IsInt, Min } from 'class-validator';
+import { IsUUID, IsInt, Min, IsOptional, IsString } from 'class-validator';
 
 export class CartAddItemDto {
     @ApiProperty({
@@ -19,4 +19,27 @@ export class CartAddItemDto {
     @IsInt()
     @Min(1)
     quantity: number;
+
+    @ApiPropertyOptional({
+        description: 'Selected product variant',
+    })
+    @IsOptional()
+    @IsUUID()
+    variantId?: string;
+
+    @ApiPropertyOptional({
+        example: 'AB',
+        description: 'Selected region label (snapshot)',
+    })
+    @IsOptional()
+    @IsString()
+    regionLabel?: string;
+
+    @ApiPropertyOptional({
+        example: 'CA',
+        description: 'ISO country code for region (snapshot)',
+    })
+    @IsOptional()
+    @IsString()
+    regionCountry?: string;
 }

@@ -7,7 +7,13 @@ import { ProductSearchDto } from '../dtos/request/product.search.request';
 import {
     ProductResponseDto,
     ProductListResponseDto,
+    ProductDetailResponseDto,
 } from '../dtos/response/product.response';
+import {
+    AdminProductRegionCreateDto,
+    AdminProductVariantCreateDto,
+    AdminProductVariantUpdateDto,
+} from '../dtos/request/product.admin.subresource.request';
 
 export interface IProductService {
     create(data: ProductCreateDto): Promise<ProductResponseDto>;
@@ -15,14 +21,18 @@ export interface IProductService {
         page?: number;
         limit?: number;
         categoryId?: string;
+        categorySlug?: string;
         isActive?: boolean;
         isFeatured?: boolean;
+        isHot?: boolean;
+        isNew?: boolean;
+        isRestocked?: boolean;
     }): Promise<ApiPaginatedDataDto<ProductListResponseDto>>;
     search(
         query: ProductSearchDto
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>>;
     findOne(id: string): Promise<ProductResponseDto>;
-    findBySlug(slug: string): Promise<ProductResponseDto>;
+    findBySlug(slug: string): Promise<ProductDetailResponseDto>;
     update(id: string, data: ProductUpdateDto): Promise<ProductResponseDto>;
     delete(id: string): Promise<ApiGenericResponseDto>;
     updateStock(id: string, stockQuantity: number): Promise<ProductResponseDto>;
@@ -40,5 +50,30 @@ export interface IProductService {
     setPrimaryImage(
         productId: string,
         imageId: string
+    ): Promise<ProductResponseDto>;
+    addVariant(
+        productId: string,
+        dto: AdminProductVariantCreateDto
+    ): Promise<ProductResponseDto>;
+    updateVariant(
+        productId: string,
+        variantId: string,
+        dto: AdminProductVariantUpdateDto
+    ): Promise<ProductResponseDto>;
+    deleteVariant(
+        productId: string,
+        variantId: string
+    ): Promise<ProductResponseDto>;
+    addRegion(
+        productId: string,
+        dto: AdminProductRegionCreateDto
+    ): Promise<ProductResponseDto>;
+    deleteRegion(
+        productId: string,
+        regionId: string
+    ): Promise<ProductResponseDto>;
+    setRelatedProducts(
+        productId: string,
+        relatedProductIds: string[]
     ): Promise<ProductResponseDto>;
 }
