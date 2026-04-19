@@ -5,32 +5,49 @@ import { Command } from 'nestjs-command';
 import { DatabaseService } from 'src/common/database/services/database.service';
 
 type CategorySlug =
-    | 'gaming-gift-cards'
-    | 'streaming-music'
-    | 'shopping-retail'
-    | 'food-dining'
-    | 'software-services'
-    | 'travel-experience';
+    | 'cashout'
+    | 'hotels'
+    | 'food'
+    | 'flights'
+    | 'groceries'
+    | 'shopping'
+    | 'clothing'
+    | 'gas-oil'
+    | 'tickets'
+    | 'lifestyle'
+    | 'jewelry'
+    | 'rentals'
+    | 'streaming';
 
 type ProductSlug =
-    | 'steam'
-    | 'playstation'
-    | 'xbox'
-    | 'nintendo'
-    | 'roblox'
-    | 'netflix'
-    | 'spotify'
-    | 'youtube-premium'
-    | 'apple-music'
-    | 'amazon'
-    | 'ebay'
+    | 'visa-gift-card'
+    | 'mastercard-gift-card'
+    | 'paypal'
+    | 'venmo'
+    | 'marriott-bonvoy'
+    | 'hilton-honors'
     | 'starbucks'
     | 'doordash'
-    | 'uber-eats'
-    | 'microsoft-365'
-    | 'adobe-creative-cloud'
-    | 'airbnb'
-    | 'booking-com';
+    | 'southwest-airlines'
+    | 'delta-air-lines'
+    | 'whole-foods-market'
+    | 'instacart'
+    | 'amazon'
+    | 'target'
+    | 'nike'
+    | 'gap'
+    | 'shell-fuel-card'
+    | 'exxonmobil-gift-card'
+    | 'ticketmaster'
+    | 'stubhub'
+    | 'spotify-premium'
+    | 'google-play'
+    | 'pandora'
+    | 'tiffany-co'
+    | 'hertz'
+    | 'enterprise'
+    | 'netflix'
+    | 'disney-plus';
 
 type ProductSeedDef = {
     slug: ProductSlug;
@@ -59,47 +76,96 @@ const CATEGORY_SEEDS: Array<{
     sortOrder: number;
 }> = [
     {
-        slug: 'gaming-gift-cards',
-        name: 'Gaming Gift Cards',
-        icon: 'IconDeviceGamepad2',
+        slug: 'cashout',
+        name: 'Cashout',
+        icon: 'IconDollar',
         description:
-            'Console and PC store credit, subscriptions, and in-game currency.',
+            'Cards and balances you can move toward cash, wallets, or payouts.',
         sortOrder: 1,
     },
     {
-        slug: 'streaming-music',
-        name: 'Streaming & Music',
-        icon: 'IconBrandSpotify',
-        description: 'Streaming video and premium music subscriptions.',
+        slug: 'hotels',
+        name: 'Hotels',
+        icon: 'IconFoodBell',
+        description: 'Stays, resort credit, and hotel-branded gift cards.',
         sortOrder: 2,
     },
     {
-        slug: 'shopping-retail',
-        name: 'Shopping & Retail',
-        icon: 'IconShoppingBag',
-        description: 'Major retail and marketplace gift cards.',
+        slug: 'food',
+        name: 'Food',
+        icon: 'IconCookies',
+        description: 'Restaurants, delivery, and coffeehouse gift cards.',
         sortOrder: 3,
     },
     {
-        slug: 'food-dining',
-        name: 'Food & Dining',
-        icon: 'IconToolsKitchen2',
-        description: 'Food delivery and coffeehouse gift cards.',
+        slug: 'flights',
+        name: 'Flights',
+        icon: 'IconAirplane',
+        description: 'Airline vouchers and flight gift cards.',
         sortOrder: 4,
     },
     {
-        slug: 'software-services',
-        name: 'Software & Services',
-        icon: 'IconDeviceLaptop',
-        description: 'Productivity suites and creative software.',
+        slug: 'groceries',
+        name: 'Groceries',
+        icon: 'IconApples',
+        description: 'Supermarkets, meal kits, and grocery delivery credit.',
         sortOrder: 5,
     },
     {
-        slug: 'travel-experience',
-        name: 'Travel & Experience',
-        icon: 'IconPlaneDeparture',
-        description: 'Stays, experiences, and travel bookings.',
+        slug: 'shopping',
+        name: 'Shopping',
+        icon: 'IconShoppingBag2',
+        description: 'Retail and marketplace gift cards for everyday buys.',
         sortOrder: 6,
+    },
+    {
+        slug: 'clothing',
+        name: 'Clothing',
+        icon: 'IconFashion',
+        description: 'Apparel, footwear, and accessories.',
+        sortOrder: 7,
+    },
+    {
+        slug: 'gas-oil',
+        name: 'Gas/Oil',
+        icon: 'IconGas',
+        description: 'Fuel brands and convenience store gift cards.',
+        sortOrder: 8,
+    },
+    {
+        slug: 'tickets',
+        name: 'Tickets',
+        icon: 'IconTicket',
+        description: 'Concerts, sports, and live event ticketing.',
+        sortOrder: 9,
+    },
+    {
+        slug: 'lifestyle',
+        name: 'Lifestyle',
+        icon: 'IconPeopleIdCard',
+        description: 'Fitness, apps, and everyday digital lifestyle perks.',
+        sortOrder: 10,
+    },
+    {
+        slug: 'jewelry',
+        name: 'Jewelry',
+        icon: 'IconDiamondShine',
+        description: 'Fine jewelry and accessories gift cards.',
+        sortOrder: 11,
+    },
+    {
+        slug: 'rentals',
+        name: 'Rentals',
+        icon: 'IconCarFrontView',
+        description: 'Car rental and mobility gift cards.',
+        sortOrder: 12,
+    },
+    {
+        slug: 'streaming',
+        name: 'Streaming',
+        icon: 'IconClapboardWide',
+        description: 'Video and entertainment streaming subscriptions.',
+        sortOrder: 13,
     },
 ];
 
@@ -111,20 +177,19 @@ const WARRANTY_HTML =
 
 const PRODUCT_DEFS: ProductSeedDef[] = [
     {
-        slug: 'steam',
-        name: 'Steam',
-        categorySlug: 'gaming-gift-cards',
+        slug: 'visa-gift-card',
+        name: 'Visa Gift Card',
+        categorySlug: 'cashout',
         description:
-            'Add funds to your Steam Wallet to buy games, DLC, and in-game items on the Steam store.',
+            'Prepaid Visa accepted almost everywhere debit is taken — online, in-store, and on the go.',
         isHot: true,
         isNew: false,
         isRestocked: true,
         isFeatured: true,
         sortOrder: 1,
-        shortNotice:
-            'Instant Steam Wallet credit — redeem on desktop or mobile app.',
+        shortNotice: 'Spend like cash wherever Visa debit is accepted.',
         deliveryContent:
-            'Steam Wallet codes are delivered instantly after payment. Redeem in the Steam client under Games → Redeem a Steam Wallet Code.',
+            'Digital delivery includes card number, expiration, and security code. Register the card on the issuer site if required before first use.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
         countryOfOrigin: 'United States',
@@ -132,19 +197,19 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         restockedAt: new Date('2026-04-16T10:00:00.000Z'),
     },
     {
-        slug: 'playstation',
-        name: 'PlayStation',
-        categorySlug: 'gaming-gift-cards',
+        slug: 'mastercard-gift-card',
+        name: 'Mastercard Gift Card',
+        categorySlug: 'cashout',
         description:
-            'PlayStation Store gift cards for games, add-ons, and subscriptions on PS4 and PS5.',
+            'Mastercard prepaid for flexible spending across millions of merchants worldwide.',
         isHot: true,
         isNew: false,
         isRestocked: true,
         isFeatured: false,
         sortOrder: 2,
-        shortNotice: 'Top up your PSN wallet for games and PlayStation Plus.',
+        shortNotice: 'One card for shopping, dining, and bills where accepted.',
         deliveryContent:
-            'Redeem your code on console: Settings → Users and Accounts → Payment and Subscriptions → Redeem Codes.',
+            'Follow the activation link in your email, then add the card to mobile wallets or use online at checkout.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
         countryOfOrigin: 'United States',
@@ -152,19 +217,19 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         restockedAt: new Date('2026-04-16T11:00:00.000Z'),
     },
     {
-        slug: 'xbox',
-        name: 'Xbox',
-        categorySlug: 'gaming-gift-cards',
+        slug: 'paypal',
+        name: 'PayPal',
+        categorySlug: 'cashout',
         description:
-            'Microsoft Xbox gift card for games, Game Pass, and content on Xbox and Windows.',
+            'Add funds to PayPal for peer transfers, checkout, or moving money to your bank.',
         isHot: true,
         isNew: false,
         isRestocked: true,
         isFeatured: false,
         sortOrder: 3,
-        shortNotice: 'Works for Xbox games, DLC, and subscriptions.',
+        shortNotice: 'Top up your PayPal balance for instant spending power.',
         deliveryContent:
-            'Redeem at microsoft.com/redeem or on your Xbox under Store → Use a code.',
+            'Redeem in the PayPal app or web under Wallet → Link a card or bank → Redeem gift card / add funds per regional flow.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
         countryOfOrigin: 'United States',
@@ -172,39 +237,300 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         restockedAt: new Date('2026-04-16T12:00:00.000Z'),
     },
     {
-        slug: 'nintendo',
-        name: 'Nintendo',
-        categorySlug: 'gaming-gift-cards',
+        slug: 'venmo',
+        name: 'Venmo',
+        categorySlug: 'cashout',
         description:
-            'Nintendo eShop funds for Switch games, DLC, and Nintendo Switch Online.',
-        isHot: true,
-        isNew: false,
+            'Venmo balance for paying friends, splitting bills, or cashing out to a linked debit card.',
+        isHot: false,
+        isNew: true,
         isRestocked: true,
         isFeatured: false,
         sortOrder: 4,
-        shortNotice: 'eShop credit for digital Nintendo Switch titles.',
+        shortNotice: 'Credit applies to your Venmo balance after redemption.',
         deliveryContent:
-            'On Switch: Nintendo eShop → Enter Code on the left sidebar, then confirm.',
+            'Open Venmo → ☰ → Settings → Payment Methods → Redeem a gift card, then enter the code from your order email.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'Japan',
-        launchedAt: null,
-        restockedAt: new Date('2026-04-16T13:00:00.000Z'),
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-12T10:00:00.000Z'),
+        restockedAt: new Date('2026-04-14T16:00:00.000Z'),
     },
     {
-        slug: 'roblox',
-        name: 'Roblox',
-        categorySlug: 'gaming-gift-cards',
+        slug: 'marriott-bonvoy',
+        name: 'Marriott Bonvoy',
+        categorySlug: 'hotels',
         description:
-            'Roblox credit for Robux and premium experiences. Redeem on web or in-app.',
+            'Marriott Bonvoy gift card toward stays, dining, and spa services at participating Marriott properties.',
         isHot: true,
         isNew: false,
         isRestocked: true,
         isFeatured: false,
         sortOrder: 5,
-        shortNotice: 'Credit for Robux and avatar upgrades.',
+        shortNotice: 'Use at checkout for eligible Marriott hotels.',
         deliveryContent:
-            'Visit roblox.com/redeem, sign in, and enter your PIN from the order email.',
+            'Present the gift card number at the front desk or apply it when booking on marriott.com where accepted.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T08:00:00.000Z'),
+    },
+    {
+        slug: 'hilton-honors',
+        name: 'Hilton Honors',
+        categorySlug: 'hotels',
+        description:
+            'Hilton gift card for room nights, upgrades, and on-property dining at Hilton brands.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 6,
+        shortNotice: 'Redeem toward stays at participating Hilton hotels.',
+        deliveryContent:
+            'Add the card in the Hilton Honors app under Account → Payment Methods, or provide details at check-in.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-11T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'starbucks',
+        name: 'Starbucks',
+        categorySlug: 'food',
+        description:
+            'Reload your Starbucks Card for drinks, food, and merchandise at participating stores.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: true,
+        sortOrder: 7,
+        shortNotice: 'Scan in the Starbucks app or pay in-store.',
+        deliveryContent:
+            'Add the card number and security code in the Starbucks mobile app under Pay.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T09:00:00.000Z'),
+    },
+    {
+        slug: 'doordash',
+        name: 'DoorDash',
+        categorySlug: 'food',
+        description:
+            'DoorDash credit for delivery and pickup from local restaurants and stores.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 8,
+        shortNotice: 'Valid for eligible DoorDash orders in your region.',
+        deliveryContent:
+            'In the DoorDash app: Account → Gift Card → enter the code from your email.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-10T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'southwest-airlines',
+        name: 'Southwest Airlines',
+        categorySlug: 'flights',
+        description:
+            'Southwest gift card toward flights, EarlyBird Check-In, and more on southwest.com.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 9,
+        shortNotice: 'Apply at checkout when booking Southwest flights.',
+        deliveryContent:
+            'On southwest.com, enter the card number and PIN in the payment section before completing purchase.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T10:00:00.000Z'),
+    },
+    {
+        slug: 'delta-air-lines',
+        name: 'Delta Air Lines',
+        categorySlug: 'flights',
+        description:
+            'Delta Gift Card for tickets, seat upgrades, and fees on delta.com and the Fly Delta app.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 10,
+        shortNotice: 'Redeem when paying for Delta-operated flights.',
+        deliveryContent:
+            'At checkout on delta.com, choose Gift Card as payment and enter the certificate number and PIN.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-09T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'whole-foods-market',
+        name: 'Whole Foods Market',
+        categorySlug: 'groceries',
+        description:
+            'Whole Foods Market gift card for organic groceries, prepared foods, and more.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 11,
+        shortNotice: 'Use at Whole Foods registers and select Amazon retail.',
+        deliveryContent:
+            'Scan the barcode from your email at checkout or add to the Amazon app for in-store payment where supported.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-08T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'instacart',
+        name: 'Instacart',
+        categorySlug: 'groceries',
+        description:
+            'Instacart credit for same-day grocery delivery from local stores.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 12,
+        shortNotice: 'Applies to orders placed through Instacart.',
+        deliveryContent:
+            'Instacart app → Account → Your account settings → Gift cards → Add gift card.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T12:00:00.000Z'),
+    },
+    {
+        slug: 'amazon',
+        name: 'Amazon',
+        categorySlug: 'shopping',
+        description:
+            'Amazon.com balance for millions of products, Kindle books, and digital content.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: true,
+        sortOrder: 13,
+        shortNotice: 'Applies to your Amazon account balance at checkout.',
+        deliveryContent:
+            'Redeem at amazon.com/gc/redeem — funds never expire for US accounts.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T11:00:00.000Z'),
+    },
+    {
+        slug: 'target',
+        name: 'Target',
+        categorySlug: 'shopping',
+        description:
+            'Target GiftCard for electronics, home, apparel, and everyday essentials in-store or online.',
+        isHot: false,
+        isNew: true,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 14,
+        shortNotice: 'Redeem at Target stores or on target.com.',
+        deliveryContent:
+            'Target app → Wallet → Add gift card, or enter the access number at checkout online.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-07T10:00:00.000Z'),
+        restockedAt: new Date('2026-04-13T10:00:00.000Z'),
+    },
+    {
+        slug: 'nike',
+        name: 'Nike',
+        categorySlug: 'clothing',
+        description:
+            'Nike gift card for sneakers, apparel, and gear on Nike.com and at Nike stores.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 15,
+        shortNotice: 'Works for Nike.com, SNKRS, and participating retail.',
+        deliveryContent:
+            'Nike App → Profile → Settings → Payment → Add gift card, or enter at checkout on Nike.com.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-16T13:00:00.000Z'),
+    },
+    {
+        slug: 'gap',
+        name: 'Gap',
+        categorySlug: 'clothing',
+        description:
+            'Gap Options gift card redeemable at Gap, Banana Republic, Old Navy, and Athleta.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 16,
+        shortNotice: 'One card across Gap Inc. family of brands.',
+        deliveryContent:
+            'Present in-store or apply the card number and PIN at checkout on any participating brand site.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-06T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'shell-fuel-card',
+        name: 'Shell Fuel Card',
+        categorySlug: 'gas-oil',
+        description:
+            'Shell gift card for fuel, car washes, and convenience items at participating Shell stations.',
+        isHot: false,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 17,
+        shortNotice: 'Swipe at the pump or inside at Shell locations.',
+        deliveryContent:
+            'Physical-style digital card: use the number at the pump keypad or pay inside where Shell cards are accepted.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-14T10:00:00.000Z'),
+    },
+    {
+        slug: 'exxonmobil-gift-card',
+        name: 'ExxonMobil Gift Card',
+        categorySlug: 'gas-oil',
+        description:
+            'Exxon and Mobil gift card for fuel and in-store purchases at participating locations.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 18,
+        shortNotice:
+            'Accepted at Exxon and Mobil stations in supported regions.',
+        deliveryContent:
+            'Follow the issuer instructions in your email to activate before first use at the pump or cashier.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
         countryOfOrigin: 'United States',
@@ -212,16 +538,178 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         restockedAt: new Date('2026-04-16T14:00:00.000Z'),
     },
     {
+        slug: 'ticketmaster',
+        name: 'Ticketmaster',
+        categorySlug: 'tickets',
+        description:
+            'Ticketmaster gift card for concerts, sports, theater, and live events.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 19,
+        shortNotice: 'Apply at checkout on ticketmaster.com or the app.',
+        deliveryContent:
+            'Sign in to Ticketmaster → Payment options → Add a gift card, then use it when completing your order.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T14:00:00.000Z'),
+    },
+    {
+        slug: 'stubhub',
+        name: 'StubHub',
+        categorySlug: 'tickets',
+        description:
+            'StubHub gift card toward resale tickets for games, shows, and festivals.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 20,
+        shortNotice:
+            'Valid on StubHub purchases where gift cards are accepted.',
+        deliveryContent:
+            'StubHub checkout → Add gift card → enter the code from your confirmation email.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-05T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'spotify-premium',
+        name: 'Spotify Premium',
+        categorySlug: 'lifestyle',
+        description:
+            'Spotify Premium for ad-free music, podcasts, and offline listening on your phone.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 21,
+        shortNotice: 'Premium listening without ads.',
+        deliveryContent:
+            'Redeem at spotify.com/redeem using the code from your order confirmation.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'Sweden',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-15T09:00:00.000Z'),
+    },
+    {
+        slug: 'google-play',
+        name: 'Google Play',
+        categorySlug: 'lifestyle',
+        description:
+            'Google Play credit for apps, games, books, and in-app purchases on Android.',
+        isHot: false,
+        isNew: true,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 22,
+        shortNotice: 'Adds balance to your Google Play account.',
+        deliveryContent:
+            'Play Store → Profile icon → Payments & subscriptions → Redeem gift code.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: new Date('2026-04-04T10:00:00.000Z'),
+        restockedAt: new Date('2026-04-12T12:00:00.000Z'),
+    },
+    {
+        slug: 'pandora',
+        name: 'Pandora Jewelry',
+        categorySlug: 'jewelry',
+        description:
+            'Pandora gift card for charms, bracelets, and jewelry collections.',
+        isHot: false,
+        isNew: true,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 23,
+        shortNotice: 'Redeem in Pandora stores and on pandora.net.',
+        deliveryContent:
+            'Enter the card number and PIN at checkout online or present in boutique locations.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'Denmark',
+        launchedAt: new Date('2026-04-03T10:00:00.000Z'),
+        restockedAt: null,
+    },
+    {
+        slug: 'tiffany-co',
+        name: 'Tiffany & Co.',
+        categorySlug: 'jewelry',
+        description:
+            'Tiffany gift card toward jewelry, watches, and home designs.',
+        isHot: true,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 24,
+        shortNotice: 'Use at Tiffany stores and tiffany.com.',
+        deliveryContent:
+            'Provide the gift card details at checkout in-store or online where Tiffany gift cards are accepted.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-16T09:00:00.000Z'),
+    },
+    {
+        slug: 'hertz',
+        name: 'Hertz',
+        categorySlug: 'rentals',
+        description:
+            'Hertz gift card toward car rentals, add-ons, and insurance at participating locations.',
+        isHot: false,
+        isNew: false,
+        isRestocked: true,
+        isFeatured: false,
+        sortOrder: 25,
+        shortNotice: 'Apply when booking on hertz.com or at the counter.',
+        deliveryContent:
+            'Enter the certificate number when paying online or mention it at pickup per Hertz redemption rules.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: new Date('2026-04-11T14:00:00.000Z'),
+    },
+    {
+        slug: 'enterprise',
+        name: 'Enterprise',
+        categorySlug: 'rentals',
+        description:
+            'Enterprise Rent-A-Car gift certificate for daily and weekly rentals.',
+        isHot: true,
+        isNew: false,
+        isRestocked: false,
+        isFeatured: false,
+        sortOrder: 26,
+        shortNotice:
+            'Valid at participating Enterprise neighborhood locations.',
+        deliveryContent:
+            'Book on enterprise.com and enter the voucher details in the payment step, or present at the rental counter.',
+        redeemProcess: REDEEM_HTML,
+        warrantyText: WARRANTY_HTML,
+        countryOfOrigin: 'United States',
+        launchedAt: null,
+        restockedAt: null,
+    },
+    {
         slug: 'netflix',
         name: 'Netflix',
-        categorySlug: 'streaming-music',
+        categorySlug: 'streaming',
         description:
             'Stream thousands of TV shows and movies. Apply balance toward any Netflix plan.',
         isHot: true,
         isNew: false,
         isRestocked: true,
         isFeatured: true,
-        sortOrder: 6,
+        sortOrder: 27,
         shortNotice:
             'Apply to new or existing Netflix accounts in supported regions.',
         deliveryContent:
@@ -233,245 +721,24 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         restockedAt: new Date('2026-04-15T08:00:00.000Z'),
     },
     {
-        slug: 'spotify',
-        name: 'Spotify',
-        categorySlug: 'streaming-music',
+        slug: 'disney-plus',
+        name: 'Disney+',
+        categorySlug: 'streaming',
         description:
-            'Spotify Premium gift subscription — ad-free music and offline downloads.',
+            'Disney+ subscription credit for Marvel, Star Wars, Pixar, and National Geographic streaming.',
         isHot: true,
-        isNew: false,
-        isRestocked: true,
-        isFeatured: false,
-        sortOrder: 7,
-        shortNotice: 'Premium listening without ads.',
-        deliveryContent:
-            'Redeem at spotify.com/redeem using the code from your order confirmation.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'Sweden',
-        launchedAt: null,
-        restockedAt: new Date('2026-04-15T09:00:00.000Z'),
-    },
-    {
-        slug: 'youtube-premium',
-        name: 'YouTube Premium',
-        categorySlug: 'streaming-music',
-        description:
-            'YouTube Premium for ad-free video, background play, and YouTube Music.',
-        isHot: true,
-        isNew: false,
-        isRestocked: true,
-        isFeatured: false,
-        sortOrder: 8,
-        shortNotice: 'Includes YouTube Music Premium where available.',
-        deliveryContent:
-            'Redeem the offer code in the YouTube app under Paid memberships.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: null,
-        restockedAt: new Date('2026-04-15T10:00:00.000Z'),
-    },
-    {
-        slug: 'apple-music',
-        name: 'Apple Music',
-        categorySlug: 'streaming-music',
-        description:
-            'Apple Gift Card usable for Apple Music, apps, games, and more in the Apple ecosystem.',
-        isHot: true,
-        isNew: false,
-        isRestocked: true,
-        isFeatured: false,
-        sortOrder: 9,
-        shortNotice: 'Redeem in App Store or Apple Music settings.',
-        deliveryContent:
-            'On iPhone: App Store → your profile → Redeem Gift Card or Code.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: null,
-        restockedAt: new Date('2026-04-15T11:00:00.000Z'),
-    },
-    {
-        slug: 'amazon',
-        name: 'Amazon',
-        categorySlug: 'shopping-retail',
-        description:
-            'Amazon.com balance for millions of products, Kindle books, and digital content.',
-        isHot: true,
-        isNew: false,
-        isRestocked: true,
-        isFeatured: true,
-        sortOrder: 10,
-        shortNotice: 'Applies to your Amazon account balance at checkout.',
-        deliveryContent:
-            'Redeem at amazon.com/gc/redeem — funds never expire for US accounts.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: null,
-        restockedAt: new Date('2026-04-15T12:00:00.000Z'),
-    },
-    {
-        slug: 'ebay',
-        name: 'eBay',
-        categorySlug: 'shopping-retail',
-        description:
-            'Shop auctions and Buy It Now listings across eBay with gift card balance.',
-        isHot: false,
         isNew: true,
         isRestocked: true,
         isFeatured: false,
-        sortOrder: 11,
-        shortNotice: 'Use toward eligible purchases on eBay.',
+        sortOrder: 28,
+        shortNotice: 'Redeem toward Disney+ in supported countries.',
         deliveryContent:
-            'Redeem during checkout or at ebay.com/sh/giftcard — one-time use per card.',
+            'Visit disneyplus.com/redeem (or regional equivalent), sign in, and enter the subscription code from your email.',
         redeemProcess: REDEEM_HTML,
         warrantyText: WARRANTY_HTML,
         countryOfOrigin: 'United States',
-        launchedAt: new Date('2026-04-12T10:00:00.000Z'),
-        restockedAt: new Date('2026-04-14T16:00:00.000Z'),
-    },
-    {
-        slug: 'starbucks',
-        name: 'Starbucks',
-        categorySlug: 'food-dining',
-        description:
-            'Reload your Starbucks Card for drinks, food, and merchandise at participating stores.',
-        isHot: false,
-        isNew: true,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 12,
-        shortNotice: 'Scan in the Starbucks app or pay in-store.',
-        deliveryContent:
-            'Add the card number and security code in the Starbucks mobile app under Pay.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: new Date('2026-04-11T10:00:00.000Z'),
-        restockedAt: null,
-    },
-    {
-        slug: 'doordash',
-        name: 'DoorDash',
-        categorySlug: 'food-dining',
-        description:
-            'DoorDash credit for delivery and pickup from local restaurants and stores.',
-        isHot: false,
-        isNew: true,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 13,
-        shortNotice: 'Valid for eligible DoorDash orders in your region.',
-        deliveryContent:
-            'In the DoorDash app: Account → Gift Card → enter the code from your email.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: new Date('2026-04-10T10:00:00.000Z'),
-        restockedAt: null,
-    },
-    {
-        slug: 'uber-eats',
-        name: 'Uber Eats',
-        categorySlug: 'food-dining',
-        description:
-            'Uber Eats balance for food delivery from thousands of restaurants.',
-        isHot: false,
-        isNew: true,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 14,
-        shortNotice:
-            'Applies to Uber Eats orders where gift cards are accepted.',
-        deliveryContent:
-            'Wallet → Add payment method → Gift card, then enter the code.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: new Date('2026-04-09T10:00:00.000Z'),
-        restockedAt: null,
-    },
-    {
-        slug: 'microsoft-365',
-        name: 'Microsoft 365',
-        categorySlug: 'software-services',
-        description:
-            'Microsoft 365 Personal or Family — Word, Excel, PowerPoint, Outlook, and cloud storage.',
-        isHot: false,
-        isNew: true,
-        isRestocked: false,
-        isFeatured: true,
-        sortOrder: 15,
-        shortNotice: 'Subscription activation via Microsoft account.',
-        deliveryContent:
-            'Redeem at microsoft.com/redeem and sign in with the Microsoft account you want to activate.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: new Date('2026-04-08T10:00:00.000Z'),
-        restockedAt: null,
-    },
-    {
-        slug: 'adobe-creative-cloud',
-        name: 'Adobe Creative Cloud',
-        categorySlug: 'software-services',
-        description:
-            'Creative Cloud prepaid for Photoshop, Illustrator, Premiere Pro, and the full Adobe suite.',
-        isHot: false,
-        isNew: false,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 16,
-        shortNotice: 'Redeem for Creative Cloud membership months.',
-        deliveryContent:
-            'Visit adobe.com/redeem, sign in with your Adobe ID, and enter the subscription code.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: null,
-        restockedAt: null,
-    },
-    {
-        slug: 'airbnb',
-        name: 'Airbnb',
-        categorySlug: 'travel-experience',
-        description:
-            'Airbnb credit toward stays and Experiences worldwide where gift cards are supported.',
-        isHot: false,
-        isNew: false,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 17,
-        shortNotice: 'Applied to your Airbnb account for future bookings.',
-        deliveryContent:
-            'Redeem at airbnb.com/gift — credit appears in your payment methods.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'United States',
-        launchedAt: null,
-        restockedAt: null,
-    },
-    {
-        slug: 'booking-com',
-        name: 'Booking.com',
-        categorySlug: 'travel-experience',
-        description:
-            'Booking.com travel credit for hotels, homes, and attractions in supported markets.',
-        isHot: false,
-        isNew: false,
-        isRestocked: false,
-        isFeatured: false,
-        sortOrder: 18,
-        shortNotice: 'Use at checkout on Booking.com where cards are accepted.',
-        deliveryContent:
-            'Add the gift card in your Booking.com account under Payment methods before you book.',
-        redeemProcess: REDEEM_HTML,
-        warrantyText: WARRANTY_HTML,
-        countryOfOrigin: 'Netherlands',
-        launchedAt: null,
-        restockedAt: null,
+        launchedAt: new Date('2026-04-13T10:00:00.000Z'),
+        restockedAt: new Date('2026-04-16T08:00:00.000Z'),
     },
 ];
 
@@ -487,20 +754,13 @@ const REGION_ROWS = [
     { label: 'Europe', countryCode: 'GB', sortOrder: 2 },
 ] as const;
 
-const GAMING_RELATED: ProductSlug[] = [
-    'steam',
-    'playstation',
-    'xbox',
-    'nintendo',
-    'roblox',
+const STREAMING_RELATED: ProductSlug[] = ['netflix', 'disney-plus'];
+const FOOD_RELATED: ProductSlug[] = ['starbucks', 'doordash'];
+const FLIGHTS_RELATED: ProductSlug[] = [
+    'southwest-airlines',
+    'delta-air-lines',
 ];
-const STREAMING_RELATED: ProductSlug[] = [
-    'netflix',
-    'spotify',
-    'youtube-premium',
-    'apple-music',
-];
-const FOOD_RELATED: ProductSlug[] = ['starbucks', 'doordash', 'uber-eats'];
+const HOTELS_RELATED: ProductSlug[] = ['marriott-bonvoy', 'hilton-honors'];
 
 @Injectable()
 export class ProductSeedService {
@@ -676,9 +936,10 @@ export class ProductSeedService {
             }
         };
 
-        addCluster(GAMING_RELATED);
         addCluster(STREAMING_RELATED);
         addCluster(FOOD_RELATED);
+        addCluster(FLIGHTS_RELATED);
+        addCluster(HOTELS_RELATED);
 
         if (pairs.length === 0) return;
 
