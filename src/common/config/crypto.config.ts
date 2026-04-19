@@ -3,6 +3,8 @@ import { registerAs } from '@nestjs/config';
 export default registerAs(
     'crypto',
     (): Record<string, any> => ({
+        appEnv: process.env.APP_ENV ?? 'local',
+
         // Blockchain RPC URLs - Use Tatum for unified API
         rpc: {
             bitcoin: process.env.BITCOIN_RPC_URL || '',
@@ -106,36 +108,36 @@ export default registerAs(
                 testnet: 'testnet',
                 current:
                     process.env.BITCOIN_NETWORK ||
-                    (process.env.NODE_ENV === 'production'
+                    process.env.APP_ENV === 'production'
                         ? 'mainnet'
-                        : 'testnet'),
+                        : 'testnet',
             },
             ethereum: {
                 mainnet: 'mainnet',
                 testnet: 'sepolia',
                 current:
                     process.env.ETHEREUM_NETWORK ||
-                    (process.env.NODE_ENV === 'production'
+                    process.env.APP_ENV === 'production'
                         ? 'mainnet'
-                        : 'sepolia'),
+                        : 'sepolia',
             },
             litecoin: {
                 mainnet: 'mainnet',
                 testnet: 'testnet',
                 current:
                     process.env.LITECOIN_NETWORK ||
-                    (process.env.NODE_ENV === 'production'
+                    process.env.APP_ENV === 'production'
                         ? 'mainnet'
-                        : 'testnet'),
+                        : 'testnet',
             },
             tron: {
                 mainnet: 'mainnet',
                 testnet: 'shasta',
                 current:
                     process.env.TRON_NETWORK ||
-                    (process.env.NODE_ENV === 'production'
+                    process.env.APP_ENV === 'production'
                         ? 'mainnet'
-                        : 'shasta'),
+                        : 'shasta',
             },
         },
 

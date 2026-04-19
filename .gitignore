@@ -8,6 +8,7 @@ coverage/
 
 # environment
 .env
+.env.prod
 !.env.docker
 config.yaml
 config.yml

@@ -5,14 +5,10 @@ import {
     Param,
     ParseEnumPipe,
 } from '@nestjs/common';
-import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiParam,
-    ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
+import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
 
 import {
     ExchangeRateResponseDto,
@@ -30,7 +26,7 @@ export class ExchangeRatePublicController {
     constructor(private readonly exchangeRateService: ExchangeRateService) {}
 
     @Get()
-    @ApiBearerAuth('accessToken')
+    @PublicRoute()
     @ApiOperation({
         summary: 'Get current exchange rates for all cryptocurrencies',
     })
@@ -61,7 +57,7 @@ export class ExchangeRatePublicController {
     }
 
     @Get(':cryptocurrency')
-    @ApiBearerAuth('accessToken')
+    @PublicRoute()
     @ApiOperation({
         summary: 'Get exchange rate for a specific cryptocurrency',
     })

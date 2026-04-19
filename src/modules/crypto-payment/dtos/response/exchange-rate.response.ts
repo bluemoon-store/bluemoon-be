@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CryptoCurrency } from '@prisma/client';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
 export class ExchangeRateResponseDto {
     @ApiProperty({
@@ -33,6 +33,7 @@ export class AllExchangeRatesResponseDto {
         type: [ExchangeRateResponseDto],
     })
     @Expose()
+    @Type(() => ExchangeRateResponseDto)
     rates: ExchangeRateResponseDto[];
 
     @ApiProperty({ description: 'Fiat currency' })

@@ -743,9 +743,9 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
 ];
 
 const VARIANT_DENOMS = [
-    { label: '$10', price: '10.00', sortOrder: 0 },
-    { label: '$25', price: '25.00', sortOrder: 1 },
-    { label: '$50', price: '50.00', sortOrder: 2 },
+    { label: '$1', price: '1.00', sortOrder: 0 },
+    { label: '$3', price: '3.00', sortOrder: 1 },
+    { label: '$5', price: '5.00', sortOrder: 2 },
 ] as const;
 
 const REGION_ROWS = [
