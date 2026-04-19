@@ -14,6 +14,7 @@
         "productInactive": "Product is not active",
         "insufficientStock": "Insufficient stock",
         "createOrderFailed": "Failed to create order",
+        "invalidTotal": "Order total is invalid",
         "getOrderHistoryFailed": "Failed to retrieve order history",
         "orderNotFound": "Order not found",
         "getOrderDetailFailed": "Failed to retrieve order details",

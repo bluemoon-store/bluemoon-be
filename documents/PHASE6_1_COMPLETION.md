@@ -114,7 +114,7 @@ Registered in `crypto-payment.module.ts`:
 
 #### Seed Service ✅
 
-Created `CryptoWalletSeedService` to initialize `SystemWalletIndex` records:
+Created `CryptoWalletsSeedService` to initialize `SystemWalletIndex` records:
 - Seeds one record per cryptocurrency
 - Sets initial `nextIndex` to 0
 - Registered in `MigrationModule`
@@ -247,7 +247,7 @@ Added:
 13. `src/common/config/crypto.config.ts`
 
 **Seed:**
-14. `src/migrations/seed/crypto-wallet.seed.ts`
+14. `src/migrations/seed/crypto-wallets.seed.ts`
 
 **Documentation:**
 15. `documents/PHASE6_1_COMPLETION.md` (this file)

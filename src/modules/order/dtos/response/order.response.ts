@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { Order, OrderItem, OrderStatus, Prisma } from '@prisma/client';
+import { OrderItem, OrderStatus, Prisma } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import {
     IsString,
@@ -129,7 +129,7 @@ export class OrderItemResponseDto implements OrderItem {
     product?: ProductResponseDto;
 }
 
-export class OrderResponseDto implements Order {
+export class OrderResponseDto {
     @ApiProperty({
         example: faker.string.uuid(),
     })
@@ -150,6 +150,22 @@ export class OrderResponseDto implements Order {
     @Expose()
     @IsUUID()
     userId: string;
+
+    @ApiPropertyOptional({
+        example: false,
+    })
+    @Expose()
+    @IsOptional()
+    buyerProtection?: boolean;
+
+    @ApiPropertyOptional({
+        example: '5.00000000',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @Type(() => String)
+    buyerProtectionAmount?: Prisma.Decimal | null;
 
     @ApiProperty({
         enum: OrderStatus,

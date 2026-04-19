@@ -287,6 +287,8 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                     .filter(item => item.deliveredContent)
                     .map(async item => ({
                         itemId: item.id,
+                        productId: item.productId,
+                        variantId: item.variantId,
                         productName: item.product.name,
                         content: item.deliveredContent!,
                         // DeliveryType is always INSTANT; no download links are needed

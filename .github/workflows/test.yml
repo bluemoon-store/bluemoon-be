@@ -56,14 +56,10 @@ jobs:
             - name: Run unit tests
               run: yarn test
 
-            - name: Generate badges
-              run: yarn make-badges
-              continue-on-error: true
-
             - name: Commit changes
               uses: stefanzweifel/git-auto-commit-action@v5
               with:
-                  commit_message: 'chore: update badges and apply formatting/linting fixes'
+                  commit_message: 'chore: apply formatting/linting fixes'
                   file_pattern: '*.md *.ts *.js *.json'
                   commit_user_name: 'github-actions[bot]'
                   commit_user_email: 'github-actions[bot]@users.noreply.github.com'

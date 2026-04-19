@@ -15,7 +15,7 @@ import { IPaymentForwardingService } from '../interfaces/payment-forwarding.serv
 /**
  * Payment Forwarding Service
  * Handles forwarding of confirmed payments to platform wallets
- * Supports BTC, ETH, LTC, BCH, and ERC-20 tokens (USDT, USDC)
+ * Supports BTC, ETH, LTC, BCH, ERC-20 (USDT, USDC), and USDT TRC-20 (Tron)
  */
 @Injectable()
 export class PaymentForwardingService implements IPaymentForwardingService {
@@ -308,6 +308,14 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 { paymentId, cryptocurrency },
                 'Using legacy calculation (balance - fee) for backward compatibility'
             );
+
+            // USDT TRC-20: balance is USDT but network fees are TRX; do not subtract fee from USDT.
+            if (cryptocurrency === CryptoCurrency.USDT_TRC20) {
+                const provider =
+                    this.providerFactory.getProvider(cryptocurrency);
+                const balanceStr = await provider.getBalance(fromAddress);
+                return parseFloat(balanceStr);
+            }
 
             const provider = this.providerFactory.getProvider(cryptocurrency);
             const balanceStr = await provider.getBalance(fromAddress);

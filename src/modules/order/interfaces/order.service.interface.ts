@@ -24,7 +24,8 @@ export interface IOrderService {
     ): Promise<ApiPaginatedDataDto<OrderResponseDto>>;
     getOrderDetail(
         orderId: string,
-        userId?: string
+        userId?: string,
+        skipOwnershipCheck?: boolean
     ): Promise<OrderDetailResponseDto>;
     updateOrderStatus(
         orderId: string,

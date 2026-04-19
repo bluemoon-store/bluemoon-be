@@ -50,12 +50,10 @@ export class CryptoPaymentPublicController {
         @Param('orderId') orderId: string,
         @AuthUser() user: IAuthUser
     ): Promise<PaymentStatusResponseDto> {
-        // Get payment by order ID first
         const payment = await this.cryptoPaymentService.getPaymentByOrderId(
             orderId,
             user.userId
         );
-        // Then get status
         return this.cryptoPaymentService.getPaymentStatus(
             payment.paymentId,
             user.userId

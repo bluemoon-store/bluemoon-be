@@ -72,7 +72,7 @@ export class OrderAdminController {
     public async getOrderDetail(
         @Param('id') orderId: string
     ): Promise<OrderDetailResponseDto> {
-        return this.orderService.getOrderDetail(orderId);
+        return this.orderService.getOrderDetail(orderId, undefined, true);
     }
 
     @Put(':id/status')

@@ -17,6 +17,24 @@ export class OrderItemDeliveryContentDto {
     @IsUUID()
     itemId: string;
 
+    @ApiPropertyOptional({
+        example: faker.string.uuid(),
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsUUID()
+    productId?: string | null;
+
+    @ApiPropertyOptional({
+        example: faker.string.uuid(),
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsUUID()
+    variantId?: string | null;
+
     @ApiProperty({
         example: faker.commerce.productName(),
     })

@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { CommonModule } from 'src/common/common.module';
+import { RequestModule } from 'src/common/request/request.module';
 import { CustomLoggerModule } from 'src/common/logger/logger.module';
 import { OrderModule } from 'src/modules/order/order.module';
 import { SystemWalletService } from './services/system-wallet.service';
@@ -17,6 +18,7 @@ import { BitcoinProvider } from './blockchain-providers/bitcoin-provider.service
 import { EthereumProvider } from './blockchain-providers/ethereum-provider.service';
 import { LitecoinProvider } from './blockchain-providers/litecoin-provider.service';
 import { BitcoinCashProvider } from './blockchain-providers/bitcoin-cash-provider.service';
+import { TronProvider } from './blockchain-providers/tron-provider.service';
 import { BlockchainProviderFactory } from './blockchain-providers/blockchain-provider.factory';
 
 // Processors
@@ -32,6 +34,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
     imports: [
         ConfigModule,
         CommonModule, // Provides DatabaseService and CacheManager
+        RequestModule,
         CustomLoggerModule, // Provides PinoLogger
         OrderModule, // Provides OrderDeliveryService
         ScheduleModule.forRoot(), // For cron jobs
@@ -59,6 +62,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         EthereumProvider,
         LitecoinProvider,
         BitcoinCashProvider,
+        TronProvider,
         // Factory
         BlockchainProviderFactory,
         // Processors

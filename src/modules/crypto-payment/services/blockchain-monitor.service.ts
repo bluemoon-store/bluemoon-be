@@ -168,7 +168,8 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                     const isValidTransaction = await this.verifyTransaction(
                         transaction,
                         payment.paymentAddress,
-                        minAcceptableAmount
+                        minAcceptableAmount,
+                        payment.cryptocurrency
                     );
 
                     if (!isValidTransaction) {
@@ -572,18 +573,23 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
      * @param transaction - Transaction to verify
      * @param expectedAddress - Expected recipient address
      * @param minAmount - Minimum expected amount
+     * @param cryptocurrency - Used for address comparison rules (Tron Base58 is case-sensitive)
      * @returns True if transaction is valid
      */
     private async verifyTransaction(
         transaction: any,
         expectedAddress: string,
-        minAmount: number
+        minAmount: number,
+        cryptocurrency: CryptoCurrency
     ): Promise<boolean> {
         try {
             // 1. Verify recipient address matches
-            if (
-                transaction.to.toLowerCase() !== expectedAddress.toLowerCase()
-            ) {
+            const recipientMatches =
+                cryptocurrency === CryptoCurrency.USDT_TRC20
+                    ? transaction.to === expectedAddress
+                    : transaction.to.toLowerCase() ===
+                      expectedAddress.toLowerCase();
+            if (!recipientMatches) {
                 this.logger.error(
                     {
                         txHash: transaction.hash,

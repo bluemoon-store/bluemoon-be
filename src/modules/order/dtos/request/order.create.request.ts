@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsBoolean } from 'class-validator';
 
 export class OrderCreateDto {
     @ApiPropertyOptional({
@@ -20,4 +20,12 @@ export class OrderCreateDto {
     @IsString()
     @MaxLength(500)
     notes?: string;
+
+    @ApiPropertyOptional({
+        description:
+            'When true, adds buyer protection fee ($5 USD) to the order total',
+    })
+    @IsOptional()
+    @IsBoolean()
+    buyerProtection?: boolean;
 }

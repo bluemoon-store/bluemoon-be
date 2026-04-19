@@ -45,6 +45,17 @@ export class CryptoPaymentService implements ICryptoPaymentService {
         this.logger.setContext(CryptoPaymentService.name);
     }
 
+    private assertCryptoOrderAccess(
+        order: { userId: string },
+        userId: string
+    ): void {
+        if (!userId || order.userId !== userId) {
+            throw new BadRequestException(
+                'You do not have permission to access this order'
+            );
+        }
+    }
+
     /**
      * Create a crypto payment for an order
      * @param orderId - Order ID
@@ -75,12 +86,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 throw new NotFoundException(`Order not found: ${orderId}`);
             }
 
-            // Verify order belongs to user
-            if (order.userId !== userId) {
-                throw new BadRequestException(
-                    'You do not have permission to create payment for this order'
-                );
-            }
+            this.assertCryptoOrderAccess(order, userId);
 
             // Check if order is in valid status
             if (order.status !== OrderStatus.PENDING) {
@@ -359,12 +365,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 throw new NotFoundException(`Payment not found: ${paymentId}`);
             }
 
-            // Verify payment belongs to user's order
-            if (payment.order.userId !== userId) {
-                throw new BadRequestException(
-                    'You do not have permission to view this payment'
-                );
-            }
+            this.assertCryptoOrderAccess(payment.order, userId);
 
             // Check if payment has expired
             const now = new Date();
@@ -444,12 +445,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 throw new NotFoundException(`Order not found: ${orderId}`);
             }
 
-            // Verify order belongs to user
-            if (order.userId !== userId) {
-                throw new BadRequestException(
-                    'You do not have permission to view this order'
-                );
-            }
+            this.assertCryptoOrderAccess(order, userId);
 
             if (!order.cryptoPayment) {
                 throw new NotFoundException(

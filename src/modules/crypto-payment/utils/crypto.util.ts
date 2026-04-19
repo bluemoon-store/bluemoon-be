@@ -338,8 +338,7 @@ export function isValidAddress(
                 // Ethereum addresses (EIP-55 checksummed)
                 return ethers.isAddress(address);
             case CryptoCurrency.USDT_TRC20:
-                // Tron addresses start with 'T' and are base58
-                return address.startsWith('T') && address.length === 34;
+                return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
             default:
                 return false;
         }

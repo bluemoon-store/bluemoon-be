@@ -763,12 +763,12 @@ const FLIGHTS_RELATED: ProductSlug[] = [
 const HOTELS_RELATED: ProductSlug[] = ['marriott-bonvoy', 'hilton-honors'];
 
 @Injectable()
-export class ProductSeedService {
+export class ProductsSeedService {
     constructor(
         private readonly logger: PinoLogger,
         private readonly databaseService: DatabaseService
     ) {
-        this.logger.setContext(ProductSeedService.name);
+        this.logger.setContext(ProductsSeedService.name);
     }
 
     @Command({

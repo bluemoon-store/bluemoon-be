@@ -5,16 +5,16 @@ import { DatabaseService } from 'src/common/database/services/database.service';
 import { CryptoCurrency } from '@prisma/client';
 
 @Injectable()
-export class CryptoWalletSeedService {
+export class CryptoWalletsSeedService {
     constructor(
         private readonly logger: PinoLogger,
         private readonly databaseService: DatabaseService
     ) {
-        this.logger.setContext(CryptoWalletSeedService.name);
+        this.logger.setContext(CryptoWalletsSeedService.name);
     }
 
     @Command({
-        command: 'seed:crypto-wallet',
+        command: 'seed:crypto-wallets',
         describe: 'Seed system wallet indexes for cryptocurrencies',
     })
     async seed(): Promise<void> {

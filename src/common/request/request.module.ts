@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { JwtAccessGuard } from './guards/jwt.access.guard';
+import { JwtOptionalAccessGuard } from './guards/jwt.optional-access.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RequestLoggerMiddleware } from './middlewares/request.middleware';
 
@@ -22,7 +23,7 @@ import { RequestLoggerMiddleware } from './middlewares/request.middleware';
             inject: [ConfigService],
         }),
     ],
-    exports: [],
+    exports: [JwtOptionalAccessGuard],
     providers: [
         {
             provide: APP_GUARD,
@@ -32,6 +33,7 @@ import { RequestLoggerMiddleware } from './middlewares/request.middleware';
             provide: APP_GUARD,
             useClass: JwtAccessGuard,
         },
+        JwtOptionalAccessGuard,
         {
             provide: APP_GUARD,
             useClass: RolesGuard,

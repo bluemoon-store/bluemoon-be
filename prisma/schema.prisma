@@ -28,7 +28,7 @@ model User {
 
   // Store related fields
   wallet          UserWallet?
-  orders          Order[]
+  orders          Order[] @relation("UserOrders")
   cart            Cart?
   supportTickets  SupportTicket[] @relation("UserTickets")
   assignedTickets SupportTicket[] @relation("AssignedTickets")
@@ -227,7 +227,9 @@ model Order {
   id             String          @id @default(uuid())
   orderNumber    String          @unique @map("order_number") // e.g., ORD-20260129-XXXXX
   userId         String          @map("user_id")
-  user           User            @relation(fields: [userId], references: [id])
+  user           User            @relation("UserOrders", fields: [userId], references: [id])
+  buyerProtection Boolean        @default(false) @map("buyer_protection")
+  buyerProtectionAmount Decimal? @map("buyer_protection_amount") @db.Decimal(20, 8)
   status         OrderStatus     @default(PENDING)
   totalAmount    Decimal         @map("total_amount") @db.Decimal(20, 8)
   currency       String // USD, BTC, ETH, etc.

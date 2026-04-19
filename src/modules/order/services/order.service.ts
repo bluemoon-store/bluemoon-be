@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, Prisma } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
@@ -16,7 +16,10 @@ import {
 } from '../dtos/response/order.response';
 import { IOrderService } from '../interfaces/order.service.interface';
 import { calculateLineItemsTotals } from 'src/common/utils/commerce.util';
-import { generateOrderNumberString } from '../utils/order.util';
+import {
+    BUYER_PROTECTION_FEE_USD,
+    generateOrderNumberString,
+} from '../utils/order.util';
 import { OrderDeliveryService } from './order-delivery.service';
 
 @Injectable()
@@ -164,10 +167,23 @@ export class OrderService implements IOrderService {
                 );
             }
 
-            // Calculate totals
+            // Calculate totals (subtotal from cart line snapshots)
             const { totalAmount, currency } = calculateLineItemsTotals(
                 cart.items
             );
+            const subtotal = parseFloat(totalAmount);
+            const buyerProtection = Boolean(data.buyerProtection);
+            const buyerProtectionUsd = buyerProtection
+                ? BUYER_PROTECTION_FEE_USD
+                : 0;
+            const finalTotalUsd = Math.max(0, subtotal + buyerProtectionUsd);
+            if (finalTotalUsd <= 0) {
+                throw new HttpException(
+                    'order.error.invalidTotal',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+            const totalAmountStr = finalTotalUsd.toFixed(8);
 
             // Generate order number
             const orderNumber = await this.generateOrderNumber();
@@ -179,9 +195,16 @@ export class OrderService implements IOrderService {
                     data: {
                         orderNumber,
                         userId,
-                        totalAmount,
+                        totalAmount: totalAmountStr,
                         currency: data.currency || currency,
                         status: OrderStatus.PENDING,
+                        buyerProtection,
+                        buyerProtectionAmount:
+                            buyerProtectionUsd > 0
+                                ? new Prisma.Decimal(
+                                      buyerProtectionUsd.toFixed(8)
+                                  )
+                                : null,
                     },
                 });
 
@@ -280,7 +303,7 @@ export class OrderService implements IOrderService {
                     orderId: order.order.id,
                     orderNumber,
                     userId,
-                    totalAmount,
+                    totalAmount: totalAmountStr,
                 },
                 'Order created'
             );
@@ -370,21 +393,15 @@ export class OrderService implements IOrderService {
      */
     async getOrderDetail(
         orderId: string,
-        userId?: string
+        userId?: string,
+        skipOwnershipCheck = false
     ): Promise<OrderDetailResponseDto> {
         try {
-            const where: any = {
-                id: orderId,
-                deletedAt: null,
-            };
-
-            // If userId provided, ensure user owns the order
-            if (userId) {
-                where.userId = userId;
-            }
-
             const order = await this.databaseService.order.findFirst({
-                where,
+                where: {
+                    id: orderId,
+                    deletedAt: null,
+                },
                 include: {
                     user: {
                         select: {
@@ -420,6 +437,15 @@ export class OrderService implements IOrderService {
                     'order.error.orderNotFound',
                     HttpStatus.NOT_FOUND
                 );
+            }
+
+            if (!skipOwnershipCheck) {
+                if (!userId || order.userId !== userId) {
+                    throw new HttpException(
+                        'order.error.orderNotFound',
+                        HttpStatus.NOT_FOUND
+                    );
+                }
             }
 
             return order as unknown as OrderDetailResponseDto;
@@ -539,7 +565,16 @@ export class OrderService implements IOrderService {
      */
     async refundOrder(orderId: string): Promise<ApiGenericResponseDto> {
         try {
-            const order = await this.getOrderDetail(orderId);
+            const order = await this.databaseService.order.findFirst({
+                where: { id: orderId, deletedAt: null },
+            });
+
+            if (!order) {
+                throw new HttpException(
+                    'order.error.orderNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
 
             if (
                 order.status !== OrderStatus.COMPLETED &&
@@ -560,12 +595,14 @@ export class OrderService implements IOrderService {
                     ? parseFloat(order.totalAmount)
                     : Number(order.totalAmount);
 
-            await this.walletService.refundBalance(
-                order.userId,
-                totalAmount,
-                `Refund for order ${order.orderNumber}`,
-                order.id
-            );
+            if (order.userId) {
+                await this.walletService.refundBalance(
+                    order.userId,
+                    totalAmount,
+                    `Refund for order ${order.orderNumber}`,
+                    order.id
+                );
+            }
 
             this.logger.info({ orderId }, 'Order refunded successfully');
 
@@ -625,14 +662,25 @@ export class OrderService implements IOrderService {
                 async tx => {
                     // Restore stock for each item
                     for (const item of order.items) {
-                        await tx.product.update({
-                            where: { id: item.productId },
-                            data: {
-                                stockQuantity: {
-                                    increment: item.quantity,
+                        if (item.variantId) {
+                            await tx.productVariant.update({
+                                where: { id: item.variantId },
+                                data: {
+                                    stockQuantity: {
+                                        increment: item.quantity,
+                                    },
                                 },
-                            },
-                        });
+                            });
+                        } else {
+                            await tx.product.update({
+                                where: { id: item.productId },
+                                data: {
+                                    stockQuantity: {
+                                        increment: item.quantity,
+                                    },
+                                },
+                            });
+                        }
                     }
 
                     // Update order status
