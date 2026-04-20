@@ -476,6 +476,7 @@ export class OrderService implements IOrderService {
                                 },
                             },
                             cryptoPayment: true,
+                            review: true,
                         },
                         orderBy: { createdAt: 'desc' },
                     }
@@ -532,6 +533,7 @@ export class OrderService implements IOrderService {
                         },
                     },
                     cryptoPayment: true,
+                    review: true,
                 },
             });
 

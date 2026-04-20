@@ -54,17 +54,16 @@ export class HelperPaginationService implements IHelperPaginationService {
         const skip = (currentPage - 1) * itemsPerPage;
 
         try {
-            // Execute count and fetch in parallel for better performance
-            const [totalItems, items] = await Promise.all([
-                delegate.count({
-                    where: options.where,
-                }),
-                delegate.findMany({
-                    ...options,
-                    take: itemsPerPage,
-                    skip,
-                }),
-            ]);
+            // Keep pagination queries sequential to avoid opening two DB
+            // connections per request, which can exhaust pooled sessions.
+            const totalItems = await delegate.count({
+                where: options.where,
+            });
+            const items = await delegate.findMany({
+                ...options,
+                take: itemsPerPage,
+                skip,
+            });
 
             const totalPages = Math.ceil(totalItems / itemsPerPage);
 

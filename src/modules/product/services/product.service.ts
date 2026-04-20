@@ -44,6 +44,9 @@ const listInclude = {
         where: { deletedAt: null },
         orderBy: { sortOrder: 'asc' as const },
     },
+    regions: {
+        orderBy: { sortOrder: 'asc' as const },
+    },
 } satisfies Prisma.ProductInclude;
 
 const detailInclude = {
@@ -91,9 +94,14 @@ export class ProductService implements IProductService {
         const primaryImageUrl = computePrimaryImageUrl(product.images);
         const fromPrice = computeFromPrice(product.price, product.variants);
         const tags = buildProductTags(product);
-        const { variants: _variants, ...rest } = product;
+        const regions = product.regions.filter(r => r.isActive);
+        const variants = product.variants.filter(
+            v => v.isActive && v.deletedAt === null
+        );
         return {
-            ...rest,
+            ...product,
+            regions,
+            variants,
             primaryImageUrl,
             fromPrice,
             tags,

@@ -129,6 +129,41 @@ export class OrderItemResponseDto implements OrderItem {
     product?: ProductResponseDto;
 }
 
+export class OrderReviewEmbedDto {
+    @ApiProperty({
+        example: faker.string.uuid(),
+    })
+    @Expose()
+    @IsUUID()
+    id: string;
+
+    @ApiProperty({
+        example: faker.string.uuid(),
+    })
+    @Expose()
+    @IsUUID()
+    orderId: string;
+
+    @ApiProperty({ example: 5 })
+    @Expose()
+    @IsInt()
+    rating: number;
+
+    @ApiPropertyOptional({
+        example: 'Excellent seller, instant delivery.',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    comment: string | null;
+
+    @ApiProperty({ example: faker.date.recent().toISOString() })
+    @Expose()
+    @IsDate()
+    createdAt: Date;
+}
+
 export class OrderResponseDto {
     @ApiProperty({
         example: faker.string.uuid(),
@@ -248,6 +283,16 @@ export class OrderResponseDto {
     @ValidateNested()
     @Type(() => CryptoPaymentResponseDto)
     cryptoPayment?: CryptoPaymentResponseDto;
+
+    @ApiPropertyOptional({
+        type: OrderReviewEmbedDto,
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => OrderReviewEmbedDto)
+    review?: OrderReviewEmbedDto | null;
 }
 
 export class OrderUserSnapshotDto {
