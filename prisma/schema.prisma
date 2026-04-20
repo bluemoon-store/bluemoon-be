@@ -227,14 +227,10 @@ model CartItem {
 model Order {
   id             String          @id @default(uuid())
   orderNumber    String          @unique @map("order_number") // e.g., ORD-20260129-XXXXX
-  userId         String?         @map("user_id")
-  user           User?           @relation("UserOrders", fields: [userId], references: [id])
-  guestEmail     String?         @map("guest_email")
-  guestCheckoutTokenHash String? @map("guest_checkout_token_hash")
-  promoCode      String?         @map("promo_code")
-  discountAmount Decimal?        @map("discount_amount") @db.Decimal(20, 8)
+  userId         String          @map("user_id")
+  user           User            @relation("UserOrders", fields: [userId], references: [id])
   buyerProtection Boolean        @default(false) @map("buyer_protection")
-  buyerProtectionAmount Decimal? @map("buyer_protection_amount") @db.Decimal(20, 8)
+  buyerProtectionAmount Decimal  @default(0) @map("buyer_protection_amount") @db.Decimal(20, 8)
   status         OrderStatus     @default(PENDING)
   totalAmount    Decimal         @map("total_amount") @db.Decimal(20, 8)
   currency       String // USD, BTC, ETH, etc.
