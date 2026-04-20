@@ -158,14 +158,13 @@ export class OrderResponseDto {
     @IsOptional()
     buyerProtection?: boolean;
 
-    @ApiPropertyOptional({
+    @ApiProperty({
         example: '5.00000000',
-        nullable: true,
+        description: 'USD fee charged for buyer protection; 0 when disabled.',
     })
     @Expose()
-    @IsOptional()
     @Type(() => String)
-    buyerProtectionAmount?: Prisma.Decimal | null;
+    buyerProtectionAmount: Prisma.Decimal;
 
     @ApiProperty({
         enum: OrderStatus,

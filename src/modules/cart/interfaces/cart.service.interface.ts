@@ -1,5 +1,6 @@
 import { CartResponseDto } from '../dtos/response/cart.response';
 import { CartAddItemDto } from '../dtos/request/cart.add-item.request';
+import { CartSyncDto } from '../dtos/request/cart.sync.request';
 import { CartUpdateItemDto } from '../dtos/request/cart.update-item.request';
 
 export interface ICartService {
@@ -12,5 +13,6 @@ export interface ICartService {
     ): Promise<CartResponseDto>;
     removeItem(userId: string, itemId: string): Promise<CartResponseDto>;
     clearCart(userId: string): Promise<CartResponseDto>;
+    syncCart(userId: string, data: CartSyncDto): Promise<CartResponseDto>;
     getCart(userId: string): Promise<CartResponseDto>;
 }

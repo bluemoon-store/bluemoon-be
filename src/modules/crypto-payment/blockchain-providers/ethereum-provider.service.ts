@@ -333,11 +333,87 @@ export class EthereumProvider extends BaseBlockchainProvider {
     }
 
     /**
-     * Estimate network fee for a transaction
-     * @param from - Sender address
-     * @param to - Recipient address
-     * @param amount - Amount in ETH
-     * @returns Estimated fee in ETH
+     * Simulate ERC-20 transfer gas. Falls back to 100_000 if simulation reverts.
+     */
+    async estimateERC20TransferGas(
+        from: string,
+        to: string,
+        amount: string,
+        tokenContract: string
+    ): Promise<bigint> {
+        try {
+            const abi = [
+                'function transfer(address to, uint256 amount) returns (bool)',
+                'function decimals() view returns (uint8)',
+            ];
+            const contract = new ethers.Contract(
+                tokenContract,
+                abi,
+                this.provider
+            );
+            const decimals: number = await contract.decimals();
+            const amountUnits = ethers.parseUnits(amount, decimals);
+            return await contract.transfer.estimateGas(to, amountUnits, {
+                from,
+            });
+        } catch (err) {
+            this.logger.warn(
+                { err },
+                'estimateERC20TransferGas failed, using fallback 100_000'
+            );
+            return 100_000n;
+        }
+    }
+
+    /** Current max fee per gas (EIP-1559 preferred, legacy gasPrice fallback). */
+    async getCurrentMaxFeePerGas(): Promise<bigint> {
+        const feeData = await this.provider.getFeeData();
+        return (
+            feeData.maxFeePerGas ??
+            feeData.gasPrice ??
+            ethers.parseUnits('100', 'gwei')
+        );
+    }
+
+    private getNativeEthTransferGasLimit(): bigint {
+        const raw = this.configService.get<string>(
+            'crypto.gas.gasLimit',
+            '21000'
+        );
+        try {
+            const n = BigInt(raw);
+            return n > 0n ? n : 21000n;
+        } catch {
+            return 21000n;
+        }
+    }
+
+    private getEthFeeBufferPercent(): bigint {
+        const pct = this.configService.get<number>(
+            'crypto.gas.ethFeeBufferPercent',
+            25
+        );
+        const clamped = Math.max(0, Math.min(500, Math.floor(pct)));
+        return BigInt(clamped);
+    }
+
+    /**
+     * Wei reserved for a simple native ETH transfer: gasLimit × maxFeePerGas × (1 + buffer%).
+     * Used for forwarding math and {@link estimateFee}.
+     */
+    async estimateNativeEthTransferFeeWei(): Promise<bigint> {
+        const gasLimit = this.getNativeEthTransferGasLimit();
+        const maxFeePerGas = await this.getCurrentMaxFeePerGas();
+        const feeBufferPercent = this.getEthFeeBufferPercent();
+        return (gasLimit * maxFeePerGas * (100n + feeBufferPercent)) / 100n;
+    }
+
+    /**
+     * Estimate network fee for a native ETH transfer (EIP-1559 max fee + buffer).
+     * @param from - Sender address (unused; kept for interface)
+     * @param to - Recipient address (unused)
+     * @param amount - Amount in ETH (unused)
+     * @returns Estimated max fee in ETH
      */
     async estimateFee(
         from: string,
@@ -347,22 +423,15 @@ export class EthereumProvider extends BaseBlockchainProvider {
         this.logger.debug({ from, to, amount }, 'Estimating Ethereum fee');
 
         try {
-            // Get current gas price
-            const feeData = await this.provider.getFeeData();
-            const gasPrice =
-                feeData.gasPrice || ethers.parseUnits('50', 'gwei'); // Default to 50 Gwei
-
-            // Estimate gas limit (21000 for ETH transfer, more for contracts)
-            const gasLimit = 21000n;
-
-            // Calculate fee
-            const feeWei = gasPrice * gasLimit;
+            const gasLimit = this.getNativeEthTransferGasLimit();
+            const feeBufferPercent = this.getEthFeeBufferPercent();
+            const feeWei = await this.estimateNativeEthTransferFeeWei();
             const feeEth = ethers.formatEther(feeWei);
 
             this.logger.debug(
                 {
-                    gasPrice: ethers.formatUnits(gasPrice, 'gwei'),
                     gasLimit: gasLimit.toString(),
+                    feeBufferPercent: feeBufferPercent.toString(),
                     feeEth,
                 },
                 'Ethereum fee estimated'

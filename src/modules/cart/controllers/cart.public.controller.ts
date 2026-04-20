@@ -15,6 +15,7 @@ import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 
 import { CartAddItemDto } from '../dtos/request/cart.add-item.request';
+import { CartSyncDto } from '../dtos/request/cart.sync.request';
 import { CartUpdateItemDto } from '../dtos/request/cart.update-item.request';
 import { CartResponseDto } from '../dtos/response/cart.response';
 import { CartService } from '../services/cart.service';
@@ -99,5 +100,20 @@ export class CartPublicController {
         @AuthUser() user: IAuthUser
     ): Promise<CartResponseDto> {
         return this.cartService.clearCart(user.userId);
+    }
+
+    @Put('sync')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Atomically replace cart contents' })
+    @DocResponse({
+        serialization: CartResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'cart.success.cartSynced',
+    })
+    public async syncCart(
+        @AuthUser() user: IAuthUser,
+        @Body() payload: CartSyncDto
+    ): Promise<CartResponseDto> {
+        return this.cartService.syncCart(user.userId, payload);
     }
 }

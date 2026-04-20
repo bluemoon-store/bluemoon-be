@@ -199,12 +199,9 @@ export class OrderService implements IOrderService {
                         currency: data.currency || currency,
                         status: OrderStatus.PENDING,
                         buyerProtection,
-                        buyerProtectionAmount:
-                            buyerProtectionUsd > 0
-                                ? new Prisma.Decimal(
-                                      buyerProtectionUsd.toFixed(8)
-                                  )
-                                : null,
+                        buyerProtectionAmount: new Prisma.Decimal(
+                            buyerProtectionUsd.toFixed(8)
+                        ),
                     },
                 });
 

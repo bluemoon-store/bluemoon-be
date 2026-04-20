@@ -17,7 +17,7 @@ const USDT_TRC20_CONTRACT_MAINNET = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 const USDT_TRC20_CONTRACT_SHASTA = 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs';
 
 /** Minimum native TRX (SUN) on payment address before forwarding TRC-20 (15 TRX). */
-const MIN_TRX_SUN_FOR_TRC20_FORWARD = 15_000_000;
+export const MIN_TRX_SUN_FOR_TRC20_FORWARD = 15_000_000;
 
 /** Tatum `feeLimit` for TRC-20 broadcast (SUN). */
 const TRC20_FEE_LIMIT_DEFAULT = 100_000_000;
@@ -408,6 +408,34 @@ export class TronProvider extends BaseBlockchainProvider {
             return txId;
         } catch (error) {
             this.handleTatumError(error, 'sendTransaction');
+        }
+    }
+
+    async sendNativeTrx(
+        to: string,
+        amount: string,
+        privateKey: string
+    ): Promise<string> {
+        try {
+            if (!this.isValidAddress(to)) {
+                throw new Error(`Invalid Tron address: ${to}`);
+            }
+            const fromPrivateKey = this.normalizeTronPrivateKey(privateKey);
+
+            const response = await this.tatumClient.post('/tron/transaction', {
+                fromPrivateKey,
+                to,
+                amount,
+            });
+
+            const txId = response.data?.txId || response.data?.txID;
+            if (!txId) {
+                throw new Error('No txId in Tatum TRX send response');
+            }
+            this.logger.info({ txId, to, amount }, 'Native TRX sent');
+            return txId;
+        } catch (error) {
+            this.handleTatumError(error, 'sendNativeTrx');
         }
     }
 

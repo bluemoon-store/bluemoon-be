@@ -91,18 +91,19 @@ export class PaymentForwardingProcessor {
                 return;
             }
 
-            // Check if payment should be forwarded
-            const shouldForward =
-                await this.forwardingService.shouldForwardPayment(paymentId);
+            const canForward =
+                (payment.status === PaymentStatus.CONFIRMED ||
+                    payment.status === PaymentStatus.FORWARDING) &&
+                !payment.forwardTxHash;
 
-            if (!shouldForward) {
+            if (!canForward) {
                 this.logger.debug(
                     {
                         jobId,
                         paymentId,
                         status: payment.status,
                     },
-                    'Payment should not be forwarded, skipping'
+                    'Payment not forwardable, skipping'
                 );
                 return;
             }
@@ -140,7 +141,7 @@ export class PaymentForwardingProcessor {
             // But only if it's not a validation error (those shouldn't retry)
             if (
                 errorMessage.includes('not found') ||
-                errorMessage.includes('must be CONFIRMED') ||
+                errorMessage.includes('must be CONFIRMED or FORWARDING') ||
                 errorMessage.includes('already forwarded')
             ) {
                 this.logger.warn(

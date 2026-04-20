@@ -5,6 +5,7 @@ import {
     CallHandler,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Prisma } from '@prisma/client';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { Observable, map } from 'rxjs';
 
@@ -17,6 +18,38 @@ import { ApiPaginationMetadataDto } from '../dtos/response.paginated.dto';
 import { MessageService } from 'src/common/message/services/message.service';
 
 import { ApiGenericResponseDto } from '../dtos/response.generic.dto';
+
+/**
+ * Prisma.Decimal + class-transformer can throw (e.g. DecimalError on invalid input)
+ * when plain objects still carry runtime Decimal instances. Coerce Decimals to
+ * strings before plainToInstance so @Type(() => String) sees stable primitives.
+ */
+function normalizeDecimalsForResponseSerialization(value: unknown): unknown {
+    if (value === null || value === undefined) {
+        return value;
+    }
+    if (Prisma.Decimal.isDecimal(value)) {
+        return value.toString();
+    }
+    if (value instanceof Date) {
+        return value;
+    }
+    if (Array.isArray(value)) {
+        return value.map(normalizeDecimalsForResponseSerialization);
+    }
+    if (typeof value === 'object') {
+        if (value instanceof Map || value instanceof Set) {
+            return value;
+        }
+        const record = value as Record<string, unknown>;
+        const out: Record<string, unknown> = {};
+        for (const key of Object.keys(record)) {
+            out[key] = normalizeDecimalsForResponseSerialization(record[key]);
+        }
+        return out;
+    }
+    return value;
+}
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -64,20 +97,34 @@ export class ResponseInterceptor implements NestInterceptor {
                               items: (
                                   responseBody as { items: unknown[] }
                               ).items.map(item =>
-                                  plainToInstance(classSerialization, item, {
-                                      excludeExtraneousValues: true,
-                                  })
+                                  plainToInstance(
+                                      classSerialization,
+                                      normalizeDecimalsForResponseSerialization(
+                                          item
+                                      ),
+                                      {
+                                          excludeExtraneousValues: true,
+                                      }
+                                  )
                               ),
                               metadata: plainToInstance(
                                   ApiPaginationMetadataDto,
-                                  (responseBody as { metadata: unknown })
-                                      .metadata,
+                                  normalizeDecimalsForResponseSerialization(
+                                      (responseBody as { metadata: unknown })
+                                          .metadata
+                                  ),
                                   { excludeExtraneousValues: true }
                               ),
                           }
-                        : plainToInstance(classSerialization, responseBody, {
-                              excludeExtraneousValues: true,
-                          })
+                        : plainToInstance(
+                              classSerialization,
+                              normalizeDecimalsForResponseSerialization(
+                                  responseBody
+                              ),
+                              {
+                                  excludeExtraneousValues: true,
+                              }
+                          )
                     : responseBody;
 
                 // Translate response message

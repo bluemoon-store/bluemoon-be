@@ -209,73 +209,9 @@ export class PaymentVerificationProcessor {
                 return;
             }
 
-            // Check confirmations
+            // Re-queue when needed is handled only in BlockchainMonitorService.checkConfirmations
+            // to avoid duplicate delayed jobs (processor used to enqueue a second copy here).
             await this.monitorService.checkConfirmations(paymentId);
-
-            // Refresh payment to check if it was confirmed
-            const updatedPayment =
-                await this.databaseService.cryptoPayment.findUnique({
-                    where: { id: paymentId },
-                    select: {
-                        status: true,
-                        confirmations: true,
-                        requiredConfirmations: true,
-                    },
-                });
-
-            if (!updatedPayment) {
-                return;
-            }
-
-            // Re-queue if not confirmed yet and hasn't exceeded max attempts
-            if (
-                updatedPayment.status !== PaymentStatus.CONFIRMED &&
-                updatedPayment.confirmations <
-                    updatedPayment.requiredConfirmations &&
-                job.attemptsMade + 1 < (job.opts.attempts || 10)
-            ) {
-                const remainingConfirmations =
-                    updatedPayment.requiredConfirmations -
-                    updatedPayment.confirmations;
-                const delay = Math.min(300000, remainingConfirmations * 60000); // Max 5 minutes, or 1 min per confirmation needed
-
-                this.logger.debug(
-                    {
-                        jobId,
-                        paymentId,
-                        confirmations: updatedPayment.confirmations,
-                        required: updatedPayment.requiredConfirmations,
-                        delay,
-                    },
-                    'Re-queuing confirmation check'
-                );
-
-                // Note: The monitor service already handles re-queuing,
-                // but we can also do it here for redundancy
-                await job.queue.add(
-                    'check-confirmations',
-                    { paymentId },
-                    {
-                        delay,
-                        attempts: 10,
-                        backoff: {
-                            type: 'exponential',
-                            delay: 60000,
-                        },
-                        removeOnComplete: true,
-                        removeOnFail: false,
-                    }
-                );
-            } else if (updatedPayment.status === PaymentStatus.CONFIRMED) {
-                this.logger.info(
-                    {
-                        jobId,
-                        paymentId,
-                        confirmations: updatedPayment.confirmations,
-                    },
-                    'Payment confirmed, no need to re-queue'
-                );
-            }
 
             this.logger.info(
                 { jobId, paymentId },

@@ -12,11 +12,4 @@ export interface IPaymentForwardingService {
      * @returns True if payment should be forwarded
      */
     shouldForwardPayment(paymentId: string): Promise<boolean>;
-
-    /**
-     * Get estimated forwarding fee
-     * @param paymentId - Payment ID
-     * @returns Estimated fee in cryptocurrency
-     */
-    estimateForwardingFee(paymentId: string): Promise<string>;
 }

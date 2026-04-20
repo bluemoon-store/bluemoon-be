@@ -28,7 +28,7 @@ model User {
 
   // Store related fields
   wallet          UserWallet?
-  orders          Order[] @relation("UserOrders")
+  orders          Order[]         @relation("UserOrders")
   cart            Cart?
   supportTickets  SupportTicket[] @relation("UserTickets")
   assignedTickets SupportTicket[] @relation("AssignedTickets")
@@ -41,10 +41,10 @@ model User {
   twoFactorEnabled Boolean @default(false) @map("two_factor_enabled")
   twoFactorSecret  String? @map("two_factor_secret")
 
-  passwordResetOtp               String?   @map("password_reset_otp")
-  passwordResetOtpExpiry         DateTime? @map("password_reset_otp_expiry")
-  emailVerificationToken         String?   @map("email_verification_token")
-  emailVerificationTokenExpiry   DateTime? @map("email_verification_token_expiry")
+  passwordResetOtp             String?   @map("password_reset_otp")
+  passwordResetOtpExpiry       DateTime? @map("password_reset_otp_expiry")
+  emailVerificationToken       String?   @map("email_verification_token")
+  emailVerificationTokenExpiry DateTime? @map("email_verification_token_expiry")
 
   @@map("users")
 }
@@ -120,20 +120,20 @@ model Product {
 }
 
 model ProductVariant {
-  id            String   @id @default(uuid())
-  productId     String   @map("product_id")
-  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  productId     String      @map("product_id")
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   label         String
-  price         Decimal  @db.Decimal(20, 8)
-  currency      String   @default("USD")
-  stockQuantity Int      @default(0) @map("stock_quantity")
-  isActive      Boolean  @default(true) @map("is_active")
-  sortOrder     Int      @default(0) @map("sort_order")
+  price         Decimal     @db.Decimal(20, 8)
+  currency      String      @default("USD")
+  stockQuantity Int         @default(0) @map("stock_quantity")
+  isActive      Boolean     @default(true) @map("is_active")
+  sortOrder     Int         @default(0) @map("sort_order")
   cartItems     CartItem[]
   orderItems    OrderItem[]
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  deletedAt     DateTime?   @map("deleted_at")
 
   @@index([productId])
   @@map("product_variants")
@@ -201,18 +201,18 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String   @map("cart_id")
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String   @map("product_id")
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(1)
+  id        String  @id @default(uuid())
+  cartId    String  @map("cart_id")
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
 
   variantId     String?         @map("variant_id")
   variant       ProductVariant? @relation(fields: [variantId], references: [id])
   regionLabel   String          @default("") @map("region_label")
   regionCountry String          @default("") @map("region_country")
-  unitPrice     Decimal?        @db.Decimal(20, 8) @map("unit_price")
+  unitPrice     Decimal?        @map("unit_price") @db.Decimal(20, 8)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -224,23 +224,23 @@ model CartItem {
 
 // Orders & Payments
 model Order {
-  id             String          @id @default(uuid())
-  orderNumber    String          @unique @map("order_number") // e.g., ORD-20260129-XXXXX
-  userId         String          @map("user_id")
-  user           User            @relation("UserOrders", fields: [userId], references: [id])
-  buyerProtection Boolean        @default(false) @map("buyer_protection")
-  buyerProtectionAmount Decimal? @map("buyer_protection_amount") @db.Decimal(20, 8)
-  status         OrderStatus     @default(PENDING)
-  totalAmount    Decimal         @map("total_amount") @db.Decimal(20, 8)
-  currency       String // USD, BTC, ETH, etc.
-  cryptoPayment  CryptoPayment?
-  items          OrderItem[]
-  supportTickets SupportTicket[]
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-  completedAt    DateTime?       @map("completed_at")
-  cancelledAt    DateTime?       @map("cancelled_at")
-  deletedAt      DateTime?       @map("deleted_at")
+  id                    String          @id @default(uuid())
+  orderNumber           String          @unique @map("order_number") // e.g., ORD-20260129-XXXXX
+  userId                String          @map("user_id")
+  user                  User            @relation("UserOrders", fields: [userId], references: [id])
+  buyerProtection       Boolean         @default(false) @map("buyer_protection")
+  buyerProtectionAmount Decimal         @default(0) @map("buyer_protection_amount") @db.Decimal(20, 8)
+  status                OrderStatus     @default(PENDING)
+  totalAmount           Decimal         @map("total_amount") @db.Decimal(20, 8)
+  currency              String // USD, BTC, ETH, etc.
+  cryptoPayment         CryptoPayment?
+  items                 OrderItem[]
+  supportTickets        SupportTicket[]
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+  completedAt           DateTime?       @map("completed_at")
+  cancelledAt           DateTime?       @map("cancelled_at")
+  deletedAt             DateTime?       @map("deleted_at")
 
   @@index([userId])
   @@index([orderNumber])

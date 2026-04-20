@@ -1,6 +1,5 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseModule } from 'src/common/database/database.module';
@@ -14,7 +13,6 @@ import { NotificationScheduleWorker } from './schedulers/notification.scheduler'
     imports: [
         HelperModule,
         DatabaseModule,
-        ScheduleModule.forRoot(),
         BullModule.registerQueue({
             name: APP_BULL_QUEUES.NOTIFICATION,
         }),

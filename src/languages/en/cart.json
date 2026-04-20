@@ -4,7 +4,8 @@
         "itemAdded": "Item added to cart successfully",
         "itemUpdated": "Cart item updated successfully",
         "itemRemoved": "Item removed from cart successfully",
-        "cartCleared": "Cart cleared successfully"
+        "cartCleared": "Cart cleared successfully",
+        "cartSynced": "Cart synced successfully"
     },
     "error": {
         "productNotFound": "Product not found",
@@ -15,6 +16,7 @@
         "itemNotFound": "Cart item not found",
         "updateItemFailed": "Failed to update cart item",
         "removeItemFailed": "Failed to remove item from cart",
-        "clearCartFailed": "Failed to clear cart"
+        "clearCartFailed": "Failed to clear cart",
+        "syncCartFailed": "Failed to sync cart"
     }
 }

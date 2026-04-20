@@ -79,6 +79,11 @@ export default registerAs(
                 process.env.MAX_FORWARDING_RETRIES || '5',
                 10
             ),
+            /** Delay before next on-chain confirmation poll (Bull job delay, ms) */
+            confirmationRecheckDelayMs: parseInt(
+                process.env.PAYMENT_CONFIRMATION_RECHECK_DELAY_MS || '30000',
+                10
+            ),
         },
 
         // Confirmation Requirements
@@ -151,6 +156,26 @@ export default registerAs(
         gas: {
             maxGasPrice: process.env.MAX_GAS_PRICE || '100', // Gwei
             gasLimit: process.env.GAS_LIMIT || '21000',
+            /** % buffer on native ETH fee = gasLimit × maxFeePerGas (EIP-1559) */
+            ethFeeBufferPercent: parseInt(
+                process.env.ETH_FEE_BUFFER_PERCENT || '25',
+                10
+            ),
+        },
+
+        hotWallet: {
+            eth: {
+                privateKey: process.env.HOT_WALLET_ETH_PRIVATE_KEY || '',
+                address: process.env.HOT_WALLET_ETH_ADDRESS || '',
+                gasBuffer: parseInt(
+                    process.env.HOT_WALLET_ETH_GAS_BUFFER_PERCENT || '25',
+                    10
+                ),
+            },
+            trx: {
+                privateKey: process.env.HOT_WALLET_TRX_PRIVATE_KEY || '',
+                trxTopUpAmount: process.env.HOT_WALLET_TRX_TOP_UP || '20',
+            },
         },
     })
 );

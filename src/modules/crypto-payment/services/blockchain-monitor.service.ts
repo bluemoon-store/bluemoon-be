@@ -429,9 +429,10 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 await this.confirmPayment(paymentId);
             } else {
                 // Re-queue for another check if not confirmed yet
-                const remainingConfirmations =
-                    payment.requiredConfirmations - confirmations;
-                const delay = Math.min(300000, remainingConfirmations * 60000); // Max 5 minutes, or 1 min per confirmation needed
+                const delay = this.configService.get<number>(
+                    'crypto.payment.confirmationRecheckDelayMs',
+                    30_000
+                );
 
                 await this.paymentVerificationQueue.add(
                     'check-confirmations',

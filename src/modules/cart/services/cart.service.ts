@@ -5,6 +5,7 @@ import { DatabaseService } from 'src/common/database/services/database.service';
 import { calculateLineItemsTotals } from 'src/common/utils/commerce.util';
 
 import { CartAddItemDto } from '../dtos/request/cart.add-item.request';
+import { CartSyncDto } from '../dtos/request/cart.sync.request';
 import { CartUpdateItemDto } from '../dtos/request/cart.update-item.request';
 import { CartResponseDto } from '../dtos/response/cart.response';
 import { ICartService } from '../interfaces/cart.service.interface';
@@ -375,6 +376,64 @@ export class CartService implements ICartService {
             this.logger.error(`Failed to clear cart: ${error.message}`);
             throw new HttpException(
                 'cart.error.clearCartFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Atomically replace all cart items
+     */
+    async syncCart(
+        userId: string,
+        data: CartSyncDto
+    ): Promise<CartResponseDto> {
+        try {
+            const cart = await this.getOrCreateCart(userId);
+
+            const validatedItems = await Promise.all(
+                data.items.map(async item => {
+                    const { unitPrice } = await this.validateProductLine(
+                        item.productId,
+                        item.quantity,
+                        item.variantId
+                    );
+
+                    return {
+                        ...item,
+                        unitPrice,
+                    };
+                })
+            );
+
+            await this.databaseService.$transaction(async tx => {
+                await tx.cartItem.deleteMany({
+                    where: { cartId: cart.id },
+                });
+
+                if (validatedItems.length > 0) {
+                    await tx.cartItem.createMany({
+                        data: validatedItems.map(item => ({
+                            cartId: cart.id,
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            variantId: item.variantId ?? null,
+                            regionLabel: item.regionLabel ?? '',
+                            regionCountry: item.regionCountry ?? '',
+                            unitPrice: item.unitPrice,
+                        })),
+                    });
+                }
+            });
+
+            return this.getCart(userId);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error(`Failed to sync cart: ${error.message}`);
+            throw new HttpException(
+                'cart.error.syncCartFailed',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

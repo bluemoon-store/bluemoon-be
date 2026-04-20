@@ -3,12 +3,13 @@ import {
     BadRequestException,
     NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { CryptoCurrency, PaymentStatus } from '@prisma/client';
+import { ethers } from 'ethers';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { SystemWalletService } from './system-wallet.service';
+import { HotWalletService } from './hot-wallet.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
 import { IPaymentForwardingService } from '../interfaces/payment-forwarding.service.interface';
 
@@ -23,7 +24,7 @@ export class PaymentForwardingService implements IPaymentForwardingService {
         private readonly databaseService: DatabaseService,
         private readonly systemWalletService: SystemWalletService,
         private readonly providerFactory: BlockchainProviderFactory,
-        private readonly configService: ConfigService,
+        private readonly hotWalletService: HotWalletService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(PaymentForwardingService.name);
@@ -60,10 +61,11 @@ export class PaymentForwardingService implements IPaymentForwardingService {
             // Validate payment status
             if (
                 payment.status !== PaymentStatus.CONFIRMED &&
+                payment.status !== PaymentStatus.FORWARDING &&
                 payment.status !== PaymentStatus.FORWARDED
             ) {
                 throw new BadRequestException(
-                    `Payment must be CONFIRMED before forwarding. Current status: ${payment.status}`
+                    `Payment must be CONFIRMED or FORWARDING before forwarding. Current status: ${payment.status}`
                 );
             }
 
@@ -89,16 +91,16 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 'Payment status updated to FORWARDING'
             );
 
-            // Decrypt private key
-            const privateKey = await this.systemWalletService.decryptPrivateKey(
-                payment.encryptedPrivateKey
-            );
-
-            // Get platform wallet address
             const platformWalletAddress =
                 this.systemWalletService.getPlatformWalletAddress(
                     payment.cryptocurrency
                 );
+
+            await this.ensureGasAvailable(payment, platformWalletAddress);
+
+            const privateKey = await this.systemWalletService.decryptPrivateKey(
+                payment.encryptedPrivateKey
+            );
 
             // Get blockchain provider
             const provider = this.providerFactory.getProvider(
@@ -106,13 +108,11 @@ export class PaymentForwardingService implements IPaymentForwardingService {
             );
 
             // Calculate amount to forward
-            // Use orderAmount from metadata if available (gas fee already included in total amount)
             const amountToForward = await this.calculateAmountToForward(
                 paymentId,
                 payment.cryptocurrency,
                 payment.paymentAddress,
-                parseFloat(payment.amount.toString()),
-                payment.metadata
+                parseFloat(payment.amount.toString())
             );
 
             let forwardTxHash: string;
@@ -137,7 +137,8 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 );
             }
 
-            // Update payment with forward transaction hash
+            const priorMetadata =
+                (payment.metadata as Record<string, unknown>) || {};
             await this.databaseService.cryptoPayment.update({
                 where: { id: paymentId },
                 data: {
@@ -145,6 +146,7 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                     forwardTxHash: forwardTxHash,
                     forwardedAt: new Date(),
                     metadata: {
+                        ...priorMetadata,
                         forwardedAmount: amountToForward,
                     },
                 },
@@ -166,6 +168,10 @@ export class PaymentForwardingService implements IPaymentForwardingService {
         } catch (error) {
             const errorMessage =
                 error instanceof Error ? error.message : 'Unknown error';
+
+            if (errorMessage === 'AWAITING_GAS_TOPUP') {
+                throw error;
+            }
 
             try {
                 const payment =
@@ -207,6 +213,92 @@ export class PaymentForwardingService implements IPaymentForwardingService {
             }
 
             throw error;
+        }
+    }
+
+    private async ensureGasAvailable(
+        payment: {
+            id: string;
+            cryptocurrency: CryptoCurrency;
+            paymentAddress: string;
+            amount: unknown;
+            metadata: unknown;
+        },
+        platformWalletAddress: string
+    ): Promise<void> {
+        const { cryptocurrency, paymentAddress, id: paymentId } = payment;
+        const metadata =
+            (payment.metadata as Record<string, unknown> | null) || {};
+
+        if (
+            cryptocurrency === CryptoCurrency.USDT_ERC20 ||
+            cryptocurrency === CryptoCurrency.USDC_ERC20
+        ) {
+            const ethProvider = this.providerFactory.getEthereumProvider();
+            const tokenSymbol =
+                cryptocurrency === CryptoCurrency.USDT_ERC20 ? 'USDT' : 'USDC';
+            const tokenContract =
+                ethProvider.getTokenContractAddress(tokenSymbol)!;
+            const tokenAmount = payment.amount.toString();
+
+            const needed = await this.hotWalletService.needsEthTopUp(
+                paymentAddress,
+                platformWalletAddress,
+                tokenAmount,
+                tokenContract
+            );
+            if (needed) {
+                if (!metadata.gasTopUpTxHash) {
+                    const txHash = await this.hotWalletService.topUpEthGas(
+                        paymentAddress,
+                        platformWalletAddress,
+                        tokenAmount,
+                        tokenContract
+                    );
+                    await this.databaseService.cryptoPayment.update({
+                        where: { id: paymentId },
+                        data: {
+                            metadata: { ...metadata, gasTopUpTxHash: txHash },
+                        },
+                    });
+                    this.logger.info(
+                        { paymentId, txHash },
+                        'ETH gas top-up sent'
+                    );
+                } else {
+                    this.logger.info(
+                        { paymentId },
+                        'ETH top-up already sent, waiting for confirmation'
+                    );
+                }
+                throw new Error('AWAITING_GAS_TOPUP');
+            }
+        }
+
+        if (cryptocurrency === CryptoCurrency.USDT_TRC20) {
+            const needed =
+                await this.hotWalletService.needsTrxTopUp(paymentAddress);
+            if (needed) {
+                if (!metadata.gasTopUpTxHash) {
+                    const txHash =
+                        await this.hotWalletService.topUpTrxEnergy(
+                            paymentAddress
+                        );
+                    await this.databaseService.cryptoPayment.update({
+                        where: { id: paymentId },
+                        data: {
+                            metadata: { ...metadata, gasTopUpTxHash: txHash },
+                        },
+                    });
+                    this.logger.info({ paymentId, txHash }, 'TRX top-up sent');
+                } else {
+                    this.logger.info(
+                        { paymentId },
+                        'TRX top-up already sent, waiting for confirmation'
+                    );
+                }
+                throw new Error('AWAITING_GAS_TOPUP');
+            }
         }
     }
 
@@ -263,101 +355,41 @@ export class PaymentForwardingService implements IPaymentForwardingService {
     }
 
     /**
-     * Calculate amount to forward
-     * If orderAmount exists in metadata, use it (gas fee already included in total amount)
-     * Otherwise, fallback to old logic (balance - fee) for backward compatibility
-     * @param paymentId - Payment ID
-     * @param cryptocurrency - Cryptocurrency type
-     * @param fromAddress - Source address
-     * @param totalAmount - Total amount received (includes gas fee if new flow)
-     * @param metadata - Payment metadata (may contain orderAmount)
-     * @returns Amount to forward (order amount, not including gas fee)
+     * Calculate amount to forward.
+     * For USDT TRC-20, forward full token balance (fees are paid in TRX).
+     * For ETH, reserve max native transfer fee (see EthereumProvider.estimateNativeEthTransferFeeWei).
+     * For all other currencies, forward the full payment amount.
      */
     private async calculateAmountToForward(
         paymentId: string,
         cryptocurrency: CryptoCurrency,
         fromAddress: string,
-        totalAmount: number,
-        metadata?: any
+        totalAmount: number
     ): Promise<number> {
         try {
-            // Check if orderAmount exists in metadata (new flow with gas fee upfront)
-            const orderAmount = metadata?.orderAmount;
-            if (
-                orderAmount &&
-                typeof orderAmount === 'number' &&
-                orderAmount > 0
-            ) {
-                this.logger.debug(
-                    {
-                        paymentId,
-                        cryptocurrency,
-                        orderAmount,
-                        totalAmount,
-                        estimatedGasFee: metadata?.estimatedGasFee,
-                    },
-                    'Using orderAmount from metadata (gas fee already included in total amount)'
-                );
-
-                // Return orderAmount (gas fee will be deducted from remaining balance)
-                return orderAmount;
-            }
-
-            // Fallback to old logic for backward compatibility
-            this.logger.debug(
-                { paymentId, cryptocurrency },
-                'Using legacy calculation (balance - fee) for backward compatibility'
-            );
-
-            // USDT TRC-20: balance is USDT but network fees are TRX; do not subtract fee from USDT.
+            // USDT TRC-20: balance is USDT while fees are TRX, so forward full USDT.
             if (cryptocurrency === CryptoCurrency.USDT_TRC20) {
                 const provider =
                     this.providerFactory.getProvider(cryptocurrency);
                 const balanceStr = await provider.getBalance(fromAddress);
                 return parseFloat(balanceStr);
             }
+            if (cryptocurrency === CryptoCurrency.ETH) {
+                const ethereumProvider =
+                    this.providerFactory.getEthereumProvider();
+                const feeWei =
+                    await ethereumProvider.estimateNativeEthTransferFeeWei();
 
-            const provider = this.providerFactory.getProvider(cryptocurrency);
-            const balanceStr = await provider.getBalance(fromAddress);
-            const actualBalance = parseFloat(balanceStr);
+                const totalWei = ethers.parseEther(totalAmount.toString());
+                if (totalWei <= feeWei) {
+                    throw new Error(
+                        'Payment amount too small to cover network fee'
+                    );
+                }
 
-            const estimatedFee = await this.estimateForwardingFee(
-                paymentId,
-                fromAddress
-            );
-            const baseFeeAmount = parseFloat(estimatedFee);
-            const safetyBufferMultiplier = 1.3;
-            const feeAmountWithBuffer = baseFeeAmount * safetyBufferMultiplier;
-
-            const amountToForward = Math.max(
-                0,
-                actualBalance - feeAmountWithBuffer
-            );
-
-            this.logger.debug(
-                {
-                    paymentId,
-                    cryptocurrency,
-                    actualBalance,
-                    feeAmountWithBuffer,
-                    amountToForward,
-                },
-                'Calculated amount to forward using legacy method'
-            );
-
-            if (actualBalance < feeAmountWithBuffer) {
-                throw new Error(
-                    `Insufficient balance for forwarding. Balance: ${actualBalance}, Required fee (with buffer): ${feeAmountWithBuffer}`
-                );
+                return parseFloat(ethers.formatEther(totalWei - feeWei));
             }
-
-            if (amountToForward <= 0) {
-                throw new Error(
-                    `Insufficient balance for forwarding fees. Balance: ${actualBalance}, Fee (with buffer): ${feeAmountWithBuffer}`
-                );
-            }
-
-            return amountToForward;
+            return totalAmount;
         } catch (error) {
             this.logger.error(
                 { error, paymentId, cryptocurrency, totalAmount },
@@ -389,9 +421,9 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 return false;
             }
 
-            // Only forward confirmed payments that haven't been forwarded
             return (
-                payment.status === PaymentStatus.CONFIRMED &&
+                (payment.status === PaymentStatus.CONFIRMED ||
+                    payment.status === PaymentStatus.FORWARDING) &&
                 !payment.forwardTxHash
             );
         } catch (error) {
@@ -400,102 +432,6 @@ export class PaymentForwardingService implements IPaymentForwardingService {
                 'Failed to check if payment should be forwarded'
             );
             return false;
-        }
-    }
-
-    /**
-     * Get estimated forwarding fee using dynamic blockchain provider estimation
-     * @param paymentId - Payment ID
-     * @param fromAddress - Optional source address for estimation
-     * @returns Estimated fee in cryptocurrency
-     */
-    async estimateForwardingFee(
-        paymentId: string,
-        fromAddress?: string
-    ): Promise<string> {
-        try {
-            const payment = await this.databaseService.cryptoPayment.findUnique(
-                {
-                    where: { id: paymentId },
-                    select: {
-                        cryptocurrency: true,
-                        paymentAddress: true,
-                        platformWalletAddress: true,
-                        amount: true,
-                    },
-                }
-            );
-
-            if (!payment) {
-                throw new NotFoundException(`Payment not found: ${paymentId}`);
-            }
-
-            const provider = this.providerFactory.getProvider(
-                payment.cryptocurrency
-            );
-
-            const from = fromAddress || payment.paymentAddress;
-            const to = payment.platformWalletAddress;
-            const amount = payment.amount.toString();
-
-            // Try to use dynamic fee estimation from blockchain provider
-            try {
-                const estimatedFee = await provider.estimateFee(
-                    from,
-                    to,
-                    amount
-                );
-
-                this.logger.debug(
-                    {
-                        paymentId,
-                        cryptocurrency: payment.cryptocurrency,
-                        estimatedFee,
-                        method: 'dynamic',
-                    },
-                    'Estimated forwarding fee using blockchain provider'
-                );
-
-                return estimatedFee;
-            } catch (error) {
-                this.logger.warn(
-                    { error, paymentId },
-                    'Failed to estimate dynamic fee from provider, using fallback'
-                );
-
-                // Fallback to default fees
-                const defaultFees: Record<CryptoCurrency, number> = {
-                    BTC: 0.00001,
-                    ETH: 0.001,
-                    LTC: 0.0001,
-                    BCH: 0.00001,
-                    USDT_ERC20: 0.001,
-                    USDT_TRC20: 0,
-                    USDC_ERC20: 0.001,
-                };
-
-                const defaultFee =
-                    defaultFees[payment.cryptocurrency] || 0.00001;
-
-                this.logger.debug(
-                    {
-                        paymentId,
-                        cryptocurrency: payment.cryptocurrency,
-                        estimatedFee: defaultFee,
-                        method: 'fallback',
-                    },
-                    'Using fallback default forwarding fee'
-                );
-
-                return defaultFee.toString();
-            }
-        } catch (error) {
-            this.logger.error(
-                { error, paymentId },
-                'Failed to estimate forwarding fee'
-            );
-            // Return conservative default fee
-            return '0.001';
         }
     }
 }

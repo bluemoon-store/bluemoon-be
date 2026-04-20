@@ -175,21 +175,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Calculated crypto amount'
             );
 
-            // 3. Estimate gas forwarding fee and add to amount
-            const estimatedGasFee =
-                await this.estimateGasForwardingFee(cryptocurrency);
-            const totalAmount = cryptoAmount + estimatedGasFee;
-
-            this.logger.debug(
-                {
-                    orderId,
-                    cryptocurrency,
-                    orderAmount: cryptoAmount,
-                    estimatedGasFee,
-                    totalAmount,
-                },
-                'Added gas forwarding fee to payment amount'
-            );
+            const totalAmount = cryptoAmount;
 
             // 4. Generate unique payment address
             const addressDetails =
@@ -236,10 +222,6 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                     status: PaymentStatus.PENDING,
                     requiredConfirmations,
                     expiresAt: addressDetails.expiresAt,
-                    metadata: {
-                        orderAmount: cryptoAmount, // Actual order amount (without gas)
-                        estimatedGasFee: estimatedGasFee, // Gas fee added upfront
-                    },
                 },
             });
 
@@ -255,14 +237,14 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Payment record created'
             );
 
-            // 9. Generate QR code (use totalAmount - what customer needs to pay)
+            // 9. Generate QR code using order amount
             const qrCode = await generatePaymentQRCode(
                 addressDetails.address,
                 totalAmount,
                 cryptocurrency
             );
 
-            // 10. Generate payment URI (use totalAmount)
+            // 10. Generate payment URI using order amount
             const paymentUri = generatePaymentURI(
                 addressDetails.address,
                 totalAmount,
@@ -292,7 +274,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 'Payment verification job queued'
             );
 
-            // 12. Return payment details (amount includes gas fee)
+            // 12. Return payment details
             const timeRemaining = Math.max(
                 0,
                 Math.floor(
@@ -306,7 +288,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 cryptocurrency,
                 network,
                 paymentAddress: addressDetails.address,
-                amount: totalAmount.toString(), // Total amount including gas fee
+                amount: totalAmount.toString(),
                 amountUsd: amountUsd.toString(),
                 exchangeRate: exchangeRate.toString(),
                 qrCode,
@@ -521,30 +503,6 @@ export class CryptoPaymentService implements ICryptoPaymentService {
             this.logger.error({ error, paymentId }, 'Failed to expire payment');
             // Don't throw - expiration is not critical
         }
-    }
-
-    /**
-     * Estimate gas forwarding fee for a cryptocurrency
-     * Uses default fees with safety buffer
-     * @param cryptocurrency - Cryptocurrency type
-     * @returns Estimated gas fee
-     */
-    private async estimateGasForwardingFee(
-        cryptocurrency: CryptoCurrency
-    ): Promise<number> {
-        const defaultFees: Record<CryptoCurrency, number> = {
-            BTC: 0.00001,
-            ETH: 0.001,
-            LTC: 0.0001,
-            BCH: 0.00001,
-            USDT_ERC20: 0.0015, // ETH gas fee for ERC-20 transfer
-            USDT_TRC20: 0,
-            USDC_ERC20: 0.0015, // ETH gas fee for ERC-20 transfer
-        };
-
-        const baseFee = defaultFees[cryptocurrency] || 0.001;
-        // Add 50% safety buffer
-        return baseFee * 1.5;
     }
 
     /**

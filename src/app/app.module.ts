@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { CommonModule } from 'src/common/common.module';
 import { UserModule } from 'src/modules/user/user.module';
@@ -15,6 +16,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
     imports: [
         // Shared Common Services
         CommonModule,
+        ScheduleModule.forRoot(),
 
         // Background Processing
         WorkerModule,

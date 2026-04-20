@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
 
 import { CommonModule } from 'src/common/common.module';
 import { RequestModule } from 'src/common/request/request.module';
@@ -12,6 +11,7 @@ import { ExchangeRateService } from './services/exchange-rate.service';
 import { CryptoPaymentService } from './services/crypto-payment.service';
 import { BlockchainMonitorService } from './services/blockchain-monitor.service';
 import { PaymentForwardingService } from './services/payment-forwarding.service';
+import { HotWalletService } from './services/hot-wallet.service';
 
 // Blockchain Providers
 import { BitcoinProvider } from './blockchain-providers/bitcoin-provider.service';
@@ -37,7 +37,6 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         RequestModule,
         CustomLoggerModule, // Provides PinoLogger
         OrderModule, // Provides OrderDeliveryService
-        ScheduleModule.forRoot(), // For cron jobs
         BullModule.registerQueue({
             name: 'crypto-payment-verification',
         }),
@@ -57,6 +56,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         CryptoPaymentService,
         BlockchainMonitorService,
         PaymentForwardingService,
+        HotWalletService,
         // Blockchain Providers
         BitcoinProvider,
         EthereumProvider,
@@ -75,6 +75,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         CryptoPaymentService,
         BlockchainMonitorService,
         PaymentForwardingService,
+        HotWalletService,
         BlockchainProviderFactory,
     ],
 })
