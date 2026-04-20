@@ -250,6 +250,45 @@ export class OrderResponseDto {
     cryptoPayment?: CryptoPaymentResponseDto;
 }
 
+export class OrderUserSnapshotDto {
+    @ApiProperty({
+        example: faker.string.uuid(),
+    })
+    @Expose()
+    @IsUUID()
+    id: string;
+
+    @ApiProperty({
+        example: faker.internet.email(),
+    })
+    @Expose()
+    @IsString()
+    email: string;
+
+    @ApiProperty({
+        example: faker.internet.username(),
+    })
+    @Expose()
+    @IsString()
+    userName: string;
+
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    firstName: string | null;
+
+    @ApiPropertyOptional({
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    lastName: string | null;
+}
+
 export class OrderDetailResponseDto extends OrderResponseDto {
     @ApiProperty({
         type: [OrderItemResponseDto],
@@ -259,4 +298,13 @@ export class OrderDetailResponseDto extends OrderResponseDto {
     @ValidateNested({ each: true })
     @Type(() => OrderItemResponseDto)
     items: OrderItemResponseDto[];
+
+    @ApiPropertyOptional({
+        type: OrderUserSnapshotDto,
+    })
+    @Expose()
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => OrderUserSnapshotDto)
+    user?: OrderUserSnapshotDto;
 }

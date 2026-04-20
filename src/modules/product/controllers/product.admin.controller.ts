@@ -1,5 +1,6 @@
 import {
     Body,
+    BadRequestException,
     Controller,
     Delete,
     Get,
@@ -30,6 +31,7 @@ import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
     AdminProductRelatedSetDto,
     AdminProductRegionCreateDto,
+    AdminProductImageCreateDto,
     AdminProductVariantCreateDto,
     AdminProductVariantUpdateDto,
 } from '../dtos/request/product.admin.subresource.request';
@@ -77,7 +79,18 @@ export class ProductAdminController {
         messageKey: 'product.success.list',
     })
     public async list(
-        @Query(new QueryTransformPipe()) query: ProductListQueryDto
+        @Query(
+            new QueryTransformPipe({
+                booleanFields: [
+                    'isActive',
+                    'isFeatured',
+                    'isHot',
+                    'isNew',
+                    'isRestocked',
+                ],
+            })
+        )
+        query: ProductListQueryDto
     ): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         return this.productService.findAll({
             page: query.page,
@@ -407,13 +420,16 @@ export class ProductAdminController {
     })
     public async addImage(
         @Param('id') productId: string,
-        @Body('imageKey') imageKey: string,
-        @Body('isPrimary') isPrimary?: boolean
+        @Body() payload: AdminProductImageCreateDto
     ): Promise<ProductResponseDto> {
+        const imageKey = payload.key ?? payload.imageKey;
+        if (!imageKey) {
+            throw new BadRequestException('imageKey or key is required');
+        }
         return this.productService.addImage(
             productId,
             imageKey,
-            isPrimary ?? false
+            payload.isPrimary ?? false
         );
     }
 

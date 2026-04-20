@@ -7,6 +7,7 @@ import {
     IsInt,
     Min,
     IsArray,
+    ValidateIf,
 } from 'class-validator';
 
 export class AdminProductVariantCreateDto {
@@ -104,4 +105,30 @@ export class AdminProductRelatedSetDto {
     @IsArray()
     @IsUUID('4', { each: true })
     relatedProductIds: string[];
+}
+
+export class AdminProductImageCreateDto {
+    @ApiPropertyOptional({
+        example: 'products/images/product-123.jpg',
+        description: 'Image key (preferred field for admin web clients)',
+    })
+    @IsOptional()
+    @IsString()
+    key?: string;
+
+    @ApiPropertyOptional({
+        example: 'products/images/product-123.jpg',
+        description: 'Legacy image key field for backward compatibility',
+    })
+    @ValidateIf(o => o.key === undefined)
+    @IsString()
+    imageKey?: string;
+
+    @ApiPropertyOptional({
+        example: false,
+        description: 'Whether this image should be primary',
+    })
+    @IsOptional()
+    @IsBoolean()
+    isPrimary?: boolean;
 }
