@@ -4,7 +4,10 @@
         "balanceFound": "Balance retrieved successfully",
         "balanceAdded": "Balance added successfully",
         "balanceAdjusted": "Balance adjusted successfully",
-        "transactionHistory": "Transaction history retrieved successfully"
+        "transactionHistory": "Transaction history retrieved successfully",
+        "topUpCreated": "Wallet top-up created successfully",
+        "topUpFound": "Wallet top-up retrieved successfully",
+        "topUpStatus": "Wallet top-up status retrieved successfully"
     },
     "error": {
         "userNotFound": "User not found",
@@ -18,6 +21,9 @@
         "negativeBalanceNotAllowed": "Balance cannot be negative",
         "adjustBalanceFailed": "Failed to adjust balance",
         "refundBalanceFailed": "Failed to refund balance",
-        "getTransactionHistoryFailed": "Failed to retrieve transaction history"
+        "getTransactionHistoryFailed": "Failed to retrieve transaction history",
+        "createTopUpFailed": "Failed to create wallet top-up",
+        "topUpNotFound": "Wallet top-up not found",
+        "getTopUpFailed": "Failed to retrieve wallet top-up"
     }
 }

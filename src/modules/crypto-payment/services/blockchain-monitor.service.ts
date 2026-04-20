@@ -10,6 +10,7 @@ import { CryptoPaymentService } from './crypto-payment.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
 import { IBlockchainMonitorService } from '../interfaces/blockchain-monitor.service.interface';
 import { OrderDeliveryService } from 'src/modules/order/services/order-delivery.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 /**
  * Blockchain Monitor Service
@@ -23,6 +24,7 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         private readonly providerFactory: BlockchainProviderFactory,
         private readonly configService: ConfigService,
         private readonly deliveryService: OrderDeliveryService,
+        private readonly walletService: WalletService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
         @InjectQueue('crypto-payment-forwarding')
@@ -276,6 +278,196 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         }
     }
 
+    async checkTopUp(topUpId: string): Promise<void> {
+        this.logger.debug({ topUpId }, 'Checking wallet top-up');
+
+        try {
+            const topUp = await this.databaseService.walletTopUp.findUnique({
+                where: { id: topUpId },
+                include: {
+                    wallet: true,
+                },
+            });
+
+            if (!topUp || topUp.status !== PaymentStatus.PENDING) {
+                return;
+            }
+
+            const now = new Date();
+            if (now > topUp.expiresAt) {
+                await this.walletService.expireWalletTopUp(topUpId);
+                return;
+            }
+
+            const provider = this.providerFactory.getProvider(
+                topUp.cryptocurrency
+            );
+
+            let balance: string;
+            let transaction = null;
+            if (
+                topUp.cryptocurrency === CryptoCurrency.USDT_ERC20 ||
+                topUp.cryptocurrency === CryptoCurrency.USDC_ERC20
+            ) {
+                const ethereumProvider =
+                    this.providerFactory.getEthereumProvider();
+                const tokenContract = this.getTokenContractAddress(
+                    topUp.cryptocurrency
+                );
+                if (!tokenContract) {
+                    this.logger.error(
+                        { topUpId, cryptocurrency: topUp.cryptocurrency },
+                        'Token contract address not found for wallet top-up'
+                    );
+                    return;
+                }
+                balance = await ethereumProvider.getERC20BalancePublic(
+                    topUp.paymentAddress,
+                    tokenContract
+                );
+                transaction =
+                    await ethereumProvider.getERC20TransactionByAddressPublic(
+                        topUp.paymentAddress,
+                        tokenContract
+                    );
+            } else {
+                balance = await provider.getBalance(topUp.paymentAddress);
+                transaction = await provider.getTransactionByAddress(
+                    topUp.paymentAddress
+                );
+            }
+
+            const balanceNumber = parseFloat(balance);
+            const expectedAmount = parseFloat(topUp.amount.toString());
+
+            this.logger.debug(
+                {
+                    topUpId,
+                    address: topUp.paymentAddress,
+                    balance: balanceNumber,
+                    expectedAmount,
+                    cryptocurrency: topUp.cryptocurrency,
+                },
+                'Wallet top-up balance checked'
+            );
+
+            const tolerancePercent = this.configService.get<number>(
+                'crypto.payment.partialPaymentTolerancePercent',
+                1.0
+            );
+            const minAcceptableAmount =
+                expectedAmount * (1 - tolerancePercent / 100);
+
+            if (balanceNumber >= minAcceptableAmount) {
+                const isPartialPayment =
+                    balanceNumber >= minAcceptableAmount &&
+                    balanceNumber < expectedAmount;
+                const isOverpayment = balanceNumber > expectedAmount;
+
+                if (transaction) {
+                    const isValidTransaction = await this.verifyTransaction(
+                        transaction,
+                        topUp.paymentAddress,
+                        minAcceptableAmount,
+                        topUp.cryptocurrency
+                    );
+
+                    if (!isValidTransaction) {
+                        this.logger.error(
+                            {
+                                topUpId,
+                                txHash: transaction.hash,
+                                to: transaction.to,
+                                amount: transaction.amount,
+                            },
+                            'Wallet top-up transaction verification failed'
+                        );
+                        return;
+                    }
+                }
+
+                const metadata: any = {
+                    ...((topUp.metadata as any) || {}),
+                    amountReceived: balanceNumber,
+                    expectedAmount,
+                };
+
+                if (isPartialPayment) {
+                    metadata.isPartialPayment = true;
+                    metadata.partialPaymentPercentage =
+                        (balanceNumber / expectedAmount) * 100;
+                    metadata.shortfall = expectedAmount - balanceNumber;
+                    metadata.requiresAdminReview = true;
+                }
+
+                if (isOverpayment) {
+                    metadata.isOverpayment = true;
+                    metadata.overpaymentAmount = balanceNumber - expectedAmount;
+                    metadata.requiresAdminReview = true;
+                }
+
+                await this.databaseService.walletTopUp.update({
+                    where: { id: topUpId },
+                    data: {
+                        status: PaymentStatus.PAID,
+                        paidAt: new Date(),
+                        txHash: transaction?.hash || null,
+                        confirmations: transaction?.confirmations || 0,
+                        metadata,
+                    },
+                });
+
+                await this.paymentVerificationQueue.add(
+                    'check-topup-confirmations',
+                    { topUpId },
+                    {
+                        attempts: 10,
+                        backoff: { type: 'exponential', delay: 60000 },
+                        removeOnComplete: true,
+                        removeOnFail: false,
+                    }
+                );
+
+                this.logger.info(
+                    { topUpId },
+                    'Wallet top-up marked as PAID, confirmation check queued'
+                );
+            } else if (balanceNumber > 0) {
+                this.logger.warn(
+                    {
+                        topUpId,
+                        balance: balanceNumber,
+                        expectedAmount,
+                        minAcceptable: minAcceptableAmount,
+                        percentage: (balanceNumber / expectedAmount) * 100,
+                        tolerancePercent,
+                    },
+                    'Insufficient wallet top-up (below tolerance)'
+                );
+
+                await this.databaseService.walletTopUp.update({
+                    where: { id: topUpId },
+                    data: {
+                        metadata: {
+                            ...((topUp.metadata as any) || {}),
+                            insufficientPayment: true,
+                            amountReceived: balanceNumber,
+                            expectedAmount,
+                            shortfall: expectedAmount - balanceNumber,
+                            requiresAdminReview: true,
+                            detectedAt: new Date().toISOString(),
+                        },
+                    },
+                });
+            }
+        } catch (error) {
+            this.logger.error(
+                { error, topUpId },
+                'Failed to check wallet top-up'
+            );
+        }
+    }
+
     /**
      * Check all pending payments (including grace period)
      */
@@ -353,6 +545,78 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         } catch (error) {
             this.logger.error({ error }, 'Failed to check pending payments');
             // Don't throw - allow retry
+        }
+    }
+
+    /**
+     * Poll pending wallet top-ups (mirrors checkPendingPayments for crypto orders)
+     */
+    async checkPendingWalletTopUps(): Promise<void> {
+        this.logger.debug('Checking all pending wallet top-ups');
+
+        try {
+            const gracePeriodMinutes = this.configService.get<number>(
+                'crypto.payment.expirationGracePeriodMinutes',
+                30
+            );
+            const gracePeriodDate = new Date();
+            gracePeriodDate.setMinutes(
+                gracePeriodDate.getMinutes() - gracePeriodMinutes
+            );
+
+            const pendingTopUps =
+                await this.databaseService.walletTopUp.findMany({
+                    where: {
+                        status: PaymentStatus.PENDING,
+                        expiresAt: {
+                            gt: gracePeriodDate,
+                        },
+                    },
+                    select: {
+                        id: true,
+                        expiresAt: true,
+                    },
+                    take: 100,
+                });
+
+            const now = new Date();
+            const activeTopUps = pendingTopUps.filter(t => t.expiresAt > now);
+            const graceTopUps = pendingTopUps.filter(t => t.expiresAt <= now);
+
+            this.logger.info(
+                {
+                    activeCount: activeTopUps.length,
+                    gracePeriodCount: graceTopUps.length,
+                    total: pendingTopUps.length,
+                },
+                'Found pending wallet top-ups to check'
+            );
+
+            if (graceTopUps.length > 0) {
+                this.logger.info(
+                    {
+                        count: graceTopUps.length,
+                        gracePeriodMinutes,
+                    },
+                    'Checking wallet top-ups within expiration grace period'
+                );
+            }
+
+            const concurrency = 5;
+            for (let i = 0; i < pendingTopUps.length; i += concurrency) {
+                const batch = pendingTopUps.slice(i, i + concurrency);
+                await Promise.allSettled(batch.map(t => this.checkTopUp(t.id)));
+            }
+
+            this.logger.info(
+                { count: pendingTopUps.length },
+                'Finished checking pending wallet top-ups'
+            );
+        } catch (error) {
+            this.logger.error(
+                { error },
+                'Failed to check pending wallet top-ups'
+            );
         }
     }
 
@@ -461,6 +725,73 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 'Failed to check confirmations'
             );
             // Don't throw - allow retry
+        }
+    }
+
+    async checkTopUpConfirmations(topUpId: string): Promise<void> {
+        try {
+            const topUp = await this.databaseService.walletTopUp.findUnique({
+                where: { id: topUpId },
+            });
+
+            if (!topUp || !topUp.txHash) {
+                return;
+            }
+
+            if (topUp.status === PaymentStatus.CONFIRMED) {
+                return;
+            }
+
+            const provider = this.providerFactory.getProvider(
+                topUp.cryptocurrency
+            );
+            const confirmations = await provider.getTransactionConfirmations(
+                topUp.txHash
+            );
+
+            await this.databaseService.walletTopUp.update({
+                where: { id: topUpId },
+                data: {
+                    confirmations,
+                    status:
+                        confirmations > 0
+                            ? PaymentStatus.CONFIRMING
+                            : PaymentStatus.PAID,
+                },
+            });
+
+            if (confirmations < topUp.requiredConfirmations) {
+                const delay = this.configService.get<number>(
+                    'crypto.payment.confirmationRecheckDelayMs',
+                    30_000
+                );
+                await this.paymentVerificationQueue.add(
+                    'check-topup-confirmations',
+                    { topUpId },
+                    {
+                        delay,
+                        attempts: 10,
+                        removeOnComplete: true,
+                        removeOnFail: false,
+                    }
+                );
+                return;
+            }
+
+            await this.databaseService.walletTopUp.update({
+                where: { id: topUpId },
+                data: {
+                    status: PaymentStatus.CONFIRMED,
+                    confirmedAt: new Date(),
+                },
+            });
+
+            await this.walletService.processConfirmedTopUp(topUpId);
+        } catch (error) {
+            this.logger.error(
+                { error, topUpId },
+                'Failed to check wallet top-up confirmations'
+            );
         }
     }
 

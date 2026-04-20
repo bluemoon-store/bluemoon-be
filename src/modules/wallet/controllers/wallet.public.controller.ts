@@ -1,4 +1,12 @@
-import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    HttpStatus,
+    Param,
+    Post,
+    Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
@@ -9,7 +17,9 @@ import { IAuthUser } from 'src/common/request/interfaces/request.interface';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 
 import { WalletTransactionHistoryQueryDto } from '../dtos/request/wallet-transaction-history.request';
+import { CreateWalletTopUpDto } from '../dtos/request/wallet.topup.request';
 import { WalletResponseDto } from '../dtos/response/wallet.response';
+import { WalletTopUpResponseDto } from '../dtos/response/wallet-topup.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
 import { WalletService } from '../services/wallet.service';
 
@@ -52,5 +62,50 @@ export class WalletPublicController {
             limit: query.limit,
             type: query.type,
         });
+    }
+
+    @Post('topup')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Create wallet top-up payment' })
+    @DocResponse({
+        serialization: WalletTopUpResponseDto,
+        httpStatus: HttpStatus.CREATED,
+        messageKey: 'wallet.success.topUpCreated',
+    })
+    public async createTopUp(
+        @AuthUser() user: IAuthUser,
+        @Body() payload: CreateWalletTopUpDto
+    ): Promise<WalletTopUpResponseDto> {
+        return this.walletService.createTopUp(user.userId, payload);
+    }
+
+    @Get('topup/:id')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get wallet top-up by id' })
+    @DocResponse({
+        serialization: WalletTopUpResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.topUpFound',
+    })
+    public async getTopUp(
+        @AuthUser() user: IAuthUser,
+        @Param('id') topUpId: string
+    ): Promise<WalletTopUpResponseDto> {
+        return this.walletService.getTopUp(user.userId, topUpId);
+    }
+
+    @Get('topup/:id/status')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get wallet top-up status' })
+    @DocResponse({
+        serialization: WalletTopUpResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'wallet.success.topUpStatus',
+    })
+    public async getTopUpStatus(
+        @AuthUser() user: IAuthUser,
+        @Param('id') topUpId: string
+    ): Promise<WalletTopUpResponseDto> {
+        return this.walletService.getTopUpStatus(user.userId, topUpId);
     }
 }

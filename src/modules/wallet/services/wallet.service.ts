@@ -1,14 +1,30 @@
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { PinoLogger } from 'nestjs-pino';
-import { WalletTransactionType } from '@prisma/client';
+import {
+    CryptoCurrency,
+    PaymentStatus,
+    Prisma,
+    WalletTransactionType,
+} from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
+import { SystemWalletService } from 'src/modules/crypto-payment/services/system-wallet.service';
+import { ExchangeRateService } from 'src/modules/crypto-payment/services/exchange-rate.service';
+import {
+    generatePaymentQRCode,
+    generatePaymentURI,
+} from 'src/modules/crypto-payment/utils/qr-code.util';
 
 import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
 import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
+import { CreateWalletTopUpDto } from '../dtos/request/wallet.topup.request';
 import { WalletResponseDto } from '../dtos/response/wallet.response';
+import { WalletTopUpResponseDto } from '../dtos/response/wallet-topup.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
 import { IWalletService } from '../interfaces/wallet.service.interface';
 
@@ -17,9 +33,107 @@ export class WalletService implements IWalletService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
+        private readonly systemWalletService: SystemWalletService,
+        private readonly exchangeRateService: ExchangeRateService,
+        private readonly configService: ConfigService,
+        @InjectQueue('crypto-payment-verification')
+        private readonly paymentVerificationQueue: Queue,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(WalletService.name);
+    }
+
+    private getRequiredConfirmations(cryptocurrency: CryptoCurrency): number {
+        const confirmationsConfig = this.configService.get<
+            Record<string, number>
+        >('crypto.confirmations');
+
+        const configMap: Record<CryptoCurrency, string> = {
+            BTC: 'btc',
+            ETH: 'eth',
+            LTC: 'ltc',
+            BCH: 'bch',
+            USDT_ERC20: 'usdtErc20',
+            USDT_TRC20: 'usdtTrc20',
+            USDC_ERC20: 'usdcErc20',
+        };
+
+        const configKey = configMap[cryptocurrency];
+        const confirmations = confirmationsConfig?.[configKey];
+
+        if (confirmations && confirmations > 0) {
+            return confirmations;
+        }
+
+        return 3;
+    }
+
+    private getNetwork(cryptocurrency: CryptoCurrency): string {
+        const networkMap: Record<CryptoCurrency, string> = {
+            BTC: 'mainnet',
+            ETH: 'mainnet',
+            LTC: 'mainnet',
+            BCH: 'mainnet',
+            USDT_ERC20: 'ERC20',
+            USDT_TRC20: 'TRC20',
+            USDC_ERC20: 'ERC20',
+        };
+
+        const isTestnet = this.configService.get<boolean>(
+            'crypto.tatum.testnet',
+            false
+        );
+
+        if (!isTestnet) {
+            return networkMap[cryptocurrency];
+        }
+
+        const testnetMap: Record<CryptoCurrency, string> = {
+            BTC: 'testnet',
+            ETH: 'sepolia',
+            LTC: 'testnet',
+            BCH: 'testnet',
+            USDT_ERC20: 'ERC20',
+            USDT_TRC20: 'TRC20',
+            USDC_ERC20: 'ERC20',
+        };
+
+        return testnetMap[cryptocurrency] || networkMap[cryptocurrency];
+    }
+
+    private async mapTopUpResponse(
+        topUp: any
+    ): Promise<WalletTopUpResponseDto> {
+        const amount = parseFloat(topUp.amount.toString());
+        const qrCode = await generatePaymentQRCode(
+            topUp.paymentAddress,
+            amount,
+            topUp.cryptocurrency
+        );
+        const paymentUri = generatePaymentURI(
+            topUp.paymentAddress,
+            amount,
+            topUp.cryptocurrency
+        );
+
+        return {
+            id: topUp.id,
+            walletId: topUp.walletId,
+            cryptocurrency: topUp.cryptocurrency,
+            network: topUp.network,
+            paymentAddress: topUp.paymentAddress,
+            amount: topUp.amount,
+            amountUsd: topUp.amountUsd,
+            exchangeRate: topUp.exchangeRate,
+            status: topUp.status,
+            confirmations: topUp.confirmations,
+            requiredConfirmations: topUp.requiredConfirmations,
+            expiresAt: topUp.expiresAt,
+            qrCode,
+            paymentUri,
+            creditedAt: topUp.creditedAt,
+            createdAt: topUp.createdAt,
+        };
     }
 
     /**
@@ -484,6 +598,210 @@ export class WalletService implements IWalletService {
             throw new HttpException(
                 'wallet.error.getTransactionHistoryFailed',
                 HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    async createTopUp(
+        userId: string,
+        dto: CreateWalletTopUpDto
+    ): Promise<WalletTopUpResponseDto> {
+        try {
+            const wallet = await this.getWallet(userId);
+            const exchangeRate = await this.exchangeRateService.getRate(
+                dto.cryptocurrency,
+                'USD'
+            );
+            const cryptoAmount = await this.exchangeRateService.convertToCrypto(
+                dto.amountUsd,
+                dto.cryptocurrency,
+                'USD'
+            );
+
+            const addressDetails =
+                await this.systemWalletService.generatePaymentAddress(
+                    wallet.id,
+                    dto.cryptocurrency,
+                    cryptoAmount,
+                    dto.amountUsd
+                );
+
+            const topUp = await this.databaseService.walletTopUp.create({
+                data: {
+                    walletId: wallet.id,
+                    cryptocurrency: dto.cryptocurrency,
+                    network: this.getNetwork(dto.cryptocurrency),
+                    paymentAddress: addressDetails.address,
+                    derivationIndex: addressDetails.derivationIndex,
+                    derivationPath: addressDetails.derivationPath,
+                    encryptedPrivateKey: addressDetails.encryptedPrivateKey,
+                    amount: new Prisma.Decimal(cryptoAmount),
+                    amountUsd: new Prisma.Decimal(dto.amountUsd),
+                    exchangeRate: new Prisma.Decimal(exchangeRate),
+                    platformWalletAddress:
+                        this.systemWalletService.getPlatformWalletAddress(
+                            dto.cryptocurrency
+                        ),
+                    status: PaymentStatus.PENDING,
+                    requiredConfirmations: this.getRequiredConfirmations(
+                        dto.cryptocurrency
+                    ),
+                    expiresAt: addressDetails.expiresAt,
+                },
+            });
+
+            await this.paymentVerificationQueue.add(
+                'verify-topup',
+                { topUpId: topUp.id },
+                {
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 60000,
+                    },
+                    removeOnComplete: true,
+                    removeOnFail: false,
+                }
+            );
+
+            return this.mapTopUpResponse(topUp);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, userId, dto },
+                'Failed to create top-up'
+            );
+            throw new HttpException(
+                'wallet.error.createTopUpFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    async getTopUp(
+        userId: string,
+        topUpId: string
+    ): Promise<WalletTopUpResponseDto> {
+        try {
+            const topUp = await this.databaseService.walletTopUp.findFirst({
+                where: {
+                    id: topUpId,
+                    wallet: {
+                        userId,
+                    },
+                },
+            });
+
+            if (!topUp) {
+                throw new HttpException(
+                    'wallet.error.topUpNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
+
+            return this.mapTopUpResponse(topUp);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, userId, topUpId },
+                'Failed to get top-up'
+            );
+            throw new HttpException(
+                'wallet.error.getTopUpFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    async getTopUpStatus(
+        userId: string,
+        topUpId: string
+    ): Promise<WalletTopUpResponseDto> {
+        return this.getTopUp(userId, topUpId);
+    }
+
+    async processConfirmedTopUp(topUpId: string): Promise<void> {
+        try {
+            const topUp = await this.databaseService.walletTopUp.findUnique({
+                where: { id: topUpId },
+                include: {
+                    wallet: true,
+                },
+            });
+
+            if (!topUp) {
+                return;
+            }
+
+            if (
+                topUp.status !== PaymentStatus.CONFIRMED ||
+                topUp.creditedAt != null
+            ) {
+                return;
+            }
+
+            const amountUsd = parseFloat(topUp.amountUsd.toString());
+
+            await this.addBalance(topUp.wallet.userId, {
+                amount: amountUsd,
+                description: `Top-up via ${topUp.cryptocurrency}`,
+                referenceId: topUp.id,
+            });
+
+            await this.databaseService.walletTopUp.update({
+                where: { id: topUpId },
+                data: {
+                    creditedAt: new Date(),
+                },
+            });
+        } catch (error) {
+            this.logger.error({ error, topUpId }, 'Failed to credit top-up');
+            throw error;
+        }
+    }
+
+    async expireWalletTopUp(topUpId: string): Promise<void> {
+        this.logger.info({ topUpId }, 'Expiring wallet top-up');
+
+        try {
+            const topUp = await this.databaseService.walletTopUp.findUnique({
+                where: { id: topUpId },
+            });
+
+            if (!topUp) {
+                this.logger.warn(
+                    { topUpId },
+                    'Wallet top-up not found for expiration'
+                );
+                return;
+            }
+
+            if (topUp.status !== PaymentStatus.PENDING) {
+                this.logger.debug(
+                    { topUpId, status: topUp.status },
+                    'Wallet top-up already processed, skipping expiration'
+                );
+                return;
+            }
+
+            await this.databaseService.walletTopUp.update({
+                where: { id: topUpId },
+                data: {
+                    status: PaymentStatus.EXPIRED,
+                },
+            });
+
+            this.logger.info({ topUpId }, 'Wallet top-up expired successfully');
+        } catch (error) {
+            this.logger.error(
+                { error, topUpId },
+                'Failed to expire wallet top-up'
             );
         }
     }

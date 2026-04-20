@@ -4,6 +4,8 @@ import { WalletResponseDto } from '../dtos/response/wallet.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
 import { WalletAddBalanceDto } from '../dtos/request/wallet.add-balance.request';
 import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.request';
+import { CreateWalletTopUpDto } from '../dtos/request/wallet.topup.request';
+import { WalletTopUpResponseDto } from '../dtos/response/wallet-topup.response';
 
 export interface IWalletService {
     createWallet(userId: string): Promise<WalletResponseDto>;
@@ -37,4 +39,15 @@ export interface IWalletService {
             type?: string;
         }
     ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>>;
+    createTopUp(
+        userId: string,
+        dto: CreateWalletTopUpDto
+    ): Promise<WalletTopUpResponseDto>;
+    getTopUp(userId: string, topUpId: string): Promise<WalletTopUpResponseDto>;
+    getTopUpStatus(
+        userId: string,
+        topUpId: string
+    ): Promise<WalletTopUpResponseDto>;
+    processConfirmedTopUp(topUpId: string): Promise<void>;
+    expireWalletTopUp(topUpId: string): Promise<void>;
 }

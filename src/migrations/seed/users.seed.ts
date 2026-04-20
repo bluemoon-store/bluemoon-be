@@ -57,7 +57,7 @@ export class UsersSeedService {
         await this.databaseService.userWallet.create({
             data: {
                 userId: user.id,
-                balance: 0,
+                balance: 1000,
             },
         });
 

@@ -31,6 +31,10 @@ export interface IOrderService {
         orderId: string,
         data: OrderStatusUpdateDto
     ): Promise<OrderResponseDto>;
+    payOrderWithWallet(
+        orderId: string,
+        userId: string
+    ): Promise<OrderResponseDto>;
     cancelOrder(orderId: string, userId: string): Promise<OrderResponseDto>;
     getAllOrders(options?: {
         page?: number;

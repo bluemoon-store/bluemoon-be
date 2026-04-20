@@ -8,6 +8,7 @@ import { PaymentStatus } from '@prisma/client';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { BlockchainMonitorService } from '../services/blockchain-monitor.service';
 import { CryptoPaymentService } from '../services/crypto-payment.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 /**
  * Payment Verification Job Data Types
@@ -19,6 +20,14 @@ interface VerifyPaymentJobData {
 
 interface CheckConfirmationsJobData {
     paymentId: string;
+}
+
+interface VerifyTopUpJobData {
+    topUpId: string;
+}
+
+interface CheckTopUpConfirmationsJobData {
+    topUpId: string;
 }
 
 interface ExpirePaymentJobData {
@@ -35,7 +44,8 @@ interface ExpirePaymentJobData {
  * - expire-payment: Handle expired payments
  *
  * Scheduled Tasks:
- * - Every minute: Check all pending payments
+ * - Every minute: Check all pending payments and pending wallet top-ups
+ * - Every 5 minutes: Expire stale pending payments and wallet top-ups
  */
 @Processor('crypto-payment-verification')
 @Injectable()
@@ -44,6 +54,7 @@ export class PaymentVerificationProcessor {
         private readonly databaseService: DatabaseService,
         private readonly monitorService: BlockchainMonitorService,
         private readonly cryptoPaymentService: CryptoPaymentService,
+        private readonly walletService: WalletService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(PaymentVerificationProcessor.name);
@@ -237,6 +248,20 @@ export class PaymentVerificationProcessor {
         }
     }
 
+    @Process('verify-topup')
+    async handleVerifyTopUp(job: Job<VerifyTopUpJobData>): Promise<void> {
+        const { topUpId } = job.data;
+        await this.monitorService.checkTopUp(topUpId);
+    }
+
+    @Process('check-topup-confirmations')
+    async handleCheckTopUpConfirmations(
+        job: Job<CheckTopUpConfirmationsJobData>
+    ): Promise<void> {
+        const { topUpId } = job.data;
+        await this.monitorService.checkTopUpConfirmations(topUpId);
+    }
+
     /**
      * Handle expire-payment job
      * Expires payments that have passed their expiration time
@@ -293,6 +318,7 @@ export class PaymentVerificationProcessor {
 
         try {
             await this.monitorService.checkPendingPayments();
+            await this.monitorService.checkPendingWalletTopUps();
 
             this.logger.debug('Completed scheduled check of pending payments');
         } catch (error) {
@@ -304,7 +330,7 @@ export class PaymentVerificationProcessor {
                     error: errorMessage,
                     stack: error instanceof Error ? error.stack : undefined,
                 },
-                'Failed to check pending payments in scheduled task'
+                'Failed to check pending payments or wallet top-ups in scheduled task'
             );
             // Don't throw - allow next cron run to try again
         }
@@ -373,6 +399,67 @@ export class PaymentVerificationProcessor {
                 'Failed to expire old payments in scheduled task'
             );
             // Don't throw - allow next cron run to try again
+        }
+    }
+
+    /**
+     * Safety net: expire wallet top-ups that stayed PENDING past expiresAt
+     */
+    @Cron('*/5 * * * *')
+    async handleExpiredWalletTopUpsCron(): Promise<void> {
+        this.logger.debug(
+            'Starting scheduled expiration check for wallet top-ups'
+        );
+
+        try {
+            const expiredTopUps =
+                await this.databaseService.walletTopUp.findMany({
+                    where: {
+                        status: PaymentStatus.PENDING,
+                        expiresAt: {
+                            lt: new Date(),
+                        },
+                    },
+                    select: {
+                        id: true,
+                        expiresAt: true,
+                    },
+                    take: 100,
+                });
+
+            if (expiredTopUps.length === 0) {
+                this.logger.debug('No expired wallet top-ups found');
+                return;
+            }
+
+            this.logger.info(
+                { count: expiredTopUps.length },
+                'Found expired wallet top-ups to process'
+            );
+
+            const concurrency = 10;
+            for (let i = 0; i < expiredTopUps.length; i += concurrency) {
+                const batch = expiredTopUps.slice(i, i + concurrency);
+                await Promise.allSettled(
+                    batch.map(t => this.walletService.expireWalletTopUp(t.id))
+                );
+            }
+
+            this.logger.info(
+                { count: expiredTopUps.length },
+                'Completed expiration check for wallet top-ups'
+            );
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : 'Unknown error';
+
+            this.logger.error(
+                {
+                    error: errorMessage,
+                    stack: error instanceof Error ? error.stack : undefined,
+                },
+                'Failed to expire old wallet top-ups in scheduled task'
+            );
         }
     }
 }

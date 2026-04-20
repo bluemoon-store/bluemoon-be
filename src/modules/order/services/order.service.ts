@@ -322,6 +322,112 @@ export class OrderService implements IOrderService {
         }
     }
 
+    async payOrderWithWallet(
+        orderId: string,
+        userId: string
+    ): Promise<OrderResponseDto> {
+        try {
+            const order = await this.databaseService.order.findFirst({
+                where: {
+                    id: orderId,
+                    userId,
+                    status: OrderStatus.PENDING,
+                    deletedAt: null,
+                },
+            });
+
+            if (!order) {
+                throw new HttpException(
+                    'order.error.orderNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
+
+            const totalAmount =
+                typeof order.totalAmount === 'string'
+                    ? parseFloat(order.totalAmount)
+                    : Number(order.totalAmount);
+
+            try {
+                await this.walletService.deductBalance(
+                    userId,
+                    totalAmount,
+                    `Purchase: ${order.orderNumber}`,
+                    order.id
+                );
+            } catch (error) {
+                if (
+                    error instanceof HttpException &&
+                    error.message === 'wallet.error.insufficientBalance'
+                ) {
+                    throw new HttpException(
+                        'order.error.insufficientWalletBalance',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                throw error;
+            }
+
+            const updatedOrder = await this.databaseService.$transaction(
+                async tx => {
+                    return tx.order.update({
+                        where: { id: orderId },
+                        data: {
+                            status: OrderStatus.COMPLETED,
+                            completedAt: new Date(),
+                        },
+                        include: {
+                            items: {
+                                include: {
+                                    product: {
+                                        include: {
+                                            category: true,
+                                            images: {
+                                                where: { deletedAt: null },
+                                                orderBy: [
+                                                    { isPrimary: 'desc' },
+                                                    { sortOrder: 'asc' },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            cryptoPayment: true,
+                        },
+                    });
+                }
+            );
+
+            try {
+                await this.deliveryService.processInstantDelivery(orderId);
+            } catch (deliveryError) {
+                this.logger.warn(
+                    {
+                        orderId,
+                        error: deliveryError?.message,
+                    },
+                    'Failed to process instant delivery after wallet payment'
+                );
+            }
+
+            return updatedOrder as unknown as OrderResponseDto;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            this.logger.error(
+                { error, orderId, userId },
+                'Failed to pay order with wallet'
+            );
+            throw new HttpException(
+                'order.error.walletPaymentFailed',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     /**
      * Get order history for user
      */

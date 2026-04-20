@@ -1,0 +1,14 @@
+{
+    "success": {
+        "created": "Review created successfully",
+        "updated": "Review updated successfully",
+        "list": "Reviews retrieved successfully"
+    },
+    "error": {
+        "orderNotFound": "Order not found",
+        "orderMustBeCompleted": "Order must be completed before review",
+        "alreadyReviewed": "Order has already been reviewed",
+        "notFound": "Review not found",
+        "noDataToUpdate": "No data provided to update review"
+    }
+}

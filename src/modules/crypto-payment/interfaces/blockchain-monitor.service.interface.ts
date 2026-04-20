@@ -4,11 +4,17 @@ export interface IBlockchainMonitorService {
      * @param paymentId - Payment ID
      */
     checkPayment(paymentId: string): Promise<void>;
+    checkTopUp(topUpId: string): Promise<void>;
 
     /**
      * Check all pending payments
      */
     checkPendingPayments(): Promise<void>;
+
+    /**
+     * Check all pending wallet top-ups (same polling model as payments)
+     */
+    checkPendingWalletTopUps(): Promise<void>;
 
     /**
      * Check transaction confirmations
