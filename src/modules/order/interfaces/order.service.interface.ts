@@ -20,6 +20,9 @@ export interface IOrderService {
             page?: number;
             limit?: number;
             status?: OrderStatus;
+            sortBy?: 'createdAt' | 'totalAmount';
+            sortOrder?: 'asc' | 'desc';
+            cryptocurrency?: string;
         }
     ): Promise<ApiPaginatedDataDto<OrderResponseDto>>;
     getOrderDetail(

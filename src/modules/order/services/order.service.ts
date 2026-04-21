@@ -437,6 +437,9 @@ export class OrderService implements IOrderService {
             page?: number;
             limit?: number;
             status?: OrderStatus;
+            sortBy?: 'createdAt' | 'totalAmount';
+            sortOrder?: 'asc' | 'desc';
+            cryptocurrency?: string;
         }
     ): Promise<ApiPaginatedDataDto<OrderResponseDto>> {
         try {
@@ -447,6 +450,12 @@ export class OrderService implements IOrderService {
 
             if (options?.status) {
                 where.status = options.status;
+            }
+
+            if (options?.cryptocurrency) {
+                where.cryptoPayment = {
+                    cryptocurrency: options.cryptocurrency,
+                };
             }
 
             const result =
@@ -478,7 +487,10 @@ export class OrderService implements IOrderService {
                             cryptoPayment: true,
                             review: true,
                         },
-                        orderBy: { createdAt: 'desc' },
+                        orderBy: {
+                            [options?.sortBy ?? 'createdAt']:
+                                options?.sortOrder ?? 'desc',
+                        },
                     }
                 );
 

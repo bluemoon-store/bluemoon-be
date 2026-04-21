@@ -559,6 +559,8 @@ export class WalletService implements IWalletService {
             page?: number;
             limit?: number;
             type?: string;
+            sortBy?: 'createdAt' | 'amount';
+            sortOrder?: 'asc' | 'desc';
         }
     ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>> {
         try {
@@ -583,7 +585,10 @@ export class WalletService implements IWalletService {
                     },
                     {
                         where,
-                        orderBy: { createdAt: 'desc' },
+                        orderBy: {
+                            [options?.sortBy ?? 'createdAt']:
+                                options?.sortOrder ?? 'desc',
+                        },
                     }
                 );
 

@@ -37,6 +37,8 @@ export interface IWalletService {
             page?: number;
             limit?: number;
             type?: string;
+            sortBy?: 'createdAt' | 'amount';
+            sortOrder?: 'asc' | 'desc';
         }
     ): Promise<ApiPaginatedDataDto<WalletTransactionResponseDto>>;
     createTopUp(

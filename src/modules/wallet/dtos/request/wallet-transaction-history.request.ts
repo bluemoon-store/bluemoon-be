@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsNumber, IsString } from 'class-validator';
+import { IsOptional, IsNumber, IsString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -33,4 +33,20 @@ export class WalletTransactionHistoryQueryDto {
     @IsOptional()
     @IsString()
     type?: string;
+
+    @ApiPropertyOptional({
+        description: 'Sort field',
+        enum: ['createdAt', 'amount'],
+    })
+    @IsOptional()
+    @IsIn(['createdAt', 'amount'])
+    sortBy?: 'createdAt' | 'amount';
+
+    @ApiPropertyOptional({
+        description: 'Sort order',
+        enum: ['asc', 'desc'],
+    })
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    sortOrder?: 'asc' | 'desc';
 }

@@ -61,6 +61,8 @@ export class WalletPublicController {
             page: query.page,
             limit: query.limit,
             type: query.type,
+            sortBy: query.sortBy,
+            sortOrder: query.sortOrder,
         });
     }
 

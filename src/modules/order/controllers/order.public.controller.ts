@@ -68,6 +68,9 @@ export class OrderPublicController {
             page: query.page,
             limit: query.limit,
             status: query.status,
+            sortBy: query.sortBy,
+            sortOrder: query.sortOrder,
+            cryptocurrency: query.cryptocurrency,
         });
     }
 

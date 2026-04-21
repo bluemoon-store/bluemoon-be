@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { IsOptional, IsNumber, IsEnum, IsIn, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrderStatus } from '@prisma/client';
 
@@ -34,4 +34,28 @@ export class OrderHistoryQueryDto {
     @IsOptional()
     @IsEnum(OrderStatus)
     status?: OrderStatus;
+
+    @ApiPropertyOptional({
+        description: 'Sort field',
+        enum: ['createdAt', 'totalAmount'],
+    })
+    @IsOptional()
+    @IsIn(['createdAt', 'totalAmount'])
+    sortBy?: 'createdAt' | 'totalAmount';
+
+    @ApiPropertyOptional({
+        description: 'Sort order',
+        enum: ['asc', 'desc'],
+    })
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    sortOrder?: 'asc' | 'desc';
+
+    @ApiPropertyOptional({
+        description: 'Filter by cryptocurrency payment method',
+        example: 'BTC',
+    })
+    @IsOptional()
+    @IsString()
+    cryptocurrency?: string;
 }
