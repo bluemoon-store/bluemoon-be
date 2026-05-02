@@ -4,6 +4,7 @@ import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
+import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { UserUpdateDto } from 'src/modules/user/dtos/request/user.update.request';
 import { UserService } from 'src/modules/user/services/user.service';
 
@@ -21,6 +22,11 @@ describe('UserService', () => {
         match: jest.fn(),
     };
 
+    const mockHelperPaginationService = {
+        paginate: jest.fn(),
+        buildSearchCondition: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -29,6 +35,10 @@ describe('UserService', () => {
                 {
                     provide: HelperEncryptionService,
                     useValue: mockHelperEncryptionService,
+                },
+                {
+                    provide: HelperPaginationService,
+                    useValue: mockHelperPaginationService,
                 },
             ],
         }).compile();

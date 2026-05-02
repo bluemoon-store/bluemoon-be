@@ -43,6 +43,11 @@ const listInclude = {
     variants: {
         where: { deletedAt: null },
         orderBy: { sortOrder: 'asc' as const },
+        include: {
+            _count: {
+                select: { orderItems: true },
+            },
+        },
     },
     regions: {
         orderBy: { sortOrder: 'asc' as const },
@@ -72,6 +77,11 @@ const adminInclude = {
     variants: {
         where: { deletedAt: null },
         orderBy: { sortOrder: 'asc' as const },
+        include: {
+            _count: {
+                select: { orderItems: true },
+            },
+        },
     },
     regions: {
         orderBy: { sortOrder: 'asc' as const },
@@ -95,9 +105,15 @@ export class ProductService implements IProductService {
         const fromPrice = computeFromPrice(product.price, product.variants);
         const tags = buildProductTags(product);
         const regions = product.regions.filter(r => r.isActive);
-        const variants = product.variants.filter(
-            v => v.isActive && v.deletedAt === null
-        );
+        const variants = product.variants
+            .filter(v => v.isActive && v.deletedAt === null)
+            .map(v => {
+                const { _count, ...variantRest } = v;
+                return {
+                    ...variantRest,
+                    soldCount: _count?.orderItems ?? 0,
+                };
+            });
         return {
             ...product,
             regions,
@@ -131,9 +147,7 @@ export class ProductService implements IProductService {
             ...list,
             heroImageUrl: list.primaryImageUrl,
             regions: product.regions.filter(r => r.isActive),
-            variants: product.variants.filter(
-                v => v.isActive && v.deletedAt === null
-            ),
+            variants: list.variants,
             related,
         };
     }
@@ -141,7 +155,17 @@ export class ProductService implements IProductService {
     private mapToAdminDto(
         product: Prisma.ProductGetPayload<{ include: typeof adminInclude }>
     ): ProductResponseDto {
-        return { ...product } as ProductResponseDto;
+        const { variants, ...rest } = product;
+        return {
+            ...rest,
+            variants: variants?.map(v => {
+                const { _count, ...variantRest } = v;
+                return {
+                    ...variantRest,
+                    soldCount: _count?.orderItems ?? 0,
+                };
+            }),
+        } as ProductResponseDto;
     }
 
     private async ensureUniqueSlug(
@@ -267,6 +291,8 @@ export class ProductService implements IProductService {
                     deliveryType: data.deliveryType ?? 'INSTANT',
                     deliveryContent: data.deliveryContent,
                     shortNotice: data.shortNotice,
+                    flair: data.flair ?? null,
+                    iconUrl: data.iconUrl ?? null,
                     isHot: data.isHot ?? false,
                     isNew: data.isNew ?? false,
                     isNFA: data.isNFA ?? false,
@@ -734,6 +760,8 @@ export class ProductService implements IProductService {
             assignScalar('deliveryType', rest.deliveryType);
             assignScalar('deliveryContent', rest.deliveryContent);
             assignScalar('shortNotice', rest.shortNotice);
+            assignScalar('flair', rest.flair);
+            assignScalar('iconUrl', rest.iconUrl);
             assignScalar('isHot', rest.isHot);
             assignScalar('isNew', rest.isNew);
             assignScalar('isNFA', rest.isNFA);

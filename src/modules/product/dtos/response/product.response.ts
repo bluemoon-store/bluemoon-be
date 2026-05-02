@@ -126,6 +126,11 @@ export class ProductVariantResponseDto {
     @IsInt()
     sortOrder: number;
 
+    @ApiProperty({ example: 42 })
+    @Expose()
+    @IsInt()
+    soldCount: number;
+
     @ApiPropertyOptional({ example: null, nullable: true })
     @Expose()
     @IsOptional()
@@ -263,6 +268,18 @@ export class ProductResponseDto implements Product {
     @IsOptional()
     @IsString()
     shortNotice: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    flair: string | null;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    iconUrl: string | null;
 
     @ApiProperty({ example: false })
     @Expose()

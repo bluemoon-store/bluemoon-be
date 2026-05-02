@@ -6,7 +6,12 @@
         "userDeleted": "User deleted successfully",
         "purchaseHistory": "Purchase history retrieved successfully",
         "userBanned": "User banned successfully",
-        "userUnbanned": "User unbanned successfully"
+        "userUnbanned": "User unbanned successfully",
+        "userFlagged": "User flagged successfully",
+        "userUnflagged": "User unflagged successfully",
+        "userListRetrieved": "User list retrieved successfully",
+        "userRetrieved": "User retrieved successfully",
+        "userStatsRetrieved": "User statistics retrieved successfully"
     },
     "error": {
         "notFound": "User not found in database",
@@ -18,6 +23,12 @@
         "userNotBanned": "User is not banned",
         "failedToUnbanUser": "Failed to unban user",
         "failedToGetPurchaseHistory": "Failed to retrieve purchase history",
-        "failedToDeleteUser": "Failed to delete user"
+        "failedToDeleteUser": "Failed to delete user",
+        "userAlreadyFlagged": "User is already flagged",
+        "userNotFlagged": "User is not flagged",
+        "failedToFlagUser": "Failed to flag user",
+        "failedToUnflagUser": "Failed to unflag user",
+        "failedToListUsers": "Failed to list users",
+        "failedToGetUserStats": "Failed to retrieve user statistics"
     }
 }

@@ -206,6 +206,21 @@ export class ProductCreateDto {
     @IsString()
     shortNotice?: string;
 
+    @ApiPropertyOptional({
+        description: 'Short merchandising badge label (e.g. "Summer Deal")',
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(100)
+    flair?: string;
+
+    @ApiPropertyOptional({
+        description: 'Product icon URL (used in cart and compact displays)',
+    })
+    @IsOptional()
+    @IsString()
+    iconUrl?: string;
+
     @ApiPropertyOptional({ default: false })
     @IsOptional()
     @IsBoolean()
