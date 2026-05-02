@@ -8,6 +8,7 @@ import { ProductModule } from 'src/modules/product/product.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { WalletModule } from 'src/modules/wallet/wallet.module';
 import { OrderModule } from 'src/modules/order/order.module';
+import { TicketModule } from 'src/modules/ticket/ticket.module';
 import { WorkerModule } from 'src/workers/worker.module';
 import { ReviewModule } from 'src/modules/review/review.module';
 import { CouponModule } from 'src/modules/coupon/coupon.module';
@@ -32,6 +33,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
         CartModule,
         WalletModule,
         OrderModule,
+        TicketModule,
         CryptoPaymentModule,
         ReviewModule,
         CouponModule,

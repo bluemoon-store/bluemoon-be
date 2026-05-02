@@ -12,6 +12,7 @@ import { createBullBoard } from '@bull-board/api';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { ExpressAdapter as BullBoardExpressAdapter } from '@bull-board/express';
 
+import { CorsIoAdapter } from './common/adapters/socket-io.adapter';
 import { AppModule } from './app/app.module';
 import { APP_ENVIRONMENT, APP_BULL_QUEUES } from './app/enums/app.enum';
 import setupSwagger from './swagger';
@@ -72,6 +73,8 @@ async function bootstrap(): Promise<void> {
                 forbidNonWhitelisted: true,
             })
         );
+
+        app.useWebSocketAdapter(new CorsIoAdapter(app, config.get('app.cors')));
 
         // Enable versioning
         app.enableVersioning({

@@ -1,0 +1,20 @@
+{
+    "success": {
+        "created": "Ticket created successfully",
+        "list": "Tickets retrieved successfully",
+        "ticketFound": "Ticket retrieved successfully",
+        "updated": "Ticket updated successfully",
+        "closed": "Ticket closed successfully",
+        "messageSent": "Message sent successfully",
+        "messagesList": "Messages retrieved successfully",
+        "markRead": "Ticket marked as read",
+        "presign": "Upload URL generated successfully"
+    },
+    "error": {
+        "ticketNotFound": "Ticket not found",
+        "forbidden": "You cannot access this ticket",
+        "orderMismatch": "Order does not belong to this account",
+        "assigneeInvalid": "Assignee must be a staff member",
+        "messageFailed": "Failed to send message"
+    }
+}
