@@ -9,7 +9,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -33,7 +33,7 @@ export class WalletAdminController {
     constructor(private readonly walletService: WalletService) {}
 
     @Get('users/:userId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'View user wallet' })
     @DocResponse({
@@ -48,7 +48,7 @@ export class WalletAdminController {
     }
 
     @Post('users/:userId/balance')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add balance to user wallet' })
     @DocResponse({
@@ -64,7 +64,7 @@ export class WalletAdminController {
     }
 
     @Put('users/:userId/balance')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Adjust user wallet balance' })
     @DocResponse({
@@ -80,7 +80,7 @@ export class WalletAdminController {
     }
 
     @Get('users/:userId/transactions')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get user transaction history (admin)' })
     @DocPaginatedResponse({

@@ -9,7 +9,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -41,7 +41,7 @@ export class OrderAdminController {
     ) {}
 
     @Get()
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all orders (admin)' })
     @DocPaginatedResponse({
@@ -61,7 +61,7 @@ export class OrderAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get order detail (admin)' })
     @DocResponse({
@@ -76,7 +76,7 @@ export class OrderAdminController {
     }
 
     @Put(':id/status')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update order status' })
     @DocResponse({
@@ -92,7 +92,7 @@ export class OrderAdminController {
     }
 
     @Post(':id/deliver')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually deliver order' })
     @DocResponse({
@@ -108,7 +108,7 @@ export class OrderAdminController {
     }
 
     @Post(':id/refund')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Refund order' })
     @DocGenericResponse({

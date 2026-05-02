@@ -56,6 +56,8 @@ export class HelperEmailService implements IHelperEmailService {
                 EMAIL_TEMPLATE_SUBJECTS.VERIFY_EMAIL,
             [EMAIL_TEMPLATES.RESET_PASSWORD_LINK]:
                 EMAIL_TEMPLATE_SUBJECTS.RESET_PASSWORD_LINK,
+            [EMAIL_TEMPLATES.TEAM_INVITATION]:
+                EMAIL_TEMPLATE_SUBJECTS.TEAM_INVITATION,
         };
         const subject = subjects[emailType];
         if (!subject) {

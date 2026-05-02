@@ -6,7 +6,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { DatabaseService } from 'src/common/database/services/database.service';
 
 const SEED_EMAIL = 'user@jinx.to';
-/** Meets public login password rules (upper, lower, digit, special, 8+). */
+const SEED_ADMIN_EMAIL = 'admin@jinx.to';
 const SEED_PASSWORD = 'Test1234!';
 
 @Injectable()
@@ -68,6 +68,57 @@ export class UsersSeedService {
                 password: SEED_PASSWORD,
             },
             'Seeded user + wallet (password shown for local dev only)'
+        );
+    }
+
+    @Command({
+        command: 'seed:admin',
+        describe: 'Seed primary super admin + wallet if missing',
+    })
+    async seedAdmin(): Promise<void> {
+        const existingSuperAdmin = await this.databaseService.user.findFirst({
+            where: { role: Role.SUPER_ADMIN },
+        });
+
+        if (existingSuperAdmin) {
+            this.logger.info(
+                {
+                    userId: existingSuperAdmin.id,
+                    email: existingSuperAdmin.email,
+                },
+                'SUPER_ADMIN already exists; skipping seed'
+            );
+            return;
+        }
+
+        const email = SEED_ADMIN_EMAIL;
+        const password = SEED_PASSWORD;
+
+        const hashedPassword = await argon2.hash(password);
+        const userName = 'superadmin';
+
+        const superAdmin = await this.databaseService.user.create({
+            data: {
+                userName,
+                email: email.toLowerCase().trim(),
+                password: hashedPassword,
+                firstName: 'Super',
+                lastName: 'Admin',
+                role: Role.SUPER_ADMIN,
+                isVerified: true,
+            },
+        });
+
+        await this.databaseService.userWallet.create({
+            data: {
+                userId: superAdmin.id,
+                balance: 0,
+            },
+        });
+
+        this.logger.info(
+            { userId: superAdmin.id, email: superAdmin.email },
+            'Seeded SUPER_ADMIN + wallet'
         );
     }
 }

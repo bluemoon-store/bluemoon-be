@@ -7,6 +7,7 @@ import {
 import { Role } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { isPrivilegedAdminRole } from 'src/common/request/constants/roles.constant';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
@@ -67,14 +68,18 @@ export class UserService implements IUserService {
                 );
             }
 
-            if (currentUserRole !== Role.ADMIN && currentUserId !== userId) {
+            if (
+                !isPrivilegedAdminRole(currentUserRole) &&
+                currentUserId !== userId
+            ) {
                 throw new ForbiddenException(
                     'auth.error.insufficientPermissions'
                 );
             }
 
             const isAdminDeletingAnotherUser =
-                currentUserRole === Role.ADMIN && currentUserId !== userId;
+                isPrivilegedAdminRole(currentUserRole) &&
+                currentUserId !== userId;
 
             if (!isAdminDeletingAnotherUser) {
                 if (!password) {

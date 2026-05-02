@@ -4,6 +4,7 @@ import { TwoFactorDisableDto } from '../dtos/request/auth.2fa.disable.dto';
 import { TwoFactorSetupDto } from '../dtos/request/auth.2fa.setup.dto';
 import { TwoFactorVerifyLoginDto } from '../dtos/request/auth.2fa.verify-login.dto';
 import { TwoFactorVerifyDto } from '../dtos/request/auth.2fa.verify.dto';
+import { ChangeEmailDto } from '../dtos/request/auth.change-email.dto';
 import { ChangePasswordDto } from '../dtos/request/auth.change-password.dto';
 import { ForgotPasswordDto } from '../dtos/request/auth.forgot-password.dto';
 import { UserLoginDto } from '../dtos/request/auth.login.dto';
@@ -56,6 +57,10 @@ export interface IAuthService {
     changePassword(
         userId: string,
         data: ChangePasswordDto
+    ): Promise<AuthSuccessResponseDto>;
+    changeEmail(
+        userId: string,
+        data: ChangeEmailDto
     ): Promise<AuthSuccessResponseDto>;
     sendVerificationEmail(userId: string): Promise<AuthSuccessResponseDto>;
     verifyEmail(token: string): Promise<AuthSuccessResponseDto>;

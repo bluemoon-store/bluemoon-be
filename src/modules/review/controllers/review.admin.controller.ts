@@ -8,7 +8,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
@@ -28,7 +28,7 @@ export class ReviewAdminController {
     constructor(private readonly reviewService: ReviewService) {}
 
     @Get()
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all reviews (admin)' })
     @DocPaginatedResponse({
@@ -43,7 +43,7 @@ export class ReviewAdminController {
     }
 
     @Delete(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete review (admin soft delete)' })
     @HttpCode(HttpStatus.NO_CONTENT)

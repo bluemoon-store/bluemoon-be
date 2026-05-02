@@ -3,6 +3,7 @@ export enum EMAIL_TEMPLATES {
     FORGOT_PASSWORD_OTP = 'forgot-password-otp',
     VERIFY_EMAIL = 'verify-email',
     RESET_PASSWORD_LINK = 'reset-password-link',
+    TEAM_INVITATION = 'team-invitation',
 }
 
 export enum EMAIL_TEMPLATE_SUBJECTS {
@@ -10,4 +11,5 @@ export enum EMAIL_TEMPLATE_SUBJECTS {
     FORGOT_PASSWORD_OTP = 'Reset your password — verification code',
     VERIFY_EMAIL = 'Verify your email address',
     RESET_PASSWORD_LINK = 'Reset your password',
+    TEAM_INVITATION = 'You are invited to the admin team',
 }

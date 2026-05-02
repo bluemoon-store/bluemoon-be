@@ -59,5 +59,6 @@ export default registerAs('app', (): Record<string, any> => {
         logLevel: process.env.APP_LOG_LEVEL ?? 'info',
 
         frontendUrl: process.env.APP_FRONTEND_URL ?? 'http://localhost:3000',
+        adminUrl: process.env.APP_ADMIN_URL ?? 'http://localhost:3001',
     };
 });

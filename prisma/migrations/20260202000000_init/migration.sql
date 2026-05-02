@@ -1,32 +1,20 @@
--- CreateEnum
-CREATE TYPE "PostStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('USER', 'MODERATOR', 'MANAGER', 'ADMIN', 'DEVELOPER');
-
--- CreateEnum
-CREATE TYPE "EnergyMapFocus" AS ENUM ('INNER_NATURE', 'CAREER_PATH', 'RELATIONSHIPS', 'LIFE_DIRECTION');
-
--- CreateEnum
-CREATE TYPE "EnergyMapStatus" AS ENUM ('PROCESSING', 'COMPLETED', 'FAILED');
-
--- CreateEnum
-CREATE TYPE "SparkTransactionType" AS ENUM ('REFERRAL_BONUS', 'DAILY_RETURN', 'PURCHASE', 'DEEP_MAP_UNLOCK');
-
--- CreateEnum
-CREATE TYPE "Platform" AS ENUM ('IOS', 'ANDROID', 'WEB');
+CREATE TYPE "Role" AS ENUM ('USER', 'SUPER_ADMIN', 'OWNER', 'MOD', 'ALLIANCE', 'SUPPORT');
 
 -- CreateEnum
 CREATE TYPE "DeliveryType" AS ENUM ('INSTANT', 'MANUAL', 'DOWNLOAD');
 
 -- CreateEnum
-CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PAYMENT_RECEIVED', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'REFUNDED');
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'COMPLETED', 'CANCELLED', 'REFUNDED');
 
 -- CreateEnum
-CREATE TYPE "CryptoCurrency" AS ENUM ('BTC', 'ETH', 'LTC', 'USDT_ERC20', 'BCH');
+CREATE TYPE "CryptoCurrency" AS ENUM ('BTC', 'ETH', 'LTC', 'BCH', 'USDT_ERC20', 'USDT_TRC20', 'USDC_ERC20');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PARTIAL', 'PAID', 'CONFIRMING', 'CONFIRMED', 'EXPIRED', 'FAILED');
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'CONFIRMING', 'CONFIRMED', 'FORWARDING', 'FORWARDED', 'FORWARDING_FAILED', 'EXPIRED', 'FAILED');
 
 -- CreateEnum
 CREATE TYPE "WalletTransactionType" AS ENUM ('DEPOSIT', 'PURCHASE', 'REFUND', 'ADMIN_ADJUST');
@@ -59,112 +47,20 @@ CREATE TABLE "users" (
     "deleted_at" TIMESTAMP(3),
     "avatar" TEXT,
     "date_of_birth" TIMESTAMP(3),
-    "sparks" INTEGER NOT NULL DEFAULT 0,
-    "referral_code" TEXT,
-    "referred_by" TEXT,
     "is_banned" BOOLEAN NOT NULL DEFAULT false,
     "banned_at" TIMESTAMP(3),
     "banned_reason" TEXT,
     "two_factor_enabled" BOOLEAN NOT NULL DEFAULT false,
     "two_factor_secret" TEXT,
+    "password_reset_otp" TEXT,
+    "password_reset_otp_expiry" TIMESTAMP(3),
+    "email_verification_token" TEXT,
+    "email_verification_token_expiry" TIMESTAMP(3),
+    "invited_by" TEXT,
+    "invitation_token" TEXT,
+    "invitation_token_expiry" TIMESTAMP(3),
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "posts" (
-    "id" TEXT NOT NULL,
-    "title" VARCHAR(255) NOT NULL,
-    "content" TEXT NOT NULL,
-    "status" "PostStatus" NOT NULL DEFAULT 'DRAFT',
-    "author_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "posts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "post_images" (
-    "id" TEXT NOT NULL,
-    "key" TEXT NOT NULL,
-    "post_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "post_images_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "energy_maps" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "focus" "EnergyMapFocus" NOT NULL,
-    "status" "EnergyMapStatus" NOT NULL DEFAULT 'PROCESSING',
-    "name" TEXT,
-    "date_of_birth" TIMESTAMP(3) NOT NULL,
-    "left_palm_image_key" TEXT,
-    "right_palm_image_key" TEXT,
-    "face_image_key" TEXT,
-    "core_pattern" TEXT[],
-    "strengths" TEXT[],
-    "challenges" TEXT[],
-    "career_tendencies" TEXT[],
-    "relationship_patterns" TEXT[],
-    "pattern_explanation" TEXT[],
-    "timing_insights" TEXT[],
-    "evolution_path" TEXT[],
-    "adjustment_strategies" TEXT[],
-    "sparks_used" INTEGER NOT NULL DEFAULT 0,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "energy_maps_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "spark_transactions" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "type" "SparkTransactionType" NOT NULL,
-    "amount" INTEGER NOT NULL,
-    "reason" TEXT NOT NULL,
-    "reference_id" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "spark_transactions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "images" (
-    "id" TEXT NOT NULL,
-    "key" TEXT NOT NULL,
-    "url" TEXT,
-    "content_type" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "images_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "device_tokens" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
-    "token" TEXT NOT NULL,
-    "platform" "Platform" NOT NULL,
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "device_tokens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -194,14 +90,64 @@ CREATE TABLE "products" (
     "stock_quantity" INTEGER NOT NULL DEFAULT 0,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "is_featured" BOOLEAN NOT NULL DEFAULT false,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
     "category_id" TEXT NOT NULL,
     "delivery_type" "DeliveryType" NOT NULL DEFAULT 'INSTANT',
     "delivery_content" TEXT,
+    "short_notice" TEXT,
+    "is_hot" BOOLEAN NOT NULL DEFAULT false,
+    "is_new" BOOLEAN NOT NULL DEFAULT false,
+    "is_nfa" BOOLEAN NOT NULL DEFAULT false,
+    "is_restocked" BOOLEAN NOT NULL DEFAULT false,
+    "launched_at" TIMESTAMP(3),
+    "restocked_at" TIMESTAMP(3),
+    "country_of_origin" TEXT,
+    "redeem_process" TEXT,
+    "warranty_text" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product_variants" (
+    "id" TEXT NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "price" DECIMAL(20,8) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'USD',
+    "stock_quantity" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "product_variants_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product_regions" (
+    "id" TEXT NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "country_code" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "product_regions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product_related" (
+    "product_id" TEXT NOT NULL,
+    "related_product_id" TEXT NOT NULL,
+
+    CONSTRAINT "product_related_pkey" PRIMARY KEY ("product_id","related_product_id")
 );
 
 -- CreateTable
@@ -235,6 +181,10 @@ CREATE TABLE "cart_items" (
     "cart_id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
+    "variant_id" TEXT,
+    "region_label" TEXT NOT NULL DEFAULT '',
+    "region_country" TEXT NOT NULL DEFAULT '',
+    "unit_price" DECIMAL(20,8),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -246,6 +196,8 @@ CREATE TABLE "orders" (
     "id" TEXT NOT NULL,
     "order_number" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
+    "buyer_protection" BOOLEAN NOT NULL DEFAULT false,
+    "buyer_protection_amount" DECIMAL(20,8) NOT NULL DEFAULT 0,
     "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
     "total_amount" DECIMAL(20,8) NOT NULL,
     "currency" TEXT NOT NULL,
@@ -259,6 +211,20 @@ CREATE TABLE "orders" (
 );
 
 -- CreateTable
+CREATE TABLE "order_reviews" (
+    "id" TEXT NOT NULL,
+    "order_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "rating" INTEGER NOT NULL,
+    "comment" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "order_reviews_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "order_items" (
     "id" TEXT NOT NULL,
     "order_id" TEXT NOT NULL,
@@ -267,6 +233,10 @@ CREATE TABLE "order_items" (
     "price_at_purchase" DECIMAL(20,8) NOT NULL,
     "delivered_content" TEXT,
     "delivered_at" TIMESTAMP(3),
+    "variant_id" TEXT,
+    "variant_label" TEXT,
+    "region_label" TEXT,
+    "region_country" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -278,21 +248,53 @@ CREATE TABLE "crypto_payments" (
     "id" TEXT NOT NULL,
     "order_id" TEXT NOT NULL,
     "cryptocurrency" "CryptoCurrency" NOT NULL,
+    "network" TEXT,
     "payment_address" TEXT NOT NULL,
-    "amount" DECIMAL(20,8) NOT NULL,
+    "derivation_index" INTEGER NOT NULL,
+    "derivation_path" TEXT NOT NULL,
+    "encrypted_private_key" TEXT NOT NULL,
+    "amount" DECIMAL(30,18) NOT NULL,
     "amount_usd" DECIMAL(20,2) NOT NULL,
-    "exchange_rate" DECIMAL(20,8) NOT NULL,
+    "exchange_rate" DECIMAL(20,8),
+    "platform_wallet_address" TEXT NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     "tx_hash" TEXT,
+    "forward_tx_hash" TEXT,
     "confirmations" INTEGER NOT NULL DEFAULT 0,
     "required_confirmations" INTEGER NOT NULL DEFAULT 3,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "paid_at" TIMESTAMP(3),
     "confirmed_at" TIMESTAMP(3),
+    "forwarded_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "metadata" JSONB,
+
+    CONSTRAINT "crypto_payments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "system_wallet_indexes" (
+    "id" TEXT NOT NULL,
+    "cryptocurrency" "CryptoCurrency" NOT NULL,
+    "next_index" INTEGER NOT NULL DEFAULT 0,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "system_wallet_indexes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "crypto_exchange_rates" (
+    "id" TEXT NOT NULL,
+    "cryptocurrency" "CryptoCurrency" NOT NULL,
+    "fiat_currency" TEXT NOT NULL DEFAULT 'USD',
+    "rate" DECIMAL(20,8) NOT NULL,
+    "provider" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "crypto_payments_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "crypto_exchange_rates_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -304,6 +306,37 @@ CREATE TABLE "user_wallets" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "user_wallets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "wallet_topups" (
+    "id" TEXT NOT NULL,
+    "wallet_id" TEXT NOT NULL,
+    "cryptocurrency" "CryptoCurrency" NOT NULL,
+    "network" TEXT,
+    "payment_address" TEXT NOT NULL,
+    "derivation_index" INTEGER NOT NULL,
+    "derivation_path" TEXT NOT NULL,
+    "encrypted_private_key" TEXT NOT NULL,
+    "amount" DECIMAL(30,18) NOT NULL,
+    "amount_usd" DECIMAL(20,2) NOT NULL,
+    "exchange_rate" DECIMAL(20,8),
+    "platform_wallet_address" TEXT NOT NULL,
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "tx_hash" TEXT,
+    "forward_tx_hash" TEXT,
+    "confirmations" INTEGER NOT NULL DEFAULT 0,
+    "required_confirmations" INTEGER NOT NULL DEFAULT 3,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "paid_at" TIMESTAMP(3),
+    "confirmed_at" TIMESTAMP(3),
+    "forwarded_at" TIMESTAMP(3),
+    "metadata" JSONB,
+    "credited_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "wallet_topups_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -400,42 +433,6 @@ CREATE UNIQUE INDEX "users_userName_key" ON "users"("userName");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_referral_code_key" ON "users"("referral_code");
-
--- CreateIndex
-CREATE INDEX "posts_author_id_idx" ON "posts"("author_id");
-
--- CreateIndex
-CREATE INDEX "post_images_post_id_idx" ON "post_images"("post_id");
-
--- CreateIndex
-CREATE INDEX "energy_maps_user_id_idx" ON "energy_maps"("user_id");
-
--- CreateIndex
-CREATE INDEX "energy_maps_focus_idx" ON "energy_maps"("focus");
-
--- CreateIndex
-CREATE INDEX "energy_maps_status_idx" ON "energy_maps"("status");
-
--- CreateIndex
-CREATE INDEX "spark_transactions_user_id_idx" ON "spark_transactions"("user_id");
-
--- CreateIndex
-CREATE INDEX "spark_transactions_type_idx" ON "spark_transactions"("type");
-
--- CreateIndex
-CREATE INDEX "images_user_id_idx" ON "images"("user_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "device_tokens_token_key" ON "device_tokens"("token");
-
--- CreateIndex
-CREATE INDEX "device_tokens_user_id_idx" ON "device_tokens"("user_id");
-
--- CreateIndex
-CREATE INDEX "device_tokens_token_idx" ON "device_tokens"("token");
-
--- CreateIndex
 CREATE UNIQUE INDEX "product_categories_name_key" ON "product_categories"("name");
 
 -- CreateIndex
@@ -454,6 +451,15 @@ CREATE INDEX "products_slug_idx" ON "products"("slug");
 CREATE INDEX "products_is_active_idx" ON "products"("is_active");
 
 -- CreateIndex
+CREATE INDEX "product_variants_product_id_idx" ON "product_variants"("product_id");
+
+-- CreateIndex
+CREATE INDEX "product_regions_product_id_idx" ON "product_regions"("product_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "product_regions_product_id_label_key" ON "product_regions"("product_id", "label");
+
+-- CreateIndex
 CREATE INDEX "product_images_product_id_idx" ON "product_images"("product_id");
 
 -- CreateIndex
@@ -463,7 +469,7 @@ CREATE UNIQUE INDEX "carts_user_id_key" ON "carts"("user_id");
 CREATE INDEX "cart_items_cart_id_idx" ON "cart_items"("cart_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "cart_items_cart_id_product_id_key" ON "cart_items"("cart_id", "product_id");
+CREATE INDEX "cart_items_variant_id_idx" ON "cart_items"("variant_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "orders_order_number_key" ON "orders"("order_number");
@@ -478,7 +484,13 @@ CREATE INDEX "orders_order_number_idx" ON "orders"("order_number");
 CREATE INDEX "orders_status_idx" ON "orders"("status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "order_reviews_order_id_key" ON "order_reviews"("order_id");
+
+-- CreateIndex
 CREATE INDEX "order_items_order_id_idx" ON "order_items"("order_id");
+
+-- CreateIndex
+CREATE INDEX "order_items_variant_id_idx" ON "order_items"("variant_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "crypto_payments_order_id_key" ON "crypto_payments"("order_id");
@@ -493,7 +505,34 @@ CREATE INDEX "crypto_payments_status_idx" ON "crypto_payments"("status");
 CREATE INDEX "crypto_payments_tx_hash_idx" ON "crypto_payments"("tx_hash");
 
 -- CreateIndex
+CREATE INDEX "crypto_payments_cryptocurrency_idx" ON "crypto_payments"("cryptocurrency");
+
+-- CreateIndex
+CREATE INDEX "crypto_payments_expires_at_idx" ON "crypto_payments"("expires_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "system_wallet_indexes_cryptocurrency_key" ON "system_wallet_indexes"("cryptocurrency");
+
+-- CreateIndex
+CREATE INDEX "crypto_exchange_rates_cryptocurrency_idx" ON "crypto_exchange_rates"("cryptocurrency");
+
+-- CreateIndex
+CREATE INDEX "crypto_exchange_rates_expires_at_idx" ON "crypto_exchange_rates"("expires_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "crypto_exchange_rates_cryptocurrency_fiat_currency_key" ON "crypto_exchange_rates"("cryptocurrency", "fiat_currency");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "user_wallets_user_id_key" ON "user_wallets"("user_id");
+
+-- CreateIndex
+CREATE INDEX "wallet_topups_wallet_id_idx" ON "wallet_topups"("wallet_id");
+
+-- CreateIndex
+CREATE INDEX "wallet_topups_status_idx" ON "wallet_topups"("status");
+
+-- CreateIndex
+CREATE INDEX "wallet_topups_payment_address_idx" ON "wallet_topups"("payment_address");
 
 -- CreateIndex
 CREATE INDEX "wallet_transactions_wallet_id_idx" ON "wallet_transactions"("wallet_id");
@@ -535,25 +574,22 @@ CREATE INDEX "analytics_type_date_idx" ON "analytics"("type", "date");
 CREATE UNIQUE INDEX "analytics_type_date_key_key" ON "analytics"("type", "date", "key");
 
 -- AddForeignKey
-ALTER TABLE "posts" ADD CONSTRAINT "posts_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "post_images" ADD CONSTRAINT "post_images_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "energy_maps" ADD CONSTRAINT "energy_maps_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "spark_transactions" ADD CONSTRAINT "spark_transactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "images" ADD CONSTRAINT "images_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "device_tokens" ADD CONSTRAINT "device_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "users" ADD CONSTRAINT "users_invited_by_fkey" FOREIGN KEY ("invited_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "product_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_variants" ADD CONSTRAINT "product_variants_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_regions" ADD CONSTRAINT "product_regions_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_related" ADD CONSTRAINT "product_related_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_related" ADD CONSTRAINT "product_related_related_product_id_fkey" FOREIGN KEY ("related_product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -568,7 +604,16 @@ ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_cart_id_fkey" FOREIGN KEY ("
 ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "cart_items" ADD CONSTRAINT "cart_items_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "product_variants"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "order_reviews" ADD CONSTRAINT "order_reviews_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "order_reviews" ADD CONSTRAINT "order_reviews_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -577,10 +622,16 @@ ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_fkey" FOREIGN KEY
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "product_variants"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "crypto_payments" ADD CONSTRAINT "crypto_payments_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_wallets" ADD CONSTRAINT "user_wallets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "wallet_topups" ADD CONSTRAINT "wallet_topups_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "user_wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "user_wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 
 import { ROLES_DECORATOR_KEY } from '../constants/request.constant';
+import { isSuperAdminRole } from '../constants/roles.constant';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -26,6 +27,10 @@ export class RolesGuard implements CanActivate {
 
         if (!user || !user.role) {
             throw new ForbiddenException('auth.error.userRoleNotDefined');
+        }
+
+        if (isSuperAdminRole(user.role)) {
+            return true;
         }
 
         const hasRole = requiredRoles.some(

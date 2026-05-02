@@ -11,12 +11,11 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
-
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -55,7 +54,7 @@ export class ProductAdminController {
     ) {}
 
     @Post()
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create product' })
     @DocResponse({
@@ -70,7 +69,7 @@ export class ProductAdminController {
     }
 
     @Get()
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all products (admin)' })
     @DocPaginatedResponse({
@@ -106,7 +105,7 @@ export class ProductAdminController {
     }
 
     @Get('search')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Search products (admin)' })
     @DocPaginatedResponse({
@@ -123,7 +122,7 @@ export class ProductAdminController {
     // Categories (must be registered before :id routes)
 
     @Post('categories')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create category' })
     @DocResponse({
@@ -138,7 +137,7 @@ export class ProductAdminController {
     }
 
     @Get('categories')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all categories (admin)' })
     @DocPaginatedResponse({
@@ -157,7 +156,7 @@ export class ProductAdminController {
     }
 
     @Get('categories/:id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get category by ID' })
     @DocResponse({
@@ -172,7 +171,7 @@ export class ProductAdminController {
     }
 
     @Put('categories/:id')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update category' })
     @DocResponse({
@@ -188,7 +187,7 @@ export class ProductAdminController {
     }
 
     @Delete('categories/:id')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete category' })
     @DocGenericResponse({
@@ -202,7 +201,7 @@ export class ProductAdminController {
     }
 
     @Put('categories/:id/toggle-active')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle category active status' })
     @DocResponse({
@@ -219,7 +218,7 @@ export class ProductAdminController {
     // Variants / regions / related
 
     @Post(':id/variants')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add product variant' })
     @DocResponse({
@@ -235,7 +234,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/variants/:variantId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product variant' })
     @DocResponse({
@@ -252,7 +251,7 @@ export class ProductAdminController {
     }
 
     @Delete(':id/variants/:variantId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove product variant (soft delete)' })
     @DocResponse({
@@ -268,7 +267,7 @@ export class ProductAdminController {
     }
 
     @Post(':id/regions')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add product region' })
     @DocResponse({
@@ -284,7 +283,7 @@ export class ProductAdminController {
     }
 
     @Delete(':id/regions/:regionId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove product region' })
     @DocResponse({
@@ -300,7 +299,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/related')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Set related products' })
     @DocResponse({
@@ -321,7 +320,7 @@ export class ProductAdminController {
     // Product by ID and CRUD
 
     @Get(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get product by ID (admin)' })
     @DocResponse({
@@ -334,7 +333,7 @@ export class ProductAdminController {
     }
 
     @Put(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product' })
     @DocResponse({
@@ -350,7 +349,7 @@ export class ProductAdminController {
     }
 
     @Delete(':id')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete product' })
     @DocGenericResponse({
@@ -364,7 +363,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/stock')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product stock' })
     @DocResponse({
@@ -380,7 +379,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/toggle-active')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle product active status' })
     @DocResponse({
@@ -395,7 +394,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/toggle-featured')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle product featured status' })
     @DocResponse({
@@ -410,7 +409,7 @@ export class ProductAdminController {
     }
 
     @Post(':id/images')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add image to product' })
     @DocResponse({
@@ -434,7 +433,7 @@ export class ProductAdminController {
     }
 
     @Delete(':id/images/:imageId')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove image from product' })
     @DocResponse({
@@ -450,7 +449,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/images/:imageId/primary')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Set image as primary' })
     @DocResponse({

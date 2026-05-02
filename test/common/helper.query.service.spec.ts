@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PinoLogger } from 'nestjs-pino';
+import { Role } from '@prisma/client';
 
 import { HelperQueryService } from 'src/common/helper/services/helper.query.service';
 
@@ -582,13 +583,13 @@ describe('HelperQueryService', () => {
 
                 const result = await service
                     .query(mockDelegate)
-                    .filter({ role: 'ADMIN' })
+                    .filter({ role: Role.OWNER })
                     .count();
 
                 expect(result).toBe(42);
                 expect(mockDelegate.count).toHaveBeenCalledWith({
                     where: {
-                        AND: [{ role: 'ADMIN' }],
+                        AND: [{ role: Role.OWNER }],
                     },
                 });
             });

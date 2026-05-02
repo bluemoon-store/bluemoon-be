@@ -7,7 +7,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -39,7 +39,7 @@ export class CryptoPaymentAdminController {
     ) {}
 
     @Get()
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all crypto payments' })
     @DocPaginatedResponse({
@@ -113,7 +113,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get crypto payment detail' })
     @DocResponse({
@@ -146,7 +146,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Post(':id/verify')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually verify payment' })
     @DocResponse({
@@ -173,7 +173,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Post(':id/forward')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually forward payment to platform wallet' })
     @DocResponse({
@@ -200,7 +200,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Get('wallet-indexes')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get wallet derivation indexes' })
     @DocResponse({

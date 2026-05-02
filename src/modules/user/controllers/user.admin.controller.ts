@@ -7,7 +7,7 @@ import {
     Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
@@ -27,7 +27,7 @@ export class UserAdminController {
     constructor(private readonly userService: UserService) {}
 
     @Delete(':id')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete user' })
     @DocGenericResponse({
@@ -42,7 +42,7 @@ export class UserAdminController {
     }
 
     @Post(':id/ban')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Ban user' })
     @DocGenericResponse({
@@ -57,7 +57,7 @@ export class UserAdminController {
     }
 
     @Post(':id/unban')
-    @AllowedRoles([Role.ADMIN, Role.MANAGER])
+    @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Unban user' })
     @DocGenericResponse({

@@ -29,3 +29,10 @@ export interface IVerifyEmailPayload {
     verificationUrl: string;
     userName: string;
 }
+
+export interface ITeamInvitationPayload {
+    inviterName: string;
+    role: string;
+    inviteLink: string;
+    expiresIn: string;
+}

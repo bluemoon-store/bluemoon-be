@@ -19,11 +19,17 @@ import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { JwtAccessGuard } from 'src/common/request/guards/jwt.access.guard';
 import { JwtRefreshGuard } from 'src/common/request/guards/jwt.refresh.guard';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
+import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
+import { UserGetProfileResponseDto } from 'src/modules/user/dtos/response/user.response';
+import { UserService } from 'src/modules/user/services/user.service';
+import { UserTeamService } from 'src/modules/user/services/user.team.service';
 
 import { TwoFactorDisableDto } from '../dtos/request/auth.2fa.disable.dto';
 import { TwoFactorSetupDto } from '../dtos/request/auth.2fa.setup.dto';
 import { TwoFactorVerifyLoginDto } from '../dtos/request/auth.2fa.verify-login.dto';
 import { TwoFactorVerifyDto } from '../dtos/request/auth.2fa.verify.dto';
+import { AcceptInvitationRequestDto } from '../dtos/request/accept-invitation.request';
+import { ChangeEmailDto } from '../dtos/request/auth.change-email.dto';
 import { ChangePasswordDto } from '../dtos/request/auth.change-password.dto';
 import { ForgotPasswordDto } from '../dtos/request/auth.forgot-password.dto';
 import { UserLoginDto } from '../dtos/request/auth.login.dto';
@@ -51,7 +57,11 @@ import { AuthService } from '../services/auth.service';
     path: '/auth',
 })
 export class AuthPublicController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(
+        private readonly authService: AuthService,
+        private readonly userService: UserService,
+        private readonly userTeamService: UserTeamService
+    ) {}
 
     @Post('login')
     @PublicRoute()
@@ -97,6 +107,20 @@ export class AuthPublicController {
     })
     public signup(@Body() payload: UserCreateDto): Promise<AuthResponseDto> {
         return this.authService.signup(payload);
+    }
+
+    @Post('accept-invitation')
+    @PublicRoute()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Accept team invitation' })
+    @DocGenericResponse({
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.invitationAccepted',
+    })
+    public acceptInvitation(
+        @Body() payload: AcceptInvitationRequestDto
+    ): Promise<ApiGenericResponseDto> {
+        return this.userTeamService.acceptInvitation(payload);
     }
 
     @Post('forgot-password')
@@ -191,6 +215,23 @@ export class AuthPublicController {
         return this.authService.changePassword(user.userId, payload);
     }
 
+    @Put('change-email')
+    @UseGuards(JwtAccessGuard)
+    @ApiBearerAuth('accessToken')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Change email (authenticated)' })
+    @DocResponse({
+        serialization: AuthSuccessResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'auth.success.verificationEmailSent',
+    })
+    public changeEmail(
+        @AuthUser() user: IAuthUser,
+        @Body() payload: ChangeEmailDto
+    ): Promise<AuthSuccessResponseDto> {
+        return this.authService.changeEmail(user.userId, payload);
+    }
+
     @Post('send-verification-email')
     @UseGuards(JwtAccessGuard)
     @ApiBearerAuth('accessToken')
@@ -232,6 +273,22 @@ export class AuthPublicController {
     })
     public logout(): Promise<{ success: boolean; message: string }> {
         return this.authService.logout();
+    }
+
+    @Get('me')
+    @UseGuards(JwtAccessGuard)
+    @ApiBearerAuth('accessToken')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get authenticated user profile' })
+    @DocResponse({
+        serialization: UserGetProfileResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'user.success.profile',
+    })
+    public getMe(
+        @AuthUser() user: IAuthUser
+    ): Promise<UserGetProfileResponseDto> {
+        return this.userService.getProfile(user.userId);
     }
 
     @Get('refresh-token')

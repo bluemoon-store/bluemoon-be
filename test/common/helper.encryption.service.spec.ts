@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 
 import { UnauthorizedException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
@@ -100,7 +101,7 @@ describe('HelperEncryptionService', () => {
     });
 
     describe('createJwtTokens', () => {
-        const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+        const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
 
         it('should create access and refresh tokens', async () => {
             jwtServiceMock.signAsync
@@ -137,7 +138,7 @@ describe('HelperEncryptionService', () => {
         });
 
         it('should handle different user roles', async () => {
-            const adminPayload: IAuthUser = { userId: '456', role: 'ADMIN' };
+            const adminPayload: IAuthUser = { userId: '456', role: Role.OWNER };
             jwtServiceMock.signAsync
                 .mockResolvedValueOnce('adminAccessToken')
                 .mockResolvedValueOnce('adminRefreshToken');
@@ -153,7 +154,7 @@ describe('HelperEncryptionService', () => {
 
     describe('createAccessToken', () => {
         it('should create an access token', async () => {
-            const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+            const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
             jwtServiceMock.signAsync.mockResolvedValue('mockAccessToken');
 
             const result = await service.createAccessToken(mockPayload);
@@ -166,7 +167,7 @@ describe('HelperEncryptionService', () => {
         });
 
         it('should handle JWT signing errors', async () => {
-            const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+            const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
             const error = new Error('JWT signing failed');
             jwtServiceMock.signAsync.mockRejectedValue(error);
 
@@ -178,7 +179,7 @@ describe('HelperEncryptionService', () => {
         it('should work with different payload types', async () => {
             const developerPayload: IAuthUser = {
                 userId: 'dev-456',
-                role: 'DEVELOPER',
+                role: Role.MOD,
             };
             jwtServiceMock.signAsync.mockResolvedValue('devAccessToken');
 
@@ -197,7 +198,7 @@ describe('HelperEncryptionService', () => {
 
     describe('createRefreshToken', () => {
         it('should create a refresh token', async () => {
-            const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+            const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
             jwtServiceMock.signAsync.mockResolvedValue('mockRefreshToken');
 
             const result = await service.createRefreshToken(mockPayload);
@@ -210,7 +211,7 @@ describe('HelperEncryptionService', () => {
         });
 
         it('should handle JWT signing errors', async () => {
-            const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+            const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
             const error = new Error('Refresh token signing failed');
             jwtServiceMock.signAsync.mockRejectedValue(error);
 
@@ -551,7 +552,7 @@ describe('HelperEncryptionService', () => {
         });
 
         it('should handle JWT token creation and password operations together', async () => {
-            const mockPayload: IAuthUser = { userId: '123', role: 'USER' };
+            const mockPayload: IAuthUser = { userId: '123', role: Role.USER };
             const password = 'testPassword';
 
             jwtServiceMock.signAsync

@@ -8,6 +8,7 @@ import {
     IForgotPasswordOtpPayload,
     IResetPasswordLinkPayload,
     ISendEmailBasePayload,
+    ITeamInvitationPayload,
     IVerifyEmailPayload,
     IWelcomeEmailDataPayload,
 } from 'src/common/helper/interfaces/email.interface';
@@ -141,6 +142,37 @@ export class EmailProcessorWorker {
             this.logger.error(
                 { jobId: job.id, error: error.message },
                 `Failed to send reset-password-link emails: ${error.message}`
+            );
+            throw error;
+        }
+    }
+
+    @Process(EMAIL_TEMPLATES.TEAM_INVITATION)
+    async processTeamInvitation(
+        job: Job<ISendEmailBasePayload<ITeamInvitationPayload>>
+    ) {
+        const { toEmails, data } = job.data;
+
+        this.logger.info(
+            { jobId: job.id, recipients: toEmails.length },
+            'Processing team-invitation email job'
+        );
+
+        try {
+            await this.helperEmailService.sendEmail({
+                emails: toEmails,
+                emailType: EMAIL_TEMPLATES.TEAM_INVITATION,
+                payload: data,
+            });
+
+            this.logger.info(
+                { jobId: job.id, recipients: toEmails.length },
+                'Team-invitation emails sent successfully'
+            );
+        } catch (error) {
+            this.logger.error(
+                { jobId: job.id, error: error.message },
+                `Failed to send team-invitation emails: ${error.message}`
             );
             throw error;
         }

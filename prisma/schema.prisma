@@ -46,16 +46,22 @@ model User {
   passwordResetOtpExpiry         DateTime? @map("password_reset_otp_expiry")
   emailVerificationToken         String?   @map("email_verification_token")
   emailVerificationTokenExpiry   DateTime? @map("email_verification_token_expiry")
+  invitedBy                      String?   @map("invited_by")
+  invitedByUser                  User?     @relation("UserInvitations", fields: [invitedBy], references: [id])
+  invitedUsers                   User[]    @relation("UserInvitations")
+  invitationToken                String?   @map("invitation_token")
+  invitationTokenExpiry          DateTime? @map("invitation_token_expiry")
 
   @@map("users")
 }
 
 enum Role {
   USER
-  MODERATOR
-  MANAGER
-  ADMIN
-  DEVELOPER
+  SUPER_ADMIN
+  OWNER
+  MOD
+  ALLIANCE
+  SUPPORT
 }
 
 model ProductCategory {

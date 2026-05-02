@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { InjectQueue } from '@nestjs/bull';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { Queue } from 'bull';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
@@ -28,6 +28,7 @@ import { TwoFactorDisableDto } from '../dtos/request/auth.2fa.disable.dto';
 import { TwoFactorSetupDto } from '../dtos/request/auth.2fa.setup.dto';
 import { TwoFactorVerifyLoginDto } from '../dtos/request/auth.2fa.verify-login.dto';
 import { TwoFactorVerifyDto } from '../dtos/request/auth.2fa.verify.dto';
+import { ChangeEmailDto } from '../dtos/request/auth.change-email.dto';
 import { ChangePasswordDto } from '../dtos/request/auth.change-password.dto';
 import { ForgotPasswordDto } from '../dtos/request/auth.forgot-password.dto';
 import { UserLoginDto } from '../dtos/request/auth.login.dto';
@@ -704,6 +705,67 @@ export class AuthService implements IAuthService {
             success: true,
             message: 'auth.success.passwordChanged',
         };
+    }
+
+    public async changeEmail(
+        userId: string,
+        data: ChangeEmailDto
+    ): Promise<AuthSuccessResponseDto> {
+        const nextEmail = data.email.trim().toLowerCase();
+
+        const user = await this.databaseService.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || user.deletedAt) {
+            throw new HttpException(
+                'user.error.userNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+
+        if (user.email === nextEmail) {
+            throw new HttpException(
+                'auth.error.emailUnchanged',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        const existingUser = await this.databaseService.user.findUnique({
+            where: { email: nextEmail },
+        });
+
+        if (existingUser && existingUser.id !== userId) {
+            throw new HttpException(
+                'user.error.userExists',
+                HttpStatus.CONFLICT
+            );
+        }
+
+        try {
+            await this.databaseService.user.update({
+                where: { id: userId },
+                data: {
+                    email: nextEmail,
+                    isVerified: false,
+                    emailVerificationToken: null,
+                    emailVerificationTokenExpiry: null,
+                },
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                throw new HttpException(
+                    'user.error.userExists',
+                    HttpStatus.CONFLICT
+                );
+            }
+            throw error;
+        }
+
+        return this.sendVerificationEmail(userId);
     }
 
     public async sendVerificationEmail(
