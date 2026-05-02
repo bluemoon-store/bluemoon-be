@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from 'src/common/database/database.module';
 import { HelperModule } from 'src/common/helper/helper.module';
+import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 
 import { CouponAdminController } from './controllers/coupon.admin.controller';
 import { CouponPublicController } from './controllers/coupon.public.controller';
 import { CouponService } from './services/coupon.service';
 
 @Module({
-    imports: [HelperModule, DatabaseModule],
+    imports: [HelperModule, DatabaseModule, ActivityLogModule],
     controllers: [CouponAdminController, CouponPublicController],
     providers: [CouponService],
     exports: [CouponService],

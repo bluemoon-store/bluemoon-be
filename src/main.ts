@@ -46,6 +46,7 @@ async function bootstrap(): Promise<void> {
                 // Email & Notification Queues
                 app.get(getQueueToken(APP_BULL_QUEUES.EMAIL)),
                 app.get(getQueueToken(APP_BULL_QUEUES.NOTIFICATION)),
+                app.get(getQueueToken(APP_BULL_QUEUES.ACTIVITY_LOG)),
             ];
 
             createBullBoard({
@@ -56,7 +57,7 @@ async function bootstrap(): Promise<void> {
             app.use('/admin/queues', serverAdapter.getRouter());
             logger.log('Bull Board available at /admin/queues');
             logger.log(
-                `Registered ${queues.length} queues: crypto-payment-verification, crypto-payment-forwarding, ${APP_BULL_QUEUES.EMAIL}, ${APP_BULL_QUEUES.NOTIFICATION}`
+                `Registered ${queues.length} queues: crypto-payment-verification, crypto-payment-forwarding, ${APP_BULL_QUEUES.EMAIL}, ${APP_BULL_QUEUES.NOTIFICATION}, ${APP_BULL_QUEUES.ACTIVITY_LOG}`
             );
         }
 

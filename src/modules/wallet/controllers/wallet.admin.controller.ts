@@ -9,6 +9,8 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory, ActivityLogSeverity } from '@prisma/client';
+
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
@@ -23,6 +25,7 @@ import { WalletAdjustBalanceDto } from '../dtos/request/wallet.adjust-balance.re
 import { WalletResponseDto } from '../dtos/response/wallet.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
 import { WalletService } from '../services/wallet.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.wallet')
 @Controller({
@@ -48,6 +51,13 @@ export class WalletAdminController {
     }
 
     @Post('users/:userId/balance')
+    @AuditLog({
+        action: 'wallet.balance.add',
+        category: ActivityLogCategory.WALLET,
+        resourceType: 'UserWallet',
+        resourceIdParam: 'userId',
+        severity: ActivityLogSeverity.WARNING,
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add balance to user wallet' })
@@ -64,6 +74,13 @@ export class WalletAdminController {
     }
 
     @Put('users/:userId/balance')
+    @AuditLog({
+        action: 'wallet.balance.adjust',
+        category: ActivityLogCategory.WALLET,
+        resourceType: 'UserWallet',
+        resourceIdParam: 'userId',
+        severity: ActivityLogSeverity.WARNING,
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Adjust user wallet balance' })

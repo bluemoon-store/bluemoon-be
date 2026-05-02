@@ -11,6 +11,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory } from '@prisma/client';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
@@ -41,6 +42,7 @@ import {
 import { CategoryResponseDto } from '../dtos/response/category.response';
 import { ProductService } from '../services/product.service';
 import { ProductCategoryService } from '../services/product-category.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.product')
 @Controller({
@@ -54,6 +56,11 @@ export class ProductAdminController {
     ) {}
 
     @Post()
+    @AuditLog({
+        action: 'product.create',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create product' })
@@ -122,6 +129,11 @@ export class ProductAdminController {
     // Categories (must be registered before :id routes)
 
     @Post('categories')
+    @AuditLog({
+        action: 'product.category.create',
+        category: ActivityLogCategory.PRODUCT_CATEGORY,
+        resourceType: 'ProductCategory',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create category' })
@@ -171,6 +183,12 @@ export class ProductAdminController {
     }
 
     @Put('categories/:id')
+    @AuditLog({
+        action: 'product.category.update',
+        category: ActivityLogCategory.PRODUCT_CATEGORY,
+        resourceType: 'ProductCategory',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update category' })
@@ -187,6 +205,12 @@ export class ProductAdminController {
     }
 
     @Delete('categories/:id')
+    @AuditLog({
+        action: 'product.category.delete',
+        category: ActivityLogCategory.PRODUCT_CATEGORY,
+        resourceType: 'ProductCategory',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete category' })
@@ -201,6 +225,12 @@ export class ProductAdminController {
     }
 
     @Put('categories/:id/toggle-active')
+    @AuditLog({
+        action: 'product.category.toggle.active',
+        category: ActivityLogCategory.PRODUCT_CATEGORY,
+        resourceType: 'ProductCategory',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle category active status' })
@@ -218,6 +248,12 @@ export class ProductAdminController {
     // Variants / regions / related
 
     @Post(':id/variants')
+    @AuditLog({
+        action: 'product.variant.create',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'ProductVariant',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add product variant' })
@@ -234,6 +270,12 @@ export class ProductAdminController {
     }
 
     @Put(':id/variants/:variantId')
+    @AuditLog({
+        action: 'product.variant.update',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'ProductVariant',
+        resourceIdParam: 'variantId',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product variant' })
@@ -251,6 +293,12 @@ export class ProductAdminController {
     }
 
     @Delete(':id/variants/:variantId')
+    @AuditLog({
+        action: 'product.variant.delete',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'ProductVariant',
+        resourceIdParam: 'variantId',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove product variant (soft delete)' })
@@ -333,6 +381,12 @@ export class ProductAdminController {
     }
 
     @Put(':id')
+    @AuditLog({
+        action: 'product.update',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product' })
@@ -349,6 +403,12 @@ export class ProductAdminController {
     }
 
     @Delete(':id')
+    @AuditLog({
+        action: 'product.delete',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete product' })
@@ -363,6 +423,12 @@ export class ProductAdminController {
     }
 
     @Put(':id/stock')
+    @AuditLog({
+        action: 'product.stock.adjust',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product stock' })
@@ -379,6 +445,12 @@ export class ProductAdminController {
     }
 
     @Put(':id/toggle-active')
+    @AuditLog({
+        action: 'product.toggle.active',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle product active status' })
@@ -394,6 +466,12 @@ export class ProductAdminController {
     }
 
     @Put(':id/toggle-featured')
+    @AuditLog({
+        action: 'product.toggle.featured',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle product featured status' })
@@ -409,6 +487,12 @@ export class ProductAdminController {
     }
 
     @Post(':id/images')
+    @AuditLog({
+        action: 'product.image.add',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'Product',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add image to product' })
@@ -433,6 +517,12 @@ export class ProductAdminController {
     }
 
     @Delete(':id/images/:imageId')
+    @AuditLog({
+        action: 'product.image.delete',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'ProductImage',
+        resourceIdParam: 'imageId',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove image from product' })
@@ -449,6 +539,12 @@ export class ProductAdminController {
     }
 
     @Put(':id/images/:imageId/primary')
+    @AuditLog({
+        action: 'product.image.setPrimary',
+        category: ActivityLogCategory.PRODUCT,
+        resourceType: 'ProductImage',
+        resourceIdParam: 'imageId',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Set image as primary' })

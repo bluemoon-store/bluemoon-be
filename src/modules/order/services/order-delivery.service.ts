@@ -3,6 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { OrderStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 import { OrderDeliverDto } from '../dtos/request/order.deliver.request';
 import { OrderResponseDto } from '../dtos/response/order.response';
@@ -13,6 +14,7 @@ import { IOrderDeliveryService } from '../interfaces/order-delivery.service.inte
 export class OrderDeliveryService implements IOrderDeliveryService {
     constructor(
         private readonly databaseService: DatabaseService,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderDeliveryService.name);
@@ -154,6 +156,13 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 );
             }
 
+            const undeliveredBefore = order.items.filter(
+                i => !i.deliveredAt
+            ).length;
+            this.activityLogEmitter.captureBefore({
+                before: { undeliveredItems: undeliveredBefore },
+            });
+
             const now = new Date();
 
             // Update each order item with delivery content
@@ -227,6 +236,14 @@ export class OrderDeliveryService implements IOrderDeliveryService {
                 },
                 'Order delivered manually'
             );
+
+            const undeliveredAfter = finalOrder.items.filter(
+                i => !i.deliveredAt
+            ).length;
+            this.activityLogEmitter.captureAfter({
+                after: { undeliveredItems: undeliveredAfter },
+                resourceLabel: `#${finalOrder.orderNumber}`,
+            });
 
             // TODO: Send delivery notification email/push notification
             // this.notificationService.sendDeliveryNotification(order.userId, orderId);

@@ -7,6 +7,12 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+    ActivityLogCategory,
+    ActivityLogSeverity,
+    CryptoCurrency,
+} from '@prisma/client';
+
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
@@ -22,7 +28,8 @@ import { BlockchainMonitorService } from '../services/blockchain-monitor.service
 import { PaymentForwardingService } from '../services/payment-forwarding.service';
 import { SystemWalletService } from '../services/system-wallet.service';
 import { DatabaseService } from 'src/common/database/services/database.service';
-import { CryptoCurrency } from '@prisma/client';
+
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.crypto-payment')
 @Controller({
@@ -146,6 +153,13 @@ export class CryptoPaymentAdminController {
     }
 
     @Post(':id/verify')
+    @AuditLog({
+        action: 'crypto.payment.verify',
+        category: ActivityLogCategory.CRYPTO_PAYMENT,
+        resourceType: 'CryptoPayment',
+        resourceIdParam: 'id',
+        severity: ActivityLogSeverity.WARNING,
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually verify payment' })
@@ -173,6 +187,13 @@ export class CryptoPaymentAdminController {
     }
 
     @Post(':id/forward')
+    @AuditLog({
+        action: 'crypto.payment.forward',
+        category: ActivityLogCategory.CRYPTO_PAYMENT,
+        resourceType: 'CryptoPayment',
+        resourceIdParam: 'id',
+        severity: ActivityLogSeverity.WARNING,
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually forward payment to platform wallet' })

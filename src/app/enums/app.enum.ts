@@ -8,4 +8,5 @@ export enum APP_ENVIRONMENT {
 export enum APP_BULL_QUEUES {
     EMAIL = 'email_queue',
     NOTIFICATION = 'notification_queue',
+    ACTIVITY_LOG = 'activity_log',
 }

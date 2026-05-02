@@ -1,0 +1,10 @@
+{
+    "success": {
+        "list": "Activity logs retrieved successfully",
+        "detail": "Activity log retrieved successfully",
+        "actors": "Actor list retrieved successfully"
+    },
+    "error": {
+        "notFound": "Activity log not found"
+    }
+}

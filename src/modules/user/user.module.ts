@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bull';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseModule } from 'src/common/database/database.module';
+import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 import { HelperModule } from 'src/common/helper/helper.module';
 
 import { UserAdminController } from './controllers/user.admin.controller';
@@ -18,6 +19,7 @@ import { UserTeamService } from './services/user.team.service';
         BullModule.registerQueue({
             name: APP_BULL_QUEUES.EMAIL,
         }),
+        ActivityLogModule,
     ],
     controllers: [
         UserAdminController,

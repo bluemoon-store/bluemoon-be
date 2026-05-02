@@ -6,6 +6,7 @@ import { HelperModule } from 'src/common/helper/helper.module';
 import { StorageModule } from 'src/common/storage/storage.module';
 import { WalletModule } from 'src/modules/wallet/wallet.module';
 import { CartModule } from 'src/modules/cart/cart.module';
+import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 
 import { OrderPublicController } from './controllers/order.public.controller';
 import { OrderAdminController } from './controllers/order.admin.controller';
@@ -20,6 +21,7 @@ import { OrderDeliveryService } from './services/order-delivery.service';
         WalletModule,
         CartModule,
         RequestModule,
+        ActivityLogModule,
     ],
     controllers: [OrderPublicController, OrderAdminController],
     providers: [OrderService, OrderDeliveryService],

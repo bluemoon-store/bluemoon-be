@@ -55,6 +55,8 @@ model User {
   invitationToken                String?   @map("invitation_token")
   invitationTokenExpiry          DateTime? @map("invitation_token_expiry")
 
+  activityLogs ActivityLog[] @relation("ActorActivityLogs")
+
   @@map("users")
 }
 
@@ -655,4 +657,67 @@ enum AnalyticType {
   REVENUE
   USER_SIGNUPS
   ORDERS_COUNT
+}
+
+model ActivityLog {
+  id       String @id @default(uuid())
+
+  actorId    String? @map("actor_id")
+  actorEmail String? @map("actor_email")
+  actorName  String? @map("actor_name")
+  actorRole  Role?   @map("actor_role")
+
+  action    String
+  category  ActivityLogCategory
+  severity  ActivityLogSeverity @default(INFO)
+
+  resourceType  String? @map("resource_type")
+  resourceId    String? @map("resource_id")
+  resourceLabel String? @map("resource_label")
+
+  before   Json?
+  after    Json?
+  metadata Json?
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent") @db.VarChar(512)
+  requestId String? @map("request_id")
+
+  status       ActivityLogStatus @default(SUCCESS)
+  errorMessage String?           @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([resourceType, resourceId, createdAt(sort: Desc)])
+  @@index([category, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("activity_logs")
+}
+
+enum ActivityLogCategory {
+  PRODUCT
+  PRODUCT_CATEGORY
+  ORDER
+  USER
+  COUPON
+  WALLET
+  CRYPTO_PAYMENT
+  REVIEW
+  CONTENT
+  SETTINGS
+}
+
+enum ActivityLogSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ActivityLogStatus {
+  SUCCESS
+  FAILURE
 }

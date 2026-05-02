@@ -10,6 +10,7 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory } from '@prisma/client';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
@@ -28,6 +29,7 @@ import {
     CouponResponseDto,
 } from '../dtos/response/coupon.response';
 import { CouponService } from '../services/coupon.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.coupon')
 @Controller({
@@ -38,6 +40,11 @@ export class CouponAdminController {
     constructor(private readonly couponService: CouponService) {}
 
     @Post()
+    @AuditLog({
+        action: 'coupon.create',
+        category: ActivityLogCategory.COUPON,
+        resourceType: 'Coupon',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create coupon' })
@@ -81,6 +88,12 @@ export class CouponAdminController {
     }
 
     @Put(':id/toggle-active')
+    @AuditLog({
+        action: 'coupon.toggle.active',
+        category: ActivityLogCategory.COUPON,
+        resourceType: 'Coupon',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle coupon active flag' })
@@ -96,6 +109,12 @@ export class CouponAdminController {
     }
 
     @Put(':id')
+    @AuditLog({
+        action: 'coupon.update',
+        category: ActivityLogCategory.COUPON,
+        resourceType: 'Coupon',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update coupon' })
@@ -112,6 +131,12 @@ export class CouponAdminController {
     }
 
     @Delete(':id')
+    @AuditLog({
+        action: 'coupon.delete',
+        category: ActivityLogCategory.COUPON,
+        resourceType: 'Coupon',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Soft-delete coupon' })

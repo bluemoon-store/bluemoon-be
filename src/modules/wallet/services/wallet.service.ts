@@ -27,6 +27,7 @@ import { WalletResponseDto } from '../dtos/response/wallet.response';
 import { WalletTopUpResponseDto } from '../dtos/response/wallet-topup.response';
 import { WalletTransactionResponseDto } from '../dtos/response/wallet-transaction.response';
 import { IWalletService } from '../interfaces/wallet.service.interface';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 @Injectable()
 export class WalletService implements IWalletService {
@@ -38,6 +39,7 @@ export class WalletService implements IWalletService {
         private readonly configService: ConfigService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(WalletService.name);
@@ -302,6 +304,10 @@ export class WalletService implements IWalletService {
             const currentBalance = this.getBalanceAsNumber(wallet.balance);
             const newBalance = currentBalance + data.amount;
 
+            this.activityLogEmitter.captureBefore({
+                before: { balance: currentBalance },
+            });
+
             // Update wallet balance
             const updatedWallet = await this.databaseService.userWallet.update({
                 where: { id: wallet.id },
@@ -328,6 +334,11 @@ export class WalletService implements IWalletService {
                 },
                 'Balance added to wallet'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { balance: newBalance },
+                resourceLabel: `user:${userId}`,
+            });
 
             return updatedWallet as WalletResponseDto;
         } catch (error) {
@@ -438,6 +449,10 @@ export class WalletService implements IWalletService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: { balance: currentBalance },
+            });
+
             // Determine transaction type
             const transactionType =
                 data.amount >= 0
@@ -471,6 +486,11 @@ export class WalletService implements IWalletService {
                 },
                 'Balance adjusted'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { balance: newBalance },
+                resourceLabel: `user:${userId}`,
+            });
 
             return updatedWallet as WalletResponseDto;
         } catch (error) {

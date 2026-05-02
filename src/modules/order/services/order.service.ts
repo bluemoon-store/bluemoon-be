@@ -7,6 +7,7 @@ import { HelperPaginationService } from 'src/common/helper/services/helper.pagin
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 import { WalletService } from 'src/modules/wallet/services/wallet.service';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 import { OrderCreateDto } from '../dtos/request/order.create.request';
 import { OrderStatusUpdateDto } from '../dtos/request/order.status-update.request';
@@ -29,6 +30,7 @@ export class OrderService implements IOrderService {
         private readonly paginationService: HelperPaginationService,
         private readonly deliveryService: OrderDeliveryService,
         private readonly walletService: WalletService,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderService.name);
@@ -600,6 +602,10 @@ export class OrderService implements IOrderService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: { status: order.status },
+            });
+
             const updateData: any = {
                 status: data.status,
             };
@@ -646,6 +652,11 @@ export class OrderService implements IOrderService {
                 },
                 'Order status updated'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { status: updatedOrder.status },
+                resourceLabel: `#${updatedOrder.orderNumber}`,
+            });
 
             // Process instant delivery if status changed to COMPLETED
             if (data.status === OrderStatus.COMPLETED) {

@@ -9,6 +9,8 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory, ActivityLogSeverity } from '@prisma/client';
+
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
@@ -28,6 +30,7 @@ import {
 } from '../dtos/response/order.response';
 import { OrderService } from '../services/order.service';
 import { OrderDeliveryService } from '../services/order-delivery.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.order')
 @Controller({
@@ -76,6 +79,13 @@ export class OrderAdminController {
     }
 
     @Put(':id/status')
+    @AuditLog({
+        action: 'order.status.update',
+        category: ActivityLogCategory.ORDER,
+        resourceType: 'Order',
+        resourceIdParam: 'id',
+        severity: ActivityLogSeverity.WARNING,
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update order status' })
@@ -92,6 +102,12 @@ export class OrderAdminController {
     }
 
     @Post(':id/deliver')
+    @AuditLog({
+        action: 'order.deliver',
+        category: ActivityLogCategory.ORDER,
+        resourceType: 'Order',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually deliver order' })
@@ -108,6 +124,12 @@ export class OrderAdminController {
     }
 
     @Post(':id/refund')
+    @AuditLog({
+        action: 'order.refund',
+        category: ActivityLogCategory.ORDER,
+        resourceType: 'Order',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Refund order' })

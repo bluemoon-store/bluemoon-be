@@ -7,6 +7,7 @@ import { HelperEncryptionService } from 'src/common/helper/services/helper.encry
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { UserUpdateDto } from 'src/modules/user/dtos/request/user.update.request';
 import { UserService } from 'src/modules/user/services/user.service';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 describe('UserService', () => {
     let service: UserService;
@@ -27,6 +28,11 @@ describe('UserService', () => {
         buildSearchCondition: jest.fn(),
     };
 
+    const mockActivityLogEmitter = {
+        captureBefore: jest.fn(),
+        captureAfter: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -39,6 +45,10 @@ describe('UserService', () => {
                 {
                     provide: HelperPaginationService,
                     useValue: mockHelperPaginationService,
+                },
+                {
+                    provide: ActivityLogEmitterService,
+                    useValue: mockActivityLogEmitter,
                 },
             ],
         }).compile();

@@ -12,6 +12,7 @@ import { TicketModule } from 'src/modules/ticket/ticket.module';
 import { WorkerModule } from 'src/workers/worker.module';
 import { ReviewModule } from 'src/modules/review/review.module';
 import { CouponModule } from 'src/modules/coupon/coupon.module';
+import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 
 import { HealthController } from './controllers/health.controller';
 import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
@@ -19,6 +20,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
     imports: [
         // Shared Common Services
         CommonModule,
+        ActivityLogModule,
         ScheduleModule.forRoot(),
 
         // Background Processing

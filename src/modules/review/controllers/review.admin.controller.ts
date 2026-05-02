@@ -8,6 +8,8 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory } from '@prisma/client';
+
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
@@ -18,6 +20,7 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { AdminReviewListQueryDto } from '../dtos/request/review.admin-list.request';
 import { ReviewResponseDto } from '../dtos/response/review.response';
 import { ReviewService } from '../services/review.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.review')
 @Controller({
@@ -43,6 +46,12 @@ export class ReviewAdminController {
     }
 
     @Delete(':id')
+    @AuditLog({
+        action: 'review.delete',
+        category: ActivityLogCategory.REVIEW,
+        resourceType: 'OrderReview',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete review (admin soft delete)' })

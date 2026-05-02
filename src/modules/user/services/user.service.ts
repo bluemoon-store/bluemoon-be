@@ -27,6 +27,7 @@ import {
 } from '../dtos/response/user.admin.response';
 import { PurchaseHistoryOrderDto } from '../dtos/response/user.purchase-history.response';
 import { IUserService } from '../interfaces/user.service.interface';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 type UserWithWallet = Prisma.UserGetPayload<{ include: { wallet: true } }>;
 
@@ -35,7 +36,8 @@ export class UserService implements IUserService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly helperEncryptionService: HelperEncryptionService,
-        private readonly helperPaginationService: HelperPaginationService
+        private readonly helperPaginationService: HelperPaginationService,
+        private readonly activityLogEmitter: ActivityLogEmitterService
     ) {}
 
     async updateUser(
@@ -173,6 +175,13 @@ export class UserService implements IUserService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: {
+                    isBanned: user.isBanned,
+                    bannedReason: user.bannedReason,
+                },
+            });
+
             await this.databaseService.user.update({
                 where: { id: userId },
                 data: {
@@ -180,6 +189,14 @@ export class UserService implements IUserService {
                     bannedAt: new Date(),
                     bannedReason: data.reason || null,
                 },
+            });
+
+            this.activityLogEmitter.captureAfter({
+                after: {
+                    isBanned: true,
+                    bannedReason: data.reason || null,
+                },
+                resourceLabel: user.email,
             });
 
             return {
@@ -217,6 +234,13 @@ export class UserService implements IUserService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: {
+                    isBanned: user.isBanned,
+                    bannedReason: user.bannedReason,
+                },
+            });
+
             await this.databaseService.user.update({
                 where: { id: userId },
                 data: {
@@ -224,6 +248,14 @@ export class UserService implements IUserService {
                     bannedAt: null,
                     bannedReason: null,
                 },
+            });
+
+            this.activityLogEmitter.captureAfter({
+                after: {
+                    isBanned: false,
+                    bannedReason: null,
+                },
+                resourceLabel: user.email,
             });
 
             return {
@@ -396,6 +428,13 @@ export class UserService implements IUserService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: {
+                    isFlagged: user.isFlagged,
+                    flaggedReason: user.flaggedReason,
+                },
+            });
+
             await this.databaseService.user.update({
                 where: { id: userId },
                 data: {
@@ -403,6 +442,14 @@ export class UserService implements IUserService {
                     flaggedAt: new Date(),
                     flaggedReason: data.reason ?? null,
                 },
+            });
+
+            this.activityLogEmitter.captureAfter({
+                after: {
+                    isFlagged: true,
+                    flaggedReason: data.reason ?? null,
+                },
+                resourceLabel: user.email,
             });
 
             return {
@@ -440,6 +487,13 @@ export class UserService implements IUserService {
                 );
             }
 
+            this.activityLogEmitter.captureBefore({
+                before: {
+                    isFlagged: user.isFlagged,
+                    flaggedReason: user.flaggedReason,
+                },
+            });
+
             await this.databaseService.user.update({
                 where: { id: userId },
                 data: {
@@ -447,6 +501,14 @@ export class UserService implements IUserService {
                     flaggedAt: null,
                     flaggedReason: null,
                 },
+            });
+
+            this.activityLogEmitter.captureAfter({
+                after: {
+                    isFlagged: false,
+                    flaggedReason: null,
+                },
+                resourceLabel: user.email,
             });
 
             return {

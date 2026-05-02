@@ -33,9 +33,9 @@ import { ResponseModule } from './response/response.module';
 
         // Caching - Redis
         CacheModule.registerAsync({
+            isGlobal: true,
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({
-                isGlobal: true,
                 store: redisStore,
                 host: configService.get('redis.host'),
                 port: configService.get('redis.port'),

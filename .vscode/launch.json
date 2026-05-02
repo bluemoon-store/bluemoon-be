@@ -7,6 +7,9 @@
       "name": "Debug NestJS (with Hot Reload)",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "debug"],
+      "env": {
+        "PATH": "${env:HOME}/.nvm/versions/node/v20.19.6/bin:${env:PATH}"
+      },
       "sourceMaps": true,
       "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceRoot}",

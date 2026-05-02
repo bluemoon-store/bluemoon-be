@@ -34,6 +34,7 @@ import {
     isValidCodeFormat,
     normalizeCode,
 } from '../utils/coupon.util';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 const couponInclude = {
     categories: {
@@ -53,6 +54,7 @@ export class CouponService {
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
         @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(CouponService.name);
@@ -433,11 +435,24 @@ export class CouponService {
                 HttpStatus.NOT_FOUND
             );
         }
+
+        this.activityLogEmitter.captureBefore({
+            before: { isActive: existing.isActive },
+        });
+
         await this.databaseService.coupon.update({
             where: { id },
             data: { isActive: !existing.isActive },
         });
-        return this.findOne(id);
+
+        const updated = await this.findOne(id);
+
+        this.activityLogEmitter.captureAfter({
+            after: { isActive: updated.isActive },
+            resourceLabel: updated.code,
+        });
+
+        return updated;
     }
 
     private buildValidateCacheKey(

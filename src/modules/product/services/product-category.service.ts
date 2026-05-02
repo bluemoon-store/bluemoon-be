@@ -11,12 +11,14 @@ import { CategoryUpdateDto } from '../dtos/request/category.update.request';
 import { CategoryResponseDto } from '../dtos/response/category.response';
 import { IProductCategoryService } from '../interfaces/product-category.service.interface';
 import { generateSlug } from '../utils/product.util';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 @Injectable()
 export class ProductCategoryService implements IProductCategoryService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(ProductCategoryService.name);
@@ -303,6 +305,10 @@ export class ProductCategoryService implements IProductCategoryService {
         try {
             const category = await this.findOne(id);
 
+            this.activityLogEmitter.captureBefore({
+                before: { isActive: category.isActive },
+            });
+
             const updated = await this.databaseService.productCategory.update({
                 where: { id },
                 data: {
@@ -314,6 +320,12 @@ export class ProductCategoryService implements IProductCategoryService {
                 { categoryId: id, isActive: updated.isActive },
                 'Category active status toggled'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { isActive: updated.isActive },
+                resourceLabel: category.name,
+            });
+
             return updated;
         } catch (error) {
             if (error instanceof HttpException) {

@@ -28,6 +28,7 @@ import {
     AdminProductVariantCreateDto,
     AdminProductVariantUpdateDto,
 } from '../dtos/request/product.admin.subresource.request';
+import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
 
 const productImageOrderBy = [
     { isPrimary: 'desc' as const },
@@ -93,6 +94,7 @@ export class ProductService implements IProductService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
+        private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(ProductService.name);
@@ -869,6 +871,20 @@ export class ProductService implements IProductService {
                 );
             }
 
+            const existing = await this.databaseService.product.findFirst({
+                where: { id, deletedAt: null },
+            });
+            if (!existing) {
+                throw new HttpException(
+                    'product.error.productNotFound',
+                    HttpStatus.NOT_FOUND
+                );
+            }
+
+            this.activityLogEmitter.captureBefore({
+                before: { stockQuantity: existing.stockQuantity },
+            });
+
             const product = await this.databaseService.product.update({
                 where: { id },
                 data: { stockQuantity },
@@ -879,6 +895,12 @@ export class ProductService implements IProductService {
                 { productId: id, stockQuantity },
                 'Product stock updated'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { stockQuantity: product.stockQuantity },
+                resourceLabel: existing.name,
+            });
+
             return this.mapToAdminDto(product);
         } catch (error) {
             if (error instanceof HttpException) {
@@ -896,6 +918,10 @@ export class ProductService implements IProductService {
         try {
             const product = await this.findOne(id);
 
+            this.activityLogEmitter.captureBefore({
+                before: { isActive: product.isActive },
+            });
+
             const updated = await this.databaseService.product.update({
                 where: { id },
                 data: {
@@ -908,6 +934,12 @@ export class ProductService implements IProductService {
                 { productId: id, isActive: updated.isActive },
                 'Product active status toggled'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { isActive: updated.isActive },
+                resourceLabel: product.name,
+            });
+
             return this.mapToAdminDto(updated);
         } catch (error) {
             if (error instanceof HttpException) {
@@ -927,6 +959,10 @@ export class ProductService implements IProductService {
         try {
             const product = await this.findOne(id);
 
+            this.activityLogEmitter.captureBefore({
+                before: { isFeatured: product.isFeatured },
+            });
+
             const updated = await this.databaseService.product.update({
                 where: { id },
                 data: {
@@ -939,6 +975,12 @@ export class ProductService implements IProductService {
                 { productId: id, isFeatured: updated.isFeatured },
                 'Product featured status toggled'
             );
+
+            this.activityLogEmitter.captureAfter({
+                after: { isFeatured: updated.isFeatured },
+                resourceLabel: product.name,
+            });
+
             return this.mapToAdminDto(updated);
         } catch (error) {
             if (error instanceof HttpException) {

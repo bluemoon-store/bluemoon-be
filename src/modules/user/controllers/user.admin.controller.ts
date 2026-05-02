@@ -9,6 +9,8 @@ import {
     Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivityLogCategory } from '@prisma/client';
+
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
@@ -29,6 +31,7 @@ import {
     UserAdminStatsResponseDto,
 } from '../dtos/response/user.admin.response';
 import { UserService } from '../services/user.service';
+import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 @ApiTags('admin.user')
 @Controller({
@@ -87,6 +90,12 @@ export class UserAdminController {
     }
 
     @Post(':id/flag')
+    @AuditLog({
+        action: 'user.flag',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Flag user' })
@@ -102,6 +111,12 @@ export class UserAdminController {
     }
 
     @Post(':id/unflag')
+    @AuditLog({
+        action: 'user.unflag',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Unflag user' })
@@ -116,6 +131,12 @@ export class UserAdminController {
     }
 
     @Post(':id/ban')
+    @AuditLog({
+        action: 'user.ban',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Ban user' })
@@ -131,6 +152,12 @@ export class UserAdminController {
     }
 
     @Post(':id/unban')
+    @AuditLog({
+        action: 'user.unban',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Unban user' })
@@ -145,6 +172,12 @@ export class UserAdminController {
     }
 
     @Delete(':id')
+    @AuditLog({
+        action: 'user.delete',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdParam: 'id',
+    })
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete user' })
