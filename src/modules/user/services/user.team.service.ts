@@ -36,7 +36,7 @@ export class UserTeamService {
     public async listTeamMembers() {
         return this.databaseService.user.findMany({
             where: {
-                role: { not: Role.USER },
+                role: { notIn: [Role.USER, Role.SUPER_ADMIN] },
             },
             select: {
                 id: true,
