@@ -1,0 +1,20 @@
+{
+    "success": {
+        "list": "Coupons retrieved successfully",
+        "found": "Coupon retrieved successfully",
+        "created": "Coupon created successfully",
+        "updated": "Coupon updated successfully",
+        "deleted": "Coupon deleted successfully",
+        "validated": "Coupon validated successfully"
+    },
+    "error": {
+        "notFound": "Coupon not found",
+        "codeExists": "A coupon with this code already exists",
+        "invalidCode": "Coupon code must be 3–32 characters (A–Z, 0–9, hyphen)",
+        "invalidDiscount": "Invalid discount value for the selected discount type",
+        "categoriesRequired": "Select at least one category when scope is SPECIFIC",
+        "invalidCategories": "One or more categories are invalid",
+        "createFailed": "Failed to create coupon",
+        "updateFailed": "Failed to update coupon"
+    }
+}

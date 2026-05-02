@@ -67,6 +67,16 @@ enum Role {
   SUPPORT
 }
 
+enum CouponDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum CouponCategoryScope {
+  ALL
+  SPECIFIC
+}
+
 model ProductCategory {
   id          String    @id @default(uuid())
   name        String    @unique
@@ -76,11 +86,43 @@ model ProductCategory {
   isActive    Boolean   @default(true) @map("is_active")
   sortOrder   Int       @default(0) @map("sort_order")
   products    Product[]
+  coupons     CouponCategory[]
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
   @@map("product_categories")
+}
+
+model Coupon {
+  id            String              @id @default(uuid())
+  code          String              @unique
+  discountType  CouponDiscountType  @map("discount_type")
+  discountValue Decimal             @db.Decimal(20, 8) @map("discount_value")
+  expiresAt     DateTime?           @map("expires_at") // null => never expires
+  maxUses       Int?                @map("max_uses") // null => unlimited
+  usedCount     Int                 @default(0) @map("used_count")
+  categoryScope CouponCategoryScope @default(ALL) @map("category_scope")
+  isActive      Boolean             @default(true) @map("is_active")
+  categories    CouponCategory[]
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  deletedAt     DateTime?           @map("deleted_at")
+
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@map("coupons")
+}
+
+model CouponCategory {
+  couponId   String          @map("coupon_id")
+  categoryId String          @map("category_id")
+  coupon     Coupon          @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  category   ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, categoryId])
+  @@index([categoryId])
+  @@map("coupon_categories")
 }
 
 // Product
@@ -484,22 +526,23 @@ enum WalletTransactionType {
 
 // Support Ticket System
 model SupportTicket {
-  id           String          @id @default(uuid())
-  ticketNumber String          @unique @map("ticket_number") // e.g., TKT-20260129-XXXXX
-  orderId      String?         @map("order_id")
-  order        Order?          @relation(fields: [orderId], references: [id])
-  userId       String          @map("user_id")
-  user         User            @relation("UserTickets", fields: [userId], references: [id])
-  subject      String
-  status       TicketStatus    @default(OPEN)
-  priority     TicketPriority  @default(MEDIUM)
-  messages     TicketMessage[]
-  assignedToId String?         @map("assigned_to_id")
-  assignedTo   User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
-  closedAt     DateTime?       @map("closed_at")
-  deletedAt    DateTime?       @map("deleted_at")
+  id               String          @id @default(uuid())
+  ticketNumber     String          @unique @map("ticket_number") // e.g., TKT-20260129-XXXXX
+  orderId          String?         @map("order_id")
+  order            Order?          @relation(fields: [orderId], references: [id])
+  userId           String          @map("user_id")
+  user             User            @relation("UserTickets", fields: [userId], references: [id])
+  subject          String
+  status           TicketStatus    @default(OPEN)
+  priority         TicketPriority  @default(MEDIUM)
+  messages         TicketMessage[]
+  assignedToId     String?         @map("assigned_to_id")
+  assignedTo       User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  lastStaffReadAt  DateTime?       @map("last_staff_read_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  closedAt         DateTime?       @map("closed_at")
+  deletedAt        DateTime?       @map("deleted_at")
 
   @@index([userId])
   @@index([orderId])
@@ -524,18 +567,33 @@ enum TicketPriority {
 }
 
 model TicketMessage {
-  id        String        @id @default(uuid())
-  ticketId  String        @map("ticket_id")
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId    String        @map("user_id")
-  user      User          @relation(fields: [userId], references: [id])
-  message   String        @db.Text
-  isStaff   Boolean       @default(false) @map("is_staff")
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
+  id          String              @id @default(uuid())
+  ticketId    String              @map("ticket_id")
+  ticket      SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId      String              @map("user_id")
+  user        User                @relation(fields: [userId], references: [id])
+  message     String              @db.Text
+  isStaff     Boolean             @default(false) @map("is_staff")
+  attachments TicketAttachment[]
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
 
   @@index([ticketId])
   @@map("ticket_messages")
+}
+
+model TicketAttachment {
+  id        String        @id @default(uuid())
+  messageId String        @map("message_id")
+  message   TicketMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  url       String
+  fileName  String        @map("file_name")
+  mimeType  String        @map("mime_type")
+  size      Int
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([messageId])
+  @@map("ticket_attachments")
 }
 
 // CMS Content System

@@ -10,6 +10,7 @@ import { WalletModule } from 'src/modules/wallet/wallet.module';
 import { OrderModule } from 'src/modules/order/order.module';
 import { WorkerModule } from 'src/workers/worker.module';
 import { ReviewModule } from 'src/modules/review/review.module';
+import { CouponModule } from 'src/modules/coupon/coupon.module';
 
 import { HealthController } from './controllers/health.controller';
 import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
@@ -33,6 +34,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
         OrderModule,
         CryptoPaymentModule,
         ReviewModule,
+        CouponModule,
     ],
     controllers: [HealthController],
 })
