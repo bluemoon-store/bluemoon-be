@@ -125,9 +125,15 @@ export class ActivityLogService {
                 resourceType: payload.resourceType ?? undefined,
                 resourceId: payload.resourceId ?? undefined,
                 resourceLabel: payload.resourceLabel ?? undefined,
-                before: payload.before ?? undefined,
-                after: payload.after ?? undefined,
-                metadata: payload.metadata ?? undefined,
+                before:
+                    (payload.before as unknown as Prisma.InputJsonValue) ??
+                    undefined,
+                after:
+                    (payload.after as unknown as Prisma.InputJsonValue) ??
+                    undefined,
+                metadata:
+                    (payload.metadata as unknown as Prisma.InputJsonValue) ??
+                    undefined,
                 ipAddress: payload.ipAddress ?? undefined,
                 userAgent: payload.userAgent ?? undefined,
                 requestId: payload.requestId ?? undefined,

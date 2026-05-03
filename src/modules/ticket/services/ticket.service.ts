@@ -479,7 +479,8 @@ export class TicketService implements ITicketService {
             updateData.status = data.status;
             if (
                 data.status === TicketStatus.CLOSED ||
-                data.status === TicketStatus.RESOLVED
+                data.status === TicketStatus.RESOLVED ||
+                data.status === TicketStatus.CANCELLED
             ) {
                 updateData.closedAt = new Date();
             } else {
@@ -596,7 +597,8 @@ export class TicketService implements ITicketService {
         }
         if (
             ticket.status === TicketStatus.RESOLVED ||
-            ticket.status === TicketStatus.CLOSED
+            ticket.status === TicketStatus.CLOSED ||
+            ticket.status === TicketStatus.CANCELLED
         ) {
             throw new HttpException(
                 'ticket.error.cannotResolveClosed',

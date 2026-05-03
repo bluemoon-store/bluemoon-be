@@ -43,6 +43,12 @@ yarn generate
 
 # Run database migrations
 yarn migrate
+
+# Reset database (⚠️ DESTRUCTIVE - development only)
+npx prisma migrate reset
+
+# Seed all data
+yarn seed:all
 ```
 
 ### 4. Start Development Server

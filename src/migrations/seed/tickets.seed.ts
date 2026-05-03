@@ -148,7 +148,8 @@ export class TicketsSeedService {
             const ticketNumber = await this.uniqueTicketNumber();
             const closedAt =
                 def.status === TicketStatus.CLOSED ||
-                def.status === TicketStatus.RESOLVED
+                def.status === TicketStatus.RESOLVED ||
+                def.status === TicketStatus.CANCELLED
                     ? new Date()
                     : null;
 

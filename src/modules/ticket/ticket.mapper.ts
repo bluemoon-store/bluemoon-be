@@ -228,5 +228,5 @@ export function tabToStatuses(
     if (tab === 'active') {
         return [TicketStatus.IN_PROGRESS, TicketStatus.WAITING_USER];
     }
-    return [TicketStatus.RESOLVED, TicketStatus.CLOSED];
+    return [TicketStatus.RESOLVED, TicketStatus.CLOSED, TicketStatus.CANCELLED];
 }

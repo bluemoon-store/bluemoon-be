@@ -567,6 +567,7 @@ enum TicketStatus {
   WAITING_USER
   RESOLVED
   CLOSED
+  CANCELLED
 }
 
 enum TicketPriority {
