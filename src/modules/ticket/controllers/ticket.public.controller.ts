@@ -92,6 +92,22 @@ export class TicketPublicController {
         );
     }
 
+    @Post(':id/resolve')
+    @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Mark ticket as resolved (ticket owner)' })
+    @DocResponse({
+        serialization: TicketResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'ticket.success.resolved',
+    })
+    public async resolveTicket(
+        @AuthUser() user: IAuthUser,
+        @Param('id') ticketId: string
+    ): Promise<TicketResponseDto> {
+        return this.ticketService.resolveTicketByOwner(ticketId, user.userId);
+    }
+
     @Get(':id')
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get ticket detail' })

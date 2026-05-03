@@ -8,13 +8,16 @@
         "messageSent": "Message sent successfully",
         "messagesList": "Messages retrieved successfully",
         "markRead": "Ticket marked as read",
-        "presign": "Upload URL generated successfully"
+        "presign": "Upload URL generated successfully",
+        "resolved": "Ticket marked as resolved"
     },
     "error": {
         "ticketNotFound": "Ticket not found",
         "forbidden": "You cannot access this ticket",
         "orderMismatch": "Order does not belong to this account",
         "assigneeInvalid": "Assignee must be a staff member",
-        "messageFailed": "Failed to send message"
+        "messageFailed": "Failed to send message",
+        "notAssignedToYou": "Only the assigned staff member can reply to this ticket",
+        "cannotResolveClosed": "This ticket is already closed or resolved"
     }
 }

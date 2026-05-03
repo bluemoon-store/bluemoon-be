@@ -15,7 +15,10 @@ import {
 
 import { TicketAttachmentPresignDto } from '../dtos/request/ticket-attachment.presign.request';
 import { TicketCreateDto } from '../dtos/request/ticket.create.request';
-import { TicketAdminListQueryDto } from '../dtos/request/ticket-list-admin.request';
+import {
+    TICKET_UNASSIGNED_FILTER,
+    TicketAdminListQueryDto,
+} from '../dtos/request/ticket-list-admin.request';
 import { TicketListQueryDto } from '../dtos/request/ticket-list.request';
 import { TicketUpdateDto } from '../dtos/request/ticket.update.request';
 import { TicketPresignResponseDto } from '../dtos/response/ticket-presign.response';
@@ -268,10 +271,17 @@ export class TicketService implements ITicketService {
                   ]
                 : undefined;
 
+        const assignedToFilter: Prisma.SupportTicketWhereInput | undefined =
+            query.assignedToId === TICKET_UNASSIGNED_FILTER
+                ? { assignedToId: null }
+                : query.assignedToId
+                  ? { assignedToId: query.assignedToId }
+                  : undefined;
+
         const where: Prisma.SupportTicketWhereInput = {
             deletedAt: null,
             ...(statuses?.length ? { status: { in: statuses } } : {}),
-            ...(query.assignedToId ? { assignedToId: query.assignedToId } : {}),
+            ...assignedToFilter,
             ...(query.userId ? { userId: query.userId } : {}),
             ...(query.orderId ? { orderId: query.orderId } : {}),
             ...(searchOr?.length ? { OR: searchOr } : {}),
@@ -563,6 +573,111 @@ export class TicketService implements ITicketService {
             { status: TicketStatus.CLOSED },
             actor
         );
+    }
+
+    async resolveTicketByOwner(
+        ticketId: string,
+        userId: string
+    ): Promise<TicketResponseDto> {
+        const ticket = await this.databaseService.supportTicket.findFirst({
+            where: { id: ticketId, deletedAt: null },
+        });
+        if (!ticket) {
+            throw new HttpException(
+                'ticket.error.ticketNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        if (ticket.userId !== userId) {
+            throw new HttpException(
+                'ticket.error.forbidden',
+                HttpStatus.FORBIDDEN
+            );
+        }
+        if (
+            ticket.status === TicketStatus.RESOLVED ||
+            ticket.status === TicketStatus.CLOSED
+        ) {
+            throw new HttpException(
+                'ticket.error.cannotResolveClosed',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        await this.databaseService.supportTicket.update({
+            where: { id: ticketId },
+            data: {
+                status: TicketStatus.RESOLVED,
+                closedAt: new Date(),
+            },
+        });
+
+        const row = await this.databaseService.supportTicket.findFirst({
+            where: { id: ticketId, deletedAt: null },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        userName: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        role: true,
+                    },
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        email: true,
+                        userName: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        role: true,
+                    },
+                },
+                order: {
+                    select: {
+                        id: true,
+                        orderNumber: true,
+                        status: true,
+                    },
+                },
+                messages: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                userName: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                role: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!row) {
+            throw new HttpException(
+                'ticket.error.ticketNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+
+        const unreadCount = await this.countStaffUnread(
+            row.id,
+            row.lastStaffReadAt
+        );
+        const dto = mapTicketListItem(row, unreadCount);
+        this.ticketGateway.emitTicketUpdated(ticketId, dto);
+        return dto;
     }
 
     async presignAttachment(

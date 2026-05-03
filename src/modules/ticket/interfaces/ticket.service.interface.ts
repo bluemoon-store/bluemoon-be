@@ -36,5 +36,9 @@ export interface ITicketService {
         ticketId: string,
         actor: { userId: string; role: Role }
     ): Promise<TicketResponseDto>;
+    resolveTicketByOwner(
+        ticketId: string,
+        userId: string
+    ): Promise<TicketResponseDto>;
     markRead(ticketId: string): Promise<void>;
 }

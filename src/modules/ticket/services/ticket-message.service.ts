@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+    ForbiddenException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+} from '@nestjs/common';
 import { Role, TicketStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
@@ -48,6 +53,8 @@ export class TicketMessageService implements ITicketMessageService {
         let nextStatus = ticket.status;
         if (ticket.status === TicketStatus.IN_PROGRESS) {
             nextStatus = TicketStatus.WAITING_USER;
+        } else if (ticket.status === TicketStatus.WAITING_USER) {
+            nextStatus = TicketStatus.IN_PROGRESS;
         }
 
         const row = await this.databaseService.$transaction(async tx => {
@@ -129,6 +136,13 @@ export class TicketMessageService implements ITicketMessageService {
                 'ticket.error.ticketNotFound',
                 HttpStatus.NOT_FOUND
             );
+        }
+
+        if (
+            !isSuperAdminRole(actor.role) &&
+            ticket.assignedToId !== actor.userId
+        ) {
+            throw new ForbiddenException('ticket.error.notAssignedToYou');
         }
 
         let nextStatus = ticket.status;
