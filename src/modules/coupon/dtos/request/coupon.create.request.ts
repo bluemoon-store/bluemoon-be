@@ -78,6 +78,15 @@ export class CouponCreateDto {
     categoryScope: CouponCategoryScope;
 
     @ApiPropertyOptional({
+        example: '10% off your first purchase',
+        description: 'Marketing label shown at checkout',
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(512)
+    description?: string | null;
+
+    @ApiPropertyOptional({
         description: 'Required when categoryScope is SPECIFIC',
         type: [String],
     })

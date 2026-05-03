@@ -201,6 +201,42 @@ export class OrderResponseDto {
     @Type(() => String)
     buyerProtectionAmount: Prisma.Decimal;
 
+    @ApiPropertyOptional({
+        example: '100.00000000',
+        description: 'Cart subtotal before discount (snapshot at order time).',
+    })
+    @Expose()
+    @IsOptional()
+    @Type(() => String)
+    subtotalAmount?: Prisma.Decimal;
+
+    @ApiPropertyOptional({
+        example: '10.00000000',
+        description: 'Discount applied from coupon (snapshot).',
+    })
+    @Expose()
+    @IsOptional()
+    @Type(() => String)
+    discountAmount?: Prisma.Decimal;
+
+    @ApiPropertyOptional({
+        example: faker.string.uuid(),
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsUUID()
+    couponId?: string | null;
+
+    @ApiPropertyOptional({
+        example: 'WELCOME10',
+        nullable: true,
+    })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    couponCode?: string | null;
+
     @ApiProperty({
         enum: OrderStatus,
         example: OrderStatus.PENDING,

@@ -9,6 +9,7 @@ import { Cache } from 'cache-manager';
 import { PinoLogger } from 'nestjs-pino';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { getCommerceLineSubtotal } from 'src/common/utils/commerce.util';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
@@ -25,9 +26,11 @@ import {
 } from '../dtos/response/coupon.response';
 import {
     CouponInvalidateReason,
+    CouponPreviewResponseDto,
     CouponValidateResponseDto,
 } from '../dtos/response/coupon.validate.response';
 import { CouponWithCategories } from '../interfaces/coupon.interface';
+import { calculateCouponDiscount } from '../utils/coupon-discount.util';
 import {
     daysRemaining,
     deriveStatus,
@@ -70,6 +73,7 @@ export class CouponService {
         return {
             id: row.id,
             code: row.code,
+            description: row.description ?? null,
             status: deriveStatus(row.expiresAt),
             discountType: row.discountType,
             discountValue: Number(row.discountValue),
@@ -182,6 +186,7 @@ export class CouponService {
                     const coupon = await tx.coupon.create({
                         data: {
                             code,
+                            description: payload.description ?? null,
                             discountType: payload.discountType,
                             discountValue: payload.discountValue,
                             expiresAt,
@@ -371,6 +376,9 @@ export class CouponService {
                             ...(dto.isActive !== undefined
                                 ? { isActive: dto.isActive }
                                 : {}),
+                            ...(dto.description !== undefined
+                                ? { description: dto.description }
+                                : {}),
                         },
                     });
 
@@ -463,6 +471,49 @@ export class CouponService {
         return `coupon:validate:${code}:${sorted}`;
     }
 
+    private getCouponInvalidateReason(
+        coupon: {
+            isActive: boolean;
+            expiresAt: Date | null;
+            maxUses: number | null;
+            usedCount: number;
+            categoryScope: CouponCategoryScope;
+            categories: { categoryId: string }[];
+        },
+        categoryIds?: string[]
+    ): CouponInvalidateReason | null {
+        if (!coupon.isActive) {
+            return 'INACTIVE';
+        }
+        if (coupon.expiresAt && coupon.expiresAt.getTime() <= Date.now()) {
+            return 'EXPIRED';
+        }
+        if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
+            return 'EXHAUSTED';
+        }
+        if (coupon.categoryScope === CouponCategoryScope.SPECIFIC) {
+            const cartIds = categoryIds ?? [];
+            const allowed = new Set(coupon.categories.map(c => c.categoryId));
+            const intersects = cartIds.some(cid => allowed.has(cid));
+            if (!intersects) {
+                return 'CATEGORY_MISMATCH';
+            }
+        }
+        return null;
+    }
+
+    private couponReasonToErrorKey(reason: CouponInvalidateReason): string {
+        const keys: Record<CouponInvalidateReason, string> = {
+            NOT_FOUND: 'coupon.error.notFound',
+            EXPIRED: 'coupon.error.expired',
+            INACTIVE: 'coupon.error.inactive',
+            EXHAUSTED: 'coupon.error.exhausted',
+            CATEGORY_MISMATCH: 'coupon.error.categoryMismatch',
+            CART_EMPTY: 'coupon.error.cartEmpty',
+        };
+        return keys[reason];
+    }
+
     async validate(
         codeRaw: string,
         categoryIds?: string[]
@@ -502,28 +553,7 @@ export class CouponService {
             return out;
         }
 
-        let reason: CouponInvalidateReason | undefined;
-
-        if (!coupon.isActive) {
-            reason = 'INACTIVE';
-        } else if (
-            coupon.expiresAt &&
-            coupon.expiresAt.getTime() <= Date.now()
-        ) {
-            reason = 'EXPIRED';
-        } else if (
-            coupon.maxUses !== null &&
-            coupon.usedCount >= coupon.maxUses
-        ) {
-            reason = 'EXHAUSTED';
-        } else if (coupon.categoryScope === CouponCategoryScope.SPECIFIC) {
-            const cartIds = categoryIds ?? [];
-            const allowed = new Set(coupon.categories.map(c => c.categoryId));
-            const intersects = cartIds.some(cid => allowed.has(cid));
-            if (!intersects) {
-                reason = 'CATEGORY_MISMATCH';
-            }
-        }
+        const reason = this.getCouponInvalidateReason(coupon, categoryIds);
 
         if (reason) {
             const out: CouponValidateResponseDto = {
@@ -544,5 +574,147 @@ export class CouponService {
         };
         await this.cacheManager.set(cacheKey, success, VALIDATE_CACHE_MS);
         return success;
+    }
+
+    /**
+     * Auth-only preview: validates against the user's cart and returns discount math.
+     * Does not cache the full response (cart changes often); validate() metadata remains cached.
+     */
+    async previewForUser(
+        userId: string,
+        codeRaw: string
+    ): Promise<CouponPreviewResponseDto> {
+        const zeroDisc = '0.00000000';
+        const cart = await this.databaseService.cart.findUnique({
+            where: { userId },
+            include: {
+                items: {
+                    include: {
+                        product: {
+                            select: {
+                                categoryId: true,
+                                price: true,
+                                currency: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!cart?.items?.length) {
+            return {
+                valid: false,
+                reason: 'CART_EMPTY',
+                discountAmount: zeroDisc,
+            };
+        }
+
+        const categoryIds = [
+            ...new Set(cart.items.map(i => i.product.categoryId)),
+        ];
+        const meta = await this.validate(codeRaw, categoryIds);
+        if (!meta.valid) {
+            return {
+                ...meta,
+                discountAmount: zeroDisc,
+            };
+        }
+
+        const couponRow = await this.databaseService.coupon.findFirst({
+            where: {
+                deletedAt: null,
+                code: {
+                    equals: normalizeCode(codeRaw),
+                    mode: 'insensitive',
+                },
+            },
+            include: {
+                categories: { select: { categoryId: true } },
+            },
+        });
+
+        if (!couponRow || !meta.code) {
+            return {
+                valid: false,
+                reason: 'NOT_FOUND',
+                discountAmount: zeroDisc,
+            };
+        }
+
+        const lineItems = cart.items.map(ci => ({
+            categoryId: ci.product.categoryId,
+            lineSubtotal: getCommerceLineSubtotal(ci),
+        }));
+
+        const calc = calculateCouponDiscount(
+            {
+                discountType: couponRow.discountType,
+                discountValue: couponRow.discountValue,
+                categoryScope: couponRow.categoryScope,
+                categoryIds: couponRow.categories.map(c => c.categoryId),
+            },
+            lineItems
+        );
+
+        return {
+            ...meta,
+            subtotal: calc.subtotal.toFixed(8),
+            applicableSubtotal: calc.applicableSubtotal.toFixed(8),
+            discountAmount: calc.discountAmount.toFixed(8),
+            description: couponRow.description ?? null,
+        };
+    }
+
+    /**
+     * Loads coupon from DB (no validate cache) and throws if not applicable to the cart categories.
+     * Used at order creation so pricing stays server-authoritative.
+     */
+    async findActiveByCode(
+        codeRaw: string,
+        cartCategoryIds: string[]
+    ): Promise<CouponWithCategories> {
+        const code = normalizeCode(codeRaw);
+        if (!code) {
+            throw new HttpException(
+                'coupon.error.notFound',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        const coupon = await this.databaseService.coupon.findFirst({
+            where: {
+                deletedAt: null,
+                code: { equals: code, mode: 'insensitive' },
+            },
+            include: couponInclude,
+        });
+
+        if (!coupon) {
+            throw new HttpException(
+                'coupon.error.notFound',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        const minimal = {
+            isActive: coupon.isActive,
+            expiresAt: coupon.expiresAt,
+            maxUses: coupon.maxUses,
+            usedCount: coupon.usedCount,
+            categoryScope: coupon.categoryScope,
+            categories: coupon.categories.map(cc => ({
+                categoryId: cc.categoryId,
+            })),
+        };
+        const reason = this.getCouponInvalidateReason(minimal, cartCategoryIds);
+        if (reason) {
+            throw new HttpException(
+                this.couponReasonToErrorKey(reason),
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        return coupon as CouponWithCategories;
     }
 }

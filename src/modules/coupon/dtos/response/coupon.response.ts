@@ -41,6 +41,12 @@ export class CouponListResponseDto {
     @IsString()
     code: string;
 
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    @IsOptional()
+    @IsString()
+    description?: string | null;
+
     @ApiProperty({ enum: ['active', 'expired'] })
     @Expose()
     @IsString()

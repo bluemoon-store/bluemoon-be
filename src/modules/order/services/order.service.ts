@@ -16,7 +16,13 @@ import {
     OrderDetailResponseDto,
 } from '../dtos/response/order.response';
 import { IOrderService } from '../interfaces/order.service.interface';
-import { calculateLineItemsTotals } from 'src/common/utils/commerce.util';
+import {
+    calculateLineItemsTotals,
+    getCommerceLineSubtotal,
+} from 'src/common/utils/commerce.util';
+import { CouponWithCategories } from 'src/modules/coupon/interfaces/coupon.interface';
+import { CouponService } from 'src/modules/coupon/services/coupon.service';
+import { calculateCouponDiscount } from 'src/modules/coupon/utils/coupon-discount.util';
 import {
     BUYER_PROTECTION_FEE_USD,
     generateOrderNumberString,
@@ -30,6 +36,7 @@ export class OrderService implements IOrderService {
         private readonly paginationService: HelperPaginationService,
         private readonly deliveryService: OrderDeliveryService,
         private readonly walletService: WalletService,
+        private readonly couponService: CouponService,
         private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
@@ -178,7 +185,41 @@ export class OrderService implements IOrderService {
             const buyerProtectionUsd = buyerProtection
                 ? BUYER_PROTECTION_FEE_USD
                 : 0;
-            const finalTotalUsd = Math.max(0, subtotal + buyerProtectionUsd);
+
+            const couponCodeRaw = data.couponCode?.trim();
+            let appliedCoupon: CouponWithCategories | null = null;
+            let discountAmountNum = 0;
+
+            if (couponCodeRaw) {
+                // Always loads from DB + cart rules (not GET /validate cache); cache TTL on validate is irrelevant here.
+                const cartCategoryIds = [
+                    ...new Set(cart.items.map(i => i.product.categoryId)),
+                ];
+                appliedCoupon = await this.couponService.findActiveByCode(
+                    couponCodeRaw,
+                    cartCategoryIds
+                );
+                const lineItems = cart.items.map(ci => ({
+                    categoryId: ci.product.categoryId,
+                    lineSubtotal: getCommerceLineSubtotal(ci),
+                }));
+                discountAmountNum = calculateCouponDiscount(
+                    {
+                        discountType: appliedCoupon.discountType,
+                        discountValue: appliedCoupon.discountValue,
+                        categoryScope: appliedCoupon.categoryScope,
+                        categoryIds: appliedCoupon.categories.map(
+                            c => c.categoryId
+                        ),
+                    },
+                    lineItems
+                ).discountAmount;
+            }
+
+            const finalTotalUsd = Math.max(
+                0,
+                subtotal - discountAmountNum + buyerProtectionUsd
+            );
             if (finalTotalUsd <= 0) {
                 throw new HttpException(
                     'order.error.invalidTotal',
@@ -186,6 +227,8 @@ export class OrderService implements IOrderService {
                 );
             }
             const totalAmountStr = finalTotalUsd.toFixed(8);
+            const subtotalStr = subtotal.toFixed(8);
+            const discountStr = discountAmountNum.toFixed(8);
 
             // Generate order number
             const orderNumber = await this.generateOrderNumber();
@@ -204,8 +247,36 @@ export class OrderService implements IOrderService {
                         buyerProtectionAmount: new Prisma.Decimal(
                             buyerProtectionUsd.toFixed(8)
                         ),
+                        subtotalAmount: new Prisma.Decimal(subtotalStr),
+                        discountAmount: new Prisma.Decimal(discountStr),
+                        couponId: appliedCoupon?.id ?? null,
+                        couponCode: appliedCoupon?.code ?? null,
                     },
                 });
+
+                if (appliedCoupon) {
+                    const couponUpdate = await tx.coupon.updateMany({
+                        where: {
+                            id: appliedCoupon.id,
+                            isActive: true,
+                            deletedAt: null,
+                            ...(appliedCoupon.maxUses != null
+                                ? { usedCount: { lt: appliedCoupon.maxUses } }
+                                : {}),
+                            OR: [
+                                { expiresAt: null },
+                                { expiresAt: { gt: new Date() } },
+                            ],
+                        },
+                        data: { usedCount: { increment: 1 } },
+                    });
+                    if (couponUpdate.count !== 1) {
+                        throw new HttpException(
+                            'coupon.error.exhausted',
+                            HttpStatus.BAD_REQUEST
+                        );
+                    }
+                }
 
                 // Create order items and update stock
                 const orderItems = [];

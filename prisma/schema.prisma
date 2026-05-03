@@ -99,6 +99,7 @@ model ProductCategory {
 model Coupon {
   id            String              @id @default(uuid())
   code          String              @unique
+  description   String?             @map("description")
   discountType  CouponDiscountType  @map("discount_type")
   discountValue Decimal             @db.Decimal(20, 8) @map("discount_value")
   expiresAt     DateTime?           @map("expires_at") // null => never expires
@@ -107,6 +108,7 @@ model Coupon {
   categoryScope CouponCategoryScope @default(ALL) @map("category_scope")
   isActive      Boolean             @default(true) @map("is_active")
   categories    CouponCategory[]
+  orders        Order[]
   createdAt     DateTime            @default(now()) @map("created_at")
   updatedAt     DateTime            @updatedAt @map("updated_at")
   deletedAt     DateTime?           @map("deleted_at")
@@ -287,6 +289,11 @@ model Order {
   buyerProtection Boolean        @default(false) @map("buyer_protection")
   buyerProtectionAmount Decimal  @default(0) @map("buyer_protection_amount") @db.Decimal(20, 8)
   status         OrderStatus     @default(PENDING)
+  subtotalAmount Decimal         @default(0) @map("subtotal_amount") @db.Decimal(20, 8)
+  discountAmount Decimal         @default(0) @map("discount_amount") @db.Decimal(20, 8)
+  couponId       String?         @map("coupon_id")
+  couponCode     String?         @map("coupon_code")
+  coupon         Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
   totalAmount    Decimal         @map("total_amount") @db.Decimal(20, 8)
   currency       String // USD, BTC, ETH, etc.
   cryptoPayment  CryptoPayment?
@@ -302,6 +309,7 @@ model Order {
   @@index([userId])
   @@index([orderNumber])
   @@index([status])
+  @@index([couponId])
   @@map("orders")
 }
 

@@ -5,10 +5,16 @@
         "created": "Coupon created successfully",
         "updated": "Coupon updated successfully",
         "deleted": "Coupon deleted successfully",
-        "validated": "Coupon validated successfully"
+        "validated": "Coupon validated successfully",
+        "previewed": "Coupon preview calculated successfully"
     },
     "error": {
         "notFound": "Coupon not found",
+        "expired": "This coupon has expired",
+        "inactive": "This coupon is no longer active",
+        "exhausted": "This coupon has been fully redeemed",
+        "categoryMismatch": "This coupon does not apply to the categories in your cart",
+        "cartEmpty": "Add items to your cart before applying a coupon",
         "codeExists": "A coupon with this code already exists",
         "invalidCode": "Coupon code must be 3–32 characters (A–Z, 0–9, hyphen)",
         "invalidDiscount": "Invalid discount value for the selected discount type",

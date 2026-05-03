@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
  * Commerce utilities for cart and order (line items with product price/quantity).
  */
 
-function coercePrice(
+export function coercePrice(
     value: string | number | Prisma.Decimal | unknown
 ): number {
     if (value === null || value === undefined) {
@@ -78,4 +78,15 @@ export function calculateLineItemsTotals(
         currency,
         totalItems,
     };
+}
+
+/** Subtotal for one cart/order line (unit × quantity) in USD (or item currency unit). */
+export function getCommerceLineSubtotal(item: CommerceLineItem): number {
+    const lineUnit =
+        item.unitPrice != null && item.unitPrice !== undefined
+            ? coercePrice(item.unitPrice)
+            : item.product?.price != null
+              ? coercePrice(item.product.price)
+              : 0;
+    return lineUnit * item.quantity;
 }

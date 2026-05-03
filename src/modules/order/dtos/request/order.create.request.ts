@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsString, IsOptional, MaxLength, IsBoolean } from 'class-validator';
 
 export class OrderCreateDto {
@@ -28,4 +29,13 @@ export class OrderCreateDto {
     @IsOptional()
     @IsBoolean()
     buyerProtection?: boolean;
+
+    @ApiPropertyOptional({ example: 'SUMMER25' })
+    @IsOptional()
+    @IsString()
+    @Transform(({ value }) =>
+        typeof value === 'string' ? value.trim().toUpperCase() : value
+    )
+    @MaxLength(64)
+    couponCode?: string;
 }
