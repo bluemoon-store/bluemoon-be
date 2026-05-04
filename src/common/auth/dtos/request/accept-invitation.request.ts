@@ -1,5 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Matches,
+    MinLength,
+} from 'class-validator';
 
 export class AcceptInvitationRequestDto {
     @ApiProperty({
@@ -23,8 +30,19 @@ export class AcceptInvitationRequestDto {
     )
     public password: string;
 
-    @ApiProperty({ example: 'new-admin-user', required: true })
+    @ApiPropertyOptional({ example: 'new-admin-user' })
+    @IsOptional()
+    @Transform(({ value }) => {
+        if (value === undefined || value === null || value === '') {
+            return undefined;
+        }
+        const s = String(value).trim().toLowerCase();
+        return s === '' ? undefined : s;
+    })
     @IsString()
-    @IsNotEmpty()
-    public userName: string;
+    @Matches(/^[a-z0-9._-]{3,32}$/, {
+        message:
+            'Username must be 3–32 chars: lowercase letters, digits, dot, underscore, hyphen',
+    })
+    public userName?: string;
 }

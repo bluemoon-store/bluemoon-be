@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { InjectQueue } from '@nestjs/bull';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { Queue } from 'bull';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
@@ -70,6 +70,16 @@ export class UserTeamService {
             );
         }
 
+        const userNameTaken = await this.databaseService.user.findUnique({
+            where: { userName: payload.userName },
+        });
+        if (userNameTaken) {
+            throw new HttpException(
+                'user.error.userNameExists',
+                HttpStatus.CONFLICT
+            );
+        }
+
         const inviter = await this.databaseService.user.findUnique({
             where: { id: invitedByUserId },
         });
@@ -87,27 +97,50 @@ export class UserTeamService {
 
         const generatedPassword =
             await this.helperEncryptionService.createHash(randomUUID());
-        const generatedUserName = `invited_${randomUUID().slice(0, 8)}`;
 
-        const created = await this.databaseService.user.create({
-            data: {
-                email: payload.email,
-                role: payload.role,
-                userName: generatedUserName,
-                password: generatedPassword,
-                firstName: payload.name?.trim(),
-                isVerified: false,
-                invitedBy: invitedByUserId,
-                invitationToken,
-                invitationTokenExpiry,
-            },
-        });
+        let created;
+        try {
+            created = await this.databaseService.user.create({
+                data: {
+                    email: payload.email,
+                    role: payload.role,
+                    userName: payload.userName,
+                    password: generatedPassword,
+                    firstName: payload.name?.trim() || null,
+                    isVerified: false,
+                    invitedBy: invitedByUserId,
+                    invitationToken,
+                    invitationTokenExpiry,
+                },
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                const target = (error.meta as { target?: string[] } | undefined)
+                    ?.target;
+                const targetStr = (target ?? []).join(' ').toLowerCase();
+                if (targetStr.includes('email')) {
+                    throw new HttpException(
+                        'user.error.userExists',
+                        HttpStatus.CONFLICT
+                    );
+                }
+                throw new HttpException(
+                    'user.error.userNameExists',
+                    HttpStatus.CONFLICT
+                );
+            }
+            throw error;
+        }
 
         await this.sendInvitationEmail(
             created.email,
             inviter,
             payload.role,
-            invitationToken
+            invitationToken,
+            created.userName
         );
 
         return created;
@@ -210,7 +243,8 @@ export class UserTeamService {
             user.email,
             inviter ?? user,
             user.role,
-            invitationToken
+            invitationToken,
+            user.userName
         );
 
         return {
@@ -245,30 +279,37 @@ export class UserTeamService {
             );
         }
 
-        const existingUserName = await this.databaseService.user.findUnique({
-            where: { userName: payload.userName },
-        });
-        if (existingUserName && existingUserName.id !== user.id) {
-            throw new HttpException(
-                'user.error.userNameExists',
-                HttpStatus.CONFLICT
-            );
-        }
-
         const hashed = await this.helperEncryptionService.createHash(
             payload.password
         );
 
+        const data: Prisma.UserUpdateInput = {
+            password: hashed,
+            isVerified: true,
+            invitationToken: null,
+            invitationTokenExpiry: null,
+            deletedAt: null,
+        };
+
+        if (payload.userName) {
+            const normalized = payload.userName.trim().toLowerCase();
+            if (normalized && normalized !== user.userName.toLowerCase()) {
+                const taken = await this.databaseService.user.findUnique({
+                    where: { userName: normalized },
+                });
+                if (taken && taken.id !== user.id) {
+                    throw new HttpException(
+                        'user.error.userNameExists',
+                        HttpStatus.CONFLICT
+                    );
+                }
+                data.userName = normalized;
+            }
+        }
+
         await this.databaseService.user.update({
             where: { id: user.id },
-            data: {
-                userName: payload.userName.trim(),
-                password: hashed,
-                isVerified: true,
-                invitationToken: null,
-                invitationTokenExpiry: null,
-                deletedAt: null,
-            },
+            data,
         });
 
         return {
@@ -286,13 +327,14 @@ export class UserTeamService {
             email: string;
         },
         role: Role,
-        token: string
+        token: string,
+        assignedUserName: string
     ): Promise<void> {
         const adminUrl =
             this.configService.get<string>('app.adminUrl') ??
             this.configService.get<string>('app.frontendUrl') ??
             'http://localhost:3000';
-        const inviteLink = `${adminUrl.replace(/\/$/, '')}/accept-invitation?token=${token}`;
+        const inviteLink = `${adminUrl.replace(/\/$/, '')}/accept-invitation?token=${encodeURIComponent(token)}&username=${encodeURIComponent(assignedUserName)}`;
 
         const inviterName =
             [inviter.firstName, inviter.lastName].filter(Boolean).join(' ') ||

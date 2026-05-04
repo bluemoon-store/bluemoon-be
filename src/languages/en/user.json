@@ -18,6 +18,7 @@
         "userNotFound": "User not found in database",
         "exists": "User with provided email/username already exists",
         "userExists": "User with provided email/username already exists",
+        "userNameExists": "This username is already taken",
         "userAlreadyBanned": "User is already banned",
         "failedToBanUser": "Failed to ban user",
         "userNotBanned": "User is not banned",
