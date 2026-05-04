@@ -106,11 +106,6 @@ export class ProductVariantResponseDto {
     @Type(() => String)
     price: Prisma.Decimal;
 
-    @ApiProperty({ example: 'USD' })
-    @Expose()
-    @IsString()
-    currency: string;
-
     @ApiProperty({ example: 10 })
     @Expose()
     @IsInt()
@@ -207,13 +202,6 @@ export class ProductResponseDto implements Product {
     price: Prisma.Decimal;
 
     @ApiProperty({
-        example: 'USD',
-    })
-    @Expose()
-    @IsString()
-    currency: string;
-
-    @ApiProperty({
         example: 100,
     })
     @Expose()
@@ -226,13 +214,6 @@ export class ProductResponseDto implements Product {
     @Expose()
     @IsBoolean()
     isActive: boolean;
-
-    @ApiProperty({
-        example: false,
-    })
-    @Expose()
-    @IsBoolean()
-    isFeatured: boolean;
 
     @ApiProperty({ example: 0 })
     @Expose()

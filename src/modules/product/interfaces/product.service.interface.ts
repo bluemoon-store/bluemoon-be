@@ -23,7 +23,6 @@ export interface IProductService {
         categoryId?: string;
         categorySlug?: string;
         isActive?: boolean;
-        isFeatured?: boolean;
         isHot?: boolean;
         isNew?: boolean;
         isRestocked?: boolean;
@@ -37,7 +36,6 @@ export interface IProductService {
     delete(id: string): Promise<ApiGenericResponseDto>;
     updateStock(id: string, stockQuantity: number): Promise<ProductResponseDto>;
     toggleActive(id: string): Promise<ProductResponseDto>;
-    toggleFeatured(id: string): Promise<ProductResponseDto>;
     addImage(
         productId: string,
         imageKey: string,

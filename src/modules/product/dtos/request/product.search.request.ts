@@ -38,15 +38,6 @@ export class ProductSearchDto extends BasePrismaQueryDto {
     isActive?: boolean;
 
     @ApiPropertyOptional({
-        example: true,
-        description: 'Filter by featured status',
-    })
-    @IsOptional()
-    @Type(() => Boolean)
-    @IsBoolean()
-    isFeatured?: boolean;
-
-    @ApiPropertyOptional({
         description: 'Filter by category slug',
     })
     @IsOptional()

@@ -28,7 +28,6 @@ export interface CommerceLineItem {
     unitPrice?: string | number | Prisma.Decimal | null;
     product?: {
         price?: string | number | unknown;
-        currency?: string;
     };
 }
 
@@ -41,8 +40,8 @@ export interface CommerceTotalsResult {
 /**
  * Calculate totals from line items (cart or order items with product price and quantity).
  *
- * @param items - Items with product (price, currency) and quantity
- * @returns totalAmount (string, 8 decimals for crypto), currency, and totalItems count
+ * @param items - Items with product price and quantity (totals are in USD)
+ * @returns totalAmount (string, 8 decimals for crypto), currency (always USD), and totalItems count
  */
 export function calculateLineItemsTotals(
     items: CommerceLineItem[]
@@ -55,7 +54,7 @@ export function calculateLineItemsTotals(
         };
     }
 
-    const currency = items[0]?.product?.currency || 'USD';
+    const currency = 'USD';
     let totalAmount = 0;
     let totalItems = 0;
 

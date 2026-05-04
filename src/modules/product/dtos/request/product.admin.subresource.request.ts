@@ -19,11 +19,6 @@ export class AdminProductVariantCreateDto {
     @IsString()
     price: string;
 
-    @ApiPropertyOptional({ default: 'USD' })
-    @IsOptional()
-    @IsString()
-    currency?: string;
-
     @ApiPropertyOptional({ default: 0 })
     @IsOptional()
     @IsInt()
@@ -52,11 +47,6 @@ export class AdminProductVariantUpdateDto {
     @IsOptional()
     @IsString()
     price?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    currency?: string;
 
     @ApiPropertyOptional()
     @IsOptional()

@@ -200,7 +200,6 @@ export class ProductService implements IProductService {
             categoryId?: string;
             categorySlug?: string;
             isActive?: boolean;
-            isFeatured?: boolean;
             isHot?: boolean;
             isNew?: boolean;
             isRestocked?: boolean;
@@ -219,10 +218,6 @@ export class ProductService implements IProductService {
 
         if (options.isActive !== undefined) {
             where.isActive = options.isActive;
-        }
-
-        if (options.isFeatured !== undefined) {
-            where.isFeatured = options.isFeatured;
         }
 
         if (options.isHot !== undefined) {
@@ -254,7 +249,7 @@ export class ProductService implements IProductService {
         if (options.isHot) {
             return [{ sortOrder: 'asc' }, { createdAt: 'desc' }];
         }
-        return [{ isFeatured: 'desc' }, { createdAt: 'desc' }];
+        return [{ sortOrder: 'asc' }, { createdAt: 'desc' }];
     }
 
     async create(data: ProductCreateDto): Promise<ProductResponseDto> {
@@ -284,10 +279,8 @@ export class ProductService implements IProductService {
                     slug,
                     description: data.description,
                     price: data.price,
-                    currency: data.currency ?? 'USD',
                     stockQuantity: data.stockQuantity ?? 0,
                     isActive: data.isActive ?? true,
-                    isFeatured: data.isFeatured ?? false,
                     sortOrder: data.sortOrder ?? 0,
                     categoryId: data.categoryId,
                     deliveryType: data.deliveryType ?? 'INSTANT',
@@ -309,7 +302,6 @@ export class ProductService implements IProductService {
                               create: data.variants.map((v, i) => ({
                                   label: v.label,
                                   price: v.price,
-                                  currency: v.currency ?? 'USD',
                                   stockQuantity: v.stockQuantity ?? 0,
                                   isActive: v.isActive ?? true,
                                   sortOrder: v.sortOrder ?? i,
@@ -377,7 +369,6 @@ export class ProductService implements IProductService {
         categoryId?: string;
         categorySlug?: string;
         isActive?: boolean;
-        isFeatured?: boolean;
         isHot?: boolean;
         isNew?: boolean;
         isRestocked?: boolean;
@@ -387,7 +378,6 @@ export class ProductService implements IProductService {
                 categoryId: options?.categoryId,
                 categorySlug: options?.categorySlug,
                 isActive: options?.isActive,
-                isFeatured: options?.isFeatured,
                 isHot: options?.isHot,
                 isNew: options?.isNew,
                 isRestocked: options?.isRestocked,
@@ -437,7 +427,6 @@ export class ProductService implements IProductService {
                 categoryId: query.categoryId,
                 categorySlug: query.categorySlug,
                 isActive: query.isActive,
-                isFeatured: query.isFeatured,
                 isHot: query.isHot,
                 isNew: query.isNew,
                 isRestocked: query.isRestocked,
@@ -615,7 +604,6 @@ export class ProductService implements IProductService {
                         data: {
                             label: v.label,
                             price: v.price,
-                            currency: v.currency ?? 'USD',
                             stockQuantity: v.stockQuantity ?? 0,
                             isActive: v.isActive ?? true,
                             sortOrder: v.sortOrder ?? 0,
@@ -633,7 +621,6 @@ export class ProductService implements IProductService {
                         productId,
                         label: v.label,
                         price: v.price,
-                        currency: v.currency ?? 'USD',
                         stockQuantity: v.stockQuantity ?? 0,
                         isActive: v.isActive ?? true,
                         sortOrder: v.sortOrder ?? 0,
@@ -754,10 +741,8 @@ export class ProductService implements IProductService {
             assignScalar('name', rest.name);
             assignScalar('description', rest.description);
             assignScalar('price', rest.price);
-            assignScalar('currency', rest.currency);
             assignScalar('stockQuantity', rest.stockQuantity);
             assignScalar('isActive', rest.isActive);
-            assignScalar('isFeatured', rest.isFeatured);
             assignScalar('sortOrder', rest.sortOrder);
             assignScalar('deliveryType', rest.deliveryType);
             assignScalar('deliveryContent', rest.deliveryContent);
@@ -955,47 +940,6 @@ export class ProductService implements IProductService {
         }
     }
 
-    async toggleFeatured(id: string): Promise<ProductResponseDto> {
-        try {
-            const product = await this.findOne(id);
-
-            this.activityLogEmitter.captureBefore({
-                before: { isFeatured: product.isFeatured },
-            });
-
-            const updated = await this.databaseService.product.update({
-                where: { id },
-                data: {
-                    isFeatured: !product.isFeatured,
-                },
-                include: adminInclude,
-            });
-
-            this.logger.info(
-                { productId: id, isFeatured: updated.isFeatured },
-                'Product featured status toggled'
-            );
-
-            this.activityLogEmitter.captureAfter({
-                after: { isFeatured: updated.isFeatured },
-                resourceLabel: product.name,
-            });
-
-            return this.mapToAdminDto(updated);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            this.logger.error(
-                `Failed to toggle product featured status: ${error.message}`
-            );
-            throw new HttpException(
-                'product.error.toggleProductFeaturedFailed',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
     async addImage(
         productId: string,
         imageKey: string,
@@ -1166,7 +1110,6 @@ export class ProductService implements IProductService {
                 productId,
                 label: dto.label,
                 price: dto.price,
-                currency: dto.currency ?? 'USD',
                 stockQuantity: dto.stockQuantity ?? 0,
                 isActive: dto.isActive ?? true,
                 sortOrder: dto.sortOrder ?? 0,
@@ -1195,7 +1138,6 @@ export class ProductService implements IProductService {
             data: {
                 ...(dto.label !== undefined && { label: dto.label }),
                 ...(dto.price !== undefined && { price: dto.price }),
-                ...(dto.currency !== undefined && { currency: dto.currency }),
                 ...(dto.stockQuantity !== undefined && {
                     stockQuantity: dto.stockQuantity,
                 }),

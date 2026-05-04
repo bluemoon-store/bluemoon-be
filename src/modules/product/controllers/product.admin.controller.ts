@@ -87,13 +87,7 @@ export class ProductAdminController {
     public async list(
         @Query(
             new QueryTransformPipe({
-                booleanFields: [
-                    'isActive',
-                    'isFeatured',
-                    'isHot',
-                    'isNew',
-                    'isRestocked',
-                ],
+                booleanFields: ['isActive', 'isHot', 'isNew', 'isRestocked'],
             })
         )
         query: ProductListQueryDto
@@ -104,7 +98,6 @@ export class ProductAdminController {
             categoryId: query.categoryId,
             categorySlug: query.categorySlug,
             isActive: query.isActive,
-            isFeatured: query.isFeatured,
             isHot: query.isHot,
             isNew: query.isNew,
             isRestocked: query.isRestocked,
@@ -463,27 +456,6 @@ export class ProductAdminController {
         @Param('id') id: string
     ): Promise<ProductResponseDto> {
         return this.productService.toggleActive(id);
-    }
-
-    @Put(':id/toggle-featured')
-    @AuditLog({
-        action: 'product.toggle.featured',
-        category: ActivityLogCategory.PRODUCT,
-        resourceType: 'Product',
-        resourceIdParam: 'id',
-    })
-    @AllowedRoles(ADMIN_ROLES)
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Toggle product featured status' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.featuredToggled',
-    })
-    public async toggleFeatured(
-        @Param('id') id: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.toggleFeatured(id);
     }
 
     @Post(':id/images')

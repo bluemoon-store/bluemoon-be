@@ -65,15 +65,6 @@ export class ProductUpdateDto {
     price?: string;
 
     @ApiPropertyOptional({
-        example: 'USD',
-        description: 'Base currency',
-    })
-    @IsOptional()
-    @IsString()
-    @MaxLength(10)
-    currency?: string;
-
-    @ApiPropertyOptional({
         example: 100,
         description: 'Stock quantity',
     })
@@ -89,14 +80,6 @@ export class ProductUpdateDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
-
-    @ApiPropertyOptional({
-        example: false,
-        description: 'Whether the product is featured',
-    })
-    @IsOptional()
-    @IsBoolean()
-    isFeatured?: boolean;
 
     @ApiPropertyOptional({
         example: 0,

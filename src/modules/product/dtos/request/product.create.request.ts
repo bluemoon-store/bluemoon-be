@@ -52,11 +52,6 @@ export class ProductVariantInputDto {
     @IsString()
     price: string;
 
-    @ApiPropertyOptional({ example: 'USD', default: 'USD' })
-    @IsOptional()
-    @IsString()
-    currency?: string;
-
     @ApiPropertyOptional({ example: 0, default: 0 })
     @IsOptional()
     @IsInt()
@@ -130,16 +125,6 @@ export class ProductCreateDto {
     price: string;
 
     @ApiPropertyOptional({
-        example: 'USD',
-        default: 'USD',
-        description: 'Base currency',
-    })
-    @IsOptional()
-    @IsString()
-    @MaxLength(10)
-    currency?: string;
-
-    @ApiPropertyOptional({
         example: 100,
         default: 0,
         description: 'Stock quantity',
@@ -157,15 +142,6 @@ export class ProductCreateDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
-
-    @ApiPropertyOptional({
-        example: false,
-        default: false,
-        description: 'Whether the product is featured',
-    })
-    @IsOptional()
-    @IsBoolean()
-    isFeatured?: boolean;
 
     @ApiPropertyOptional({
         example: 0,

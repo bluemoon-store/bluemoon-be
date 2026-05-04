@@ -57,7 +57,6 @@ type ProductSeedDef = {
     isHot: boolean;
     isNew: boolean;
     isRestocked: boolean;
-    isFeatured: boolean;
     sortOrder: number;
     shortNotice: string;
     deliveryContent: string;
@@ -66,6 +65,8 @@ type ProductSeedDef = {
     countryOfOrigin: string;
     launchedAt: Date | null;
     restockedAt: Date | null;
+    flair?: string;
+    iconUrl?: string;
 };
 
 const CATEGORY_SEEDS: Array<{
@@ -185,8 +186,8 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: true,
         sortOrder: 1,
+        flair: 'Best Seller',
         shortNotice: 'Spend like cash wherever Visa debit is accepted.',
         deliveryContent:
             'Digital delivery includes card number, expiration, and security code. Register the card on the issuer site if required before first use.',
@@ -205,7 +206,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 2,
         shortNotice: 'One card for shopping, dining, and bills where accepted.',
         deliveryContent:
@@ -225,7 +225,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 3,
         shortNotice: 'Top up your PayPal balance for instant spending power.',
         deliveryContent:
@@ -245,7 +244,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 4,
         shortNotice: 'Credit applies to your Venmo balance after redemption.',
         deliveryContent:
@@ -265,7 +263,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 5,
         shortNotice: 'Use at checkout for eligible Marriott hotels.',
         deliveryContent:
@@ -285,7 +282,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 6,
         shortNotice: 'Redeem toward stays at participating Hilton hotels.',
         deliveryContent:
@@ -305,7 +301,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: true,
         sortOrder: 7,
         shortNotice: 'Scan in the Starbucks app or pay in-store.',
         deliveryContent:
@@ -325,7 +320,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 8,
         shortNotice: 'Valid for eligible DoorDash orders in your region.',
         deliveryContent:
@@ -345,7 +339,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 9,
         shortNotice: 'Apply at checkout when booking Southwest flights.',
         deliveryContent:
@@ -365,7 +358,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 10,
         shortNotice: 'Redeem when paying for Delta-operated flights.',
         deliveryContent:
@@ -385,7 +377,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 11,
         shortNotice: 'Use at Whole Foods registers and select Amazon retail.',
         deliveryContent:
@@ -405,7 +396,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 12,
         shortNotice: 'Applies to orders placed through Instacart.',
         deliveryContent:
@@ -425,7 +415,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: true,
         sortOrder: 13,
         shortNotice: 'Applies to your Amazon account balance at checkout.',
         deliveryContent:
@@ -445,7 +434,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 14,
         shortNotice: 'Redeem at Target stores or on target.com.',
         deliveryContent:
@@ -465,7 +453,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 15,
         shortNotice: 'Works for Nike.com, SNKRS, and participating retail.',
         deliveryContent:
@@ -485,7 +472,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 16,
         shortNotice: 'One card across Gap Inc. family of brands.',
         deliveryContent:
@@ -505,7 +491,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 17,
         shortNotice: 'Swipe at the pump or inside at Shell locations.',
         deliveryContent:
@@ -525,7 +510,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 18,
         shortNotice:
             'Accepted at Exxon and Mobil stations in supported regions.',
@@ -546,7 +530,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 19,
         shortNotice: 'Apply at checkout on ticketmaster.com or the app.',
         deliveryContent:
@@ -566,7 +549,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 20,
         shortNotice:
             'Valid on StubHub purchases where gift cards are accepted.',
@@ -587,7 +569,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 21,
         shortNotice: 'Premium listening without ads.',
         deliveryContent:
@@ -607,7 +588,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 22,
         shortNotice: 'Adds balance to your Google Play account.',
         deliveryContent:
@@ -627,7 +607,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: true,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 23,
         shortNotice: 'Redeem in Pandora stores and on pandora.net.',
         deliveryContent:
@@ -647,7 +626,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 24,
         shortNotice: 'Use at Tiffany stores and tiffany.com.',
         deliveryContent:
@@ -667,7 +645,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: false,
         isNew: false,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 25,
         shortNotice: 'Apply when booking on hertz.com or at the counter.',
         deliveryContent:
@@ -687,7 +664,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: false,
-        isFeatured: false,
         sortOrder: 26,
         shortNotice:
             'Valid at participating Enterprise neighborhood locations.',
@@ -708,8 +684,8 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: false,
         isRestocked: true,
-        isFeatured: true,
         sortOrder: 27,
+        flair: 'Hot Pick',
         shortNotice:
             'Apply to new or existing Netflix accounts in supported regions.',
         deliveryContent:
@@ -729,8 +705,8 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isHot: true,
         isNew: true,
         isRestocked: true,
-        isFeatured: false,
         sortOrder: 28,
+        flair: 'New',
         shortNotice: 'Redeem toward Disney+ in supported countries.',
         deliveryContent:
             'Visit disneyplus.com/redeem (or regional equivalent), sign in, and enter the subscription code from your email.',
@@ -849,6 +825,8 @@ export class ProductsSeedService {
 
             const category = categories[def.categorySlug];
             const imageUrl = `https://picsum.photos/seed/${def.slug}/640/360`;
+            const iconUrl =
+                def.iconUrl ?? `https://picsum.photos/seed/${def.slug}/64/64`;
             const basePrice = VARIANT_DENOMS[0].price;
 
             const product = await this.databaseService.product.create({
@@ -857,14 +835,14 @@ export class ProductsSeedService {
                     slug: def.slug,
                     description: def.description,
                     price: new Prisma.Decimal(basePrice),
-                    currency: 'USD',
                     stockQuantity: 10_000,
                     categoryId: category.id,
                     deliveryType: DeliveryType.INSTANT,
                     deliveryContent: def.deliveryContent,
-                    isFeatured: def.isFeatured,
                     sortOrder: def.sortOrder,
                     shortNotice: def.shortNotice,
+                    flair: def.flair ?? null,
+                    iconUrl,
                     isHot: def.isHot,
                     isNew: def.isNew,
                     isNFA: false,
@@ -888,7 +866,6 @@ export class ProductsSeedService {
                         create: VARIANT_DENOMS.map(v => ({
                             label: v.label,
                             price: new Prisma.Decimal(v.price),
-                            currency: 'USD',
                             stockQuantity: 5000,
                             sortOrder: v.sortOrder,
                         })),

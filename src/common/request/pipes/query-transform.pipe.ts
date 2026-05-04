@@ -12,7 +12,7 @@ export interface QueryTransformOptions {
 
     /**
      * Fields that should be parsed as booleans
-     * @default ['isActive', 'isFeatured']
+     * @default ['isActive']
      */
     booleanFields?: string[];
 
@@ -28,7 +28,7 @@ export interface QueryTransformOptions {
  *
  * Automatically converts:
  * - Number fields (page, limit) from string to number
- * - Boolean fields (isActive, isFeatured) from string to boolean
+ * - Boolean fields (isActive, and any custom booleanFields) from string to boolean
  * - Handles undefined values appropriately
  *
  * @example
@@ -36,7 +36,7 @@ export interface QueryTransformOptions {
  * @Get()
  * async list(@Query(QueryTransformPipe) query: any) {
  *   // query.page and query.limit are numbers
- *   // query.isActive and query.isFeatured are booleans
+ *   // query.isActive is a boolean when listed in booleanFields
  * }
  *
  * @example
@@ -44,7 +44,7 @@ export interface QueryTransformOptions {
  * @Get()
  * async list(@Query(new QueryTransformPipe({
  *   numberFields: ['page', 'limit', 'offset'],
- *   booleanFields: ['isActive', 'isFeatured', 'isDeleted']
+ *   booleanFields: ['isActive', 'isDeleted']
  * })) query: any) {
  *   // Custom transformation
  * }
@@ -52,7 +52,7 @@ export interface QueryTransformOptions {
 @Injectable()
 export class QueryTransformPipe implements PipeTransform {
     private readonly defaultNumberFields = ['page', 'limit'];
-    private readonly defaultBooleanFields = ['isActive', 'isFeatured'];
+    private readonly defaultBooleanFields = ['isActive'];
     private readonly options: Required<QueryTransformOptions>;
 
     constructor(options?: QueryTransformOptions) {

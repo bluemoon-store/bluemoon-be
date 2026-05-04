@@ -594,7 +594,6 @@ export class CouponService {
                             select: {
                                 categoryId: true,
                                 price: true,
-                                currency: true,
                             },
                         },
                     },
