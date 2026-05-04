@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+
+import { TICKET_SERVICE } from './ticket.constants';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -31,6 +33,7 @@ import { TicketService } from './services/ticket.service';
     controllers: [TicketPublicController, TicketAdminController],
     providers: [
         TicketService,
+        { provide: TICKET_SERVICE, useExisting: TicketService },
         TicketMessageService,
         TicketGateway,
         FileService,

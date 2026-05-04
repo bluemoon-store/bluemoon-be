@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TicketStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
-import { IsEnum, IsIn, IsNumber, IsOptional } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsArray, IsEnum, IsIn, IsNumber, IsOptional } from 'class-validator';
 
 export class TicketListQueryDto {
     @ApiPropertyOptional({ example: 1, type: Number })
@@ -16,10 +16,22 @@ export class TicketListQueryDto {
     @IsNumber()
     limit?: number;
 
-    @ApiPropertyOptional({ enum: TicketStatus })
+    @ApiPropertyOptional({
+        enum: TicketStatus,
+        isArray: true,
+        description:
+            'Repeat `status` for multiple values (e.g. IN_PROGRESS and WAITING_USER).',
+    })
     @IsOptional()
-    @IsEnum(TicketStatus)
-    status?: TicketStatus;
+    @Transform(({ value }) => {
+        if (value === undefined || value === null || value === '') {
+            return undefined;
+        }
+        return Array.isArray(value) ? value : [value];
+    })
+    @IsArray()
+    @IsEnum(TicketStatus, { each: true })
+    status?: TicketStatus[];
 
     @ApiPropertyOptional({
         description:

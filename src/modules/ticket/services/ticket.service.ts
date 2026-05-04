@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { HttpException } from '@nestjs/common';
 import { Prisma, Role, TicketPriority, TicketStatus } from '@prisma/client';
 
@@ -24,6 +24,7 @@ import { TicketUpdateDto } from '../dtos/request/ticket.update.request';
 import { TicketPresignResponseDto } from '../dtos/response/ticket-presign.response';
 import {
     TicketDetailResponseDto,
+    TicketListItemDto,
     TicketResponseDto,
 } from '../dtos/response/ticket.response';
 import { TicketGateway } from '../gateways/ticket.gateway';
@@ -32,6 +33,7 @@ import {
     mapTicketDetail,
     mapTicketListItem,
     tabToStatuses,
+    TicketListRow,
 } from '../ticket.mapper';
 import { generateTicketNumberString } from '../utils/ticket.util';
 
@@ -42,6 +44,7 @@ export class TicketService implements ITicketService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
+        @Inject(forwardRef(() => TicketGateway))
         private readonly ticketGateway: TicketGateway,
         private readonly fileService: FileService
     ) {}
@@ -139,17 +142,26 @@ export class TicketService implements ITicketService {
             created.lastStaffReadAt
         );
 
-        return mapTicketDetail(created, unreadCount);
+        const detail = mapTicketDetail(created, unreadCount);
+        const latestMsg = created.messages[created.messages.length - 1];
+        const listRow: TicketListRow = {
+            ...created,
+            messages: [latestMsg],
+        };
+        this.ticketGateway.emitTicketListUpserted(
+            mapTicketListItem(listRow, unreadCount)
+        );
+
+        return detail;
     }
 
     async getUserTickets(
         userId: string,
         query: TicketListQueryDto
     ): Promise<ApiPaginatedDataDto<TicketResponseDto>> {
-        const statuses =
-            query.status !== undefined
-                ? [query.status]
-                : tabToStatuses(query.tab);
+        const statuses = query.status?.length
+            ? query.status
+            : tabToStatuses(query.tab);
 
         const baseWhere: Prisma.SupportTicketWhereInput = {
             userId,
@@ -236,10 +248,9 @@ export class TicketService implements ITicketService {
     async getAllTickets(
         query: TicketAdminListQueryDto
     ): Promise<ApiPaginatedDataDto<TicketResponseDto>> {
-        const statuses =
-            query.status !== undefined
-                ? [query.status]
-                : tabToStatuses(query.tab);
+        const statuses = query.status?.length
+            ? query.status
+            : tabToStatuses(query.tab);
 
         const searchOr: Prisma.SupportTicketWhereInput[] | undefined =
             query.search?.trim()
@@ -562,6 +573,12 @@ export class TicketService implements ITicketService {
         );
         const dto = mapTicketListItem(row, unreadCount);
         this.ticketGateway.emitTicketUpdated(ticketId, dto);
+        if (data.assignedToId !== undefined) {
+            this.ticketGateway.emitTicketListAssigned(
+                ticketId,
+                row.assignedToId
+            );
+        }
         return dto;
     }
 
@@ -719,6 +736,77 @@ export class TicketService implements ITicketService {
             ticketId,
             lastStaffReadAt: row.lastStaffReadAt,
         });
+
+        const listDto = await this.fetchTicketListItemDto(ticketId);
+        if (listDto) {
+            this.ticketGateway.emitTicketListUpserted(listDto);
+        }
+    }
+
+    private async fetchTicketListItemDto(
+        ticketId: string
+    ): Promise<TicketListItemDto | null> {
+        const row = await this.databaseService.supportTicket.findFirst({
+            where: { id: ticketId, deletedAt: null },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        userName: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        role: true,
+                    },
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        email: true,
+                        userName: true,
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        role: true,
+                    },
+                },
+                order: {
+                    select: {
+                        id: true,
+                        orderNumber: true,
+                        status: true,
+                    },
+                },
+                messages: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                userName: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                role: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!row) {
+            return null;
+        }
+
+        const unreadCount = await this.countStaffUnread(
+            row.id,
+            row.lastStaffReadAt
+        );
+        return mapTicketListItem(row, unreadCount);
     }
 
     private async generateUniqueTicketNumber(): Promise<string> {

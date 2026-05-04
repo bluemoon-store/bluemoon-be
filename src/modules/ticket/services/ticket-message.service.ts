@@ -15,12 +15,47 @@ import {
 import { TicketMessageCreateDto } from '../dtos/request/ticket-message.create.request';
 import { TicketMessageResponseDto } from '../dtos/response/ticket-message.response';
 import { TicketMessagesCursorResponseDto } from '../dtos/response/ticket-messages-cursor.response';
+import { TicketListItemDto } from '../dtos/response/ticket.response';
 import { TicketGateway } from '../gateways/ticket.gateway';
 import { ITicketMessageService } from '../interfaces/ticket-message.service.interface';
-import { mapMessage, mapTicketListItem } from '../ticket.mapper';
+import { mapMessage, mapTicketListItem, TicketListRow } from '../ticket.mapper';
+
+const ticketListContextInclude = {
+    user: {
+        select: {
+            id: true,
+            email: true,
+            userName: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            role: true,
+        },
+    },
+    assignedTo: {
+        select: {
+            id: true,
+            email: true,
+            userName: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            role: true,
+        },
+    },
+    order: {
+        select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+        },
+    },
+} as const;
 
 @Injectable()
 export class TicketMessageService implements ITicketMessageService {
+    private readonly staffListUpsertTimers = new Map<string, NodeJS.Timeout>();
+
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly ticketGateway: TicketGateway
@@ -35,6 +70,7 @@ export class TicketMessageService implements ITicketMessageService {
 
         const ticket = await this.databaseService.supportTicket.findFirst({
             where: { id: ticketId, deletedAt: null },
+            include: ticketListContextInclude,
         });
         if (!ticket) {
             throw new HttpException(
@@ -104,9 +140,12 @@ export class TicketMessageService implements ITicketMessageService {
         const dto = mapMessage(row);
         this.ticketGateway.emitNewMessage(ticketId, dto);
 
-        if (nextStatus !== ticket.status) {
-            await this.emitTicketListSnapshot(ticketId);
-        }
+        await this.emitListUpdatesAfterMessage(
+            ticketId,
+            ticket,
+            row,
+            nextStatus
+        );
 
         return dto;
     }
@@ -130,6 +169,7 @@ export class TicketMessageService implements ITicketMessageService {
 
         const ticket = await this.databaseService.supportTicket.findFirst({
             where: { id: ticketId, deletedAt: null },
+            include: ticketListContextInclude,
         });
         if (!ticket) {
             throw new HttpException(
@@ -200,9 +240,12 @@ export class TicketMessageService implements ITicketMessageService {
         const dto = mapMessage(row);
         this.ticketGateway.emitNewMessage(ticketId, dto);
 
-        if (nextStatus !== ticket.status) {
-            await this.emitTicketListSnapshot(ticketId);
-        }
+        await this.emitListUpdatesAfterMessage(
+            ticketId,
+            ticket,
+            row,
+            nextStatus
+        );
 
         return dto;
     }
@@ -348,68 +391,58 @@ export class TicketMessageService implements ITicketMessageService {
         });
     }
 
-    private async emitTicketListSnapshot(ticketId: string): Promise<void> {
-        const row = await this.databaseService.supportTicket.findFirst({
-            where: { id: ticketId, deletedAt: null },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        email: true,
-                        userName: true,
-                        firstName: true,
-                        lastName: true,
-                        avatar: true,
-                        role: true,
-                    },
-                },
-                assignedTo: {
-                    select: {
-                        id: true,
-                        email: true,
-                        userName: true,
-                        firstName: true,
-                        lastName: true,
-                        avatar: true,
-                        role: true,
-                    },
-                },
-                order: {
-                    select: {
-                        id: true,
-                        orderNumber: true,
-                        status: true,
-                    },
-                },
-                messages: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1,
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                userName: true,
-                                firstName: true,
-                                lastName: true,
-                                avatar: true,
-                                role: true,
-                                email: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+    private async buildListItemAfterMessage(
+        ticket: TicketListRow,
+        latestMessage: Parameters<typeof mapMessage>[0],
+        nextStatus: TicketStatus
+    ): Promise<TicketListItemDto> {
+        const merged: TicketListRow = {
+            ...ticket,
+            status: nextStatus,
+            messages: [latestMessage],
+        };
+        const unreadCount = await this.countStaffUnread(
+            ticket.id,
+            ticket.lastStaffReadAt
+        );
+        return mapTicketListItem(merged, unreadCount);
+    }
 
-        if (!row) {
+    private scheduleDebouncedStaffListUpsert(
+        ticketId: string,
+        factory: () => Promise<TicketListItemDto>
+    ): void {
+        const existing = this.staffListUpsertTimers.get(ticketId);
+        if (existing) {
+            clearTimeout(existing);
+        }
+        const timer = setTimeout(() => {
+            this.staffListUpsertTimers.delete(ticketId);
+            void factory().then(dto => {
+                this.ticketGateway.emitTicketListUpserted(dto);
+            });
+        }, 500);
+        this.staffListUpsertTimers.set(ticketId, timer);
+    }
+
+    private async emitListUpdatesAfterMessage(
+        ticketId: string,
+        ticket: TicketListRow,
+        latestMessage: Parameters<typeof mapMessage>[0],
+        nextStatus: TicketStatus
+    ): Promise<void> {
+        if (nextStatus !== ticket.status) {
+            const listDto = await this.buildListItemAfterMessage(
+                ticket,
+                latestMessage,
+                nextStatus
+            );
+            this.ticketGateway.emitTicketUpdated(ticketId, listDto);
             return;
         }
 
-        const unreadCount = await this.countStaffUnread(
-            row.id,
-            row.lastStaffReadAt
+        this.scheduleDebouncedStaffListUpsert(ticketId, () =>
+            this.buildListItemAfterMessage(ticket, latestMessage, nextStatus)
         );
-        const dto = mapTicketListItem(row, unreadCount);
-        this.ticketGateway.emitTicketUpdated(ticketId, dto);
     }
 }

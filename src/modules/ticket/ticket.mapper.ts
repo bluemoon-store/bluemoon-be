@@ -14,6 +14,7 @@ import {
 } from './dtos/response/ticket-message.response';
 import {
     TicketDetailResponseDto,
+    TicketListItemDto,
     TicketOrderSnapshotDto,
     TicketResponseDto,
     TicketUserSnapshotDto,
@@ -104,7 +105,7 @@ export function mapMessage(m: MessageWithRelations): TicketMessageResponseDto {
     };
 }
 
-type TicketListRow = SupportTicket & {
+export type TicketListRow = SupportTicket & {
     user?: Pick<
         User,
         | 'id'
@@ -132,13 +133,13 @@ type TicketListRow = SupportTicket & {
 export function mapTicketListItem(
     row: TicketListRow,
     unreadCount: number
-): TicketResponseDto {
+): TicketListItemDto {
     const lastMsg =
         row.messages && row.messages.length > 0
             ? mapMessage({ ...row.messages[0], attachments: [] })
             : null;
 
-    const base: TicketResponseDto = {
+    const base: TicketListItemDto = {
         id: row.id,
         ticketNumber: row.ticketNumber,
         subject: row.subject,

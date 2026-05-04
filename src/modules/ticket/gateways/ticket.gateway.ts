@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { forwardRef, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
@@ -19,7 +19,9 @@ import {
 } from 'src/common/request/constants/roles.constant';
 
 import { TicketMessageResponseDto } from '../dtos/response/ticket-message.response';
-import { TicketResponseDto } from '../dtos/response/ticket.response';
+import { TicketListItemDto } from '../dtos/response/ticket.response';
+import type { ITicketService } from '../interfaces/ticket.service.interface';
+import { TICKET_SERVICE } from '../ticket.constants';
 
 interface SocketAuthPayload {
     userId: string;
@@ -40,7 +42,9 @@ export class TicketGateway implements OnGatewayConnection {
     constructor(
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
-        private readonly databaseService: DatabaseService
+        private readonly databaseService: DatabaseService,
+        @Inject(forwardRef(() => TICKET_SERVICE))
+        private readonly ticketService: ITicketService
     ) {
         this.accessSecret = this.configService.getOrThrow<string>(
             'auth.accessToken.secret'
@@ -65,6 +69,12 @@ export class TicketGateway implements OnGatewayConnection {
             }
             client.data.userId = payload.userId;
             client.data.role = payload.role;
+            if (
+                isSuperAdminRole(payload.role) ||
+                isPrivilegedAdminRole(payload.role)
+            ) {
+                await client.join('staff');
+            }
         } catch {
             client.disconnect(true);
         }
@@ -74,8 +84,24 @@ export class TicketGateway implements OnGatewayConnection {
         this.server.to(`ticket:${ticketId}`).emit('ticket:message', message);
     }
 
-    emitTicketUpdated(ticketId: string, ticket: TicketResponseDto): void {
+    emitTicketUpdated(ticketId: string, ticket: TicketListItemDto): void {
         this.server.to(`ticket:${ticketId}`).emit('ticket:updated', ticket);
+        this.emitTicketListUpserted(ticket);
+    }
+
+    emitTicketListUpserted(item: TicketListItemDto): void {
+        this.server.to('staff').emit('ticket:list:upserted', item);
+    }
+
+    emitTicketListRemoved(ticketId: string): void {
+        this.server.to('staff').emit('ticket:list:removed', { ticketId });
+    }
+
+    emitTicketListAssigned(ticketId: string, assigneeId: string | null): void {
+        this.server.to('staff').emit('ticket:list:assigned', {
+            ticketId,
+            assigneeId,
+        });
     }
 
     emitRead(
@@ -104,6 +130,17 @@ export class TicketGateway implements OnGatewayConnection {
         }
 
         await client.join(`ticket:${ticketId}`);
+
+        if (isSuperAdminRole(role) || isPrivilegedAdminRole(role)) {
+            try {
+                await this.ticketService.markRead(ticketId);
+            } catch (err) {
+                this.logger.warn(
+                    { err, ticketId },
+                    'mark read on ticket:join failed'
+                );
+            }
+        }
     }
 
     @SubscribeMessage('ticket:leave')

@@ -172,6 +172,9 @@ export class TicketResponseDto {
     unreadCount?: number;
 }
 
+/** Admin list row + WebSocket `ticket:list:upserted` payload (same shape as list API items). */
+export class TicketListItemDto extends TicketResponseDto {}
+
 export class TicketDetailResponseDto extends TicketResponseDto {
     @ApiProperty({ type: [TicketMessageResponseDto] })
     @Expose()
