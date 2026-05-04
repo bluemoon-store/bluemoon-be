@@ -10,6 +10,7 @@ import { CryptoPaymentService } from './crypto-payment.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
 import { IBlockchainMonitorService } from '../interfaces/blockchain-monitor.service.interface';
 import { OrderDeliveryService } from 'src/modules/order/services/order-delivery.service';
+import { StockLineService } from 'src/modules/stock-line/services/stock-line.service';
 import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 /**
@@ -24,6 +25,7 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         private readonly providerFactory: BlockchainProviderFactory,
         private readonly configService: ConfigService,
         private readonly deliveryService: OrderDeliveryService,
+        private readonly stockLineService: StockLineService,
         private readonly walletService: WalletService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
@@ -803,16 +805,29 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         this.logger.info({ paymentId }, 'Confirming payment');
 
         try {
-            const payment = await this.databaseService.cryptoPayment.update({
-                where: { id: paymentId },
-                data: {
-                    status: PaymentStatus.CONFIRMED,
-                    confirmedAt: new Date(),
-                },
-                include: {
-                    order: true,
-                },
-            });
+            const payment = await this.databaseService.$transaction(
+                async tx => {
+                    const p = await tx.cryptoPayment.update({
+                        where: { id: paymentId },
+                        data: {
+                            status: PaymentStatus.CONFIRMED,
+                            confirmedAt: new Date(),
+                        },
+                        include: {
+                            order: true,
+                        },
+                    });
+                    await this.stockLineService.markSoldForOrder(tx, p.orderId);
+                    await tx.order.update({
+                        where: { id: p.orderId },
+                        data: {
+                            status: OrderStatus.COMPLETED,
+                            completedAt: new Date(),
+                        },
+                    });
+                    return p;
+                }
+            );
 
             this.logger.info(
                 {
@@ -823,15 +838,6 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 },
                 'Payment confirmed'
             );
-
-            // Update order status to COMPLETED and trigger auto-delivery
-            await this.databaseService.order.update({
-                where: { id: payment.orderId },
-                data: {
-                    status: OrderStatus.COMPLETED,
-                    completedAt: new Date(),
-                },
-            });
 
             this.logger.info(
                 { paymentId, orderId: payment.orderId },

@@ -8,6 +8,7 @@ import { WalletModule } from 'src/modules/wallet/wallet.module';
 import { CartModule } from 'src/modules/cart/cart.module';
 import { CouponModule } from 'src/modules/coupon/coupon.module';
 import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
+import { StockLineModule } from 'src/modules/stock-line/stock-line.module';
 
 import { OrderPublicController } from './controllers/order.public.controller';
 import { OrderAdminController } from './controllers/order.admin.controller';
@@ -24,6 +25,7 @@ import { OrderDeliveryService } from './services/order-delivery.service';
         CouponModule,
         RequestModule,
         ActivityLogModule,
+        StockLineModule,
     ],
     controllers: [OrderPublicController, OrderAdminController],
     providers: [OrderService, OrderDeliveryService],

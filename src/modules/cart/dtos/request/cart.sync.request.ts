@@ -6,6 +6,7 @@ import {
     IsOptional,
     IsString,
     IsUUID,
+    Max,
     Min,
     ValidateNested,
 } from 'class-validator';
@@ -27,6 +28,7 @@ export class CartSyncItemDto {
     })
     @IsInt()
     @Min(1)
+    @Max(1000)
     quantity: number;
 
     @ApiPropertyOptional({

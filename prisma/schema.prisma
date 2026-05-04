@@ -186,12 +186,45 @@ model ProductVariant {
   sortOrder     Int      @default(0) @map("sort_order")
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  stockLines    ProductStockLine[]
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
   @@index([productId])
   @@map("product_variants")
+}
+
+enum StockLineStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  REFUNDED
+}
+
+model ProductStockLine {
+  id             String          @id @default(uuid())
+  variantId      String          @map("variant_id")
+  variant        ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  content        String          @db.Text
+  contentHash    String          @map("content_hash")
+  status         StockLineStatus @default(AVAILABLE)
+
+  orderItemId    String?         @map("order_item_id")
+  orderItem      OrderItem?      @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  reservedAt     DateTime?       @map("reserved_at")
+  reservedUntil  DateTime?       @map("reserved_until")
+  soldAt         DateTime?       @map("sold_at")
+  retiredAt      DateTime?       @map("retired_at")
+
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@unique([variantId, contentHash])
+  @@index([variantId, status])
+  @@index([orderItemId])
+  @@index([status, reservedUntil])
+  @@map("product_stock_lines")
 }
 
 model ProductRegion {
@@ -349,6 +382,7 @@ model OrderItem {
   variantLabel  String?         @map("variant_label")
   regionLabel   String?         @map("region_label")
   regionCountry String?         @map("region_country")
+  stockLines    ProductStockLine[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

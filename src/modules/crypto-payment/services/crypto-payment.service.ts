@@ -17,6 +17,7 @@ import {
 } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { StockLineService } from 'src/modules/stock-line/services/stock-line.service';
 import { SystemWalletService } from './system-wallet.service';
 import { ExchangeRateService } from './exchange-rate.service';
 import { ICryptoPaymentService } from '../interfaces/crypto-payment.service.interface';
@@ -40,6 +41,7 @@ export class CryptoPaymentService implements ICryptoPaymentService {
         private readonly configService: ConfigService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
+        private readonly stockLineService: StockLineService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(CryptoPaymentService.name);
@@ -224,6 +226,12 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                     expiresAt: addressDetails.expiresAt,
                 },
             });
+
+            await this.stockLineService.syncReservationExpiryForOrder(
+                this.databaseService,
+                orderId,
+                payment.expiresAt
+            );
 
             this.logger.info(
                 {
@@ -487,16 +495,23 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 return;
             }
 
-            // Update payment status to EXPIRED
-            await this.databaseService.cryptoPayment.update({
-                where: { id: paymentId },
-                data: {
-                    status: PaymentStatus.EXPIRED,
-                },
+            const orderId = payment.orderId;
+
+            await this.databaseService.$transaction(async tx => {
+                await tx.cryptoPayment.update({
+                    where: { id: paymentId },
+                    data: {
+                        status: PaymentStatus.EXPIRED,
+                    },
+                });
+                await this.stockLineService.releaseReservedForOrder(
+                    tx,
+                    orderId
+                );
             });
 
             this.logger.info(
-                { paymentId, orderId: payment.orderId },
+                { paymentId, orderId },
                 'Payment expired successfully'
             );
         } catch (error) {

@@ -68,6 +68,13 @@ export class CartService implements ICartService {
                 );
             }
 
+            if (variant.stockQuantity === 0) {
+                throw new HttpException(
+                    'cart.error.outOfStock',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
             if (variant.stockQuantity < quantity) {
                 throw new HttpException(
                     'cart.error.insufficientStock',
@@ -81,6 +88,13 @@ export class CartService implements ICartService {
                         ? variant.price
                         : variant.price.toString(),
             };
+        }
+
+        if (product.stockQuantity === 0) {
+            throw new HttpException(
+                'cart.error.outOfStock',
+                HttpStatus.BAD_REQUEST
+            );
         }
 
         if (product.stockQuantity < quantity) {

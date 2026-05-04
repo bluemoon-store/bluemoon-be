@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, StockLineStatus } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
@@ -58,10 +58,32 @@ export class OrderDeliveryService implements IOrderDeliveryService {
             for (const item of order.items) {
                 // With DeliveryType always INSTANT, simply deliver any undelivered items
                 if (!item.deliveredContent) {
-                    // Use product's delivery content
-                    const content =
-                        item.product.deliveryContent ||
-                        'Your product has been delivered.';
+                    let content: string;
+
+                    if (item.variantId) {
+                        const soldLines =
+                            await this.databaseService.productStockLine.findMany(
+                                {
+                                    where: {
+                                        orderItemId: item.id,
+                                        status: StockLineStatus.SOLD,
+                                    },
+                                    orderBy: { createdAt: 'asc' },
+                                    select: { content: true },
+                                }
+                            );
+                        if (soldLines.length > 0) {
+                            content = soldLines.map(l => l.content).join('\n');
+                        } else {
+                            content =
+                                item.product.deliveryContent ||
+                                'Your product has been delivered.';
+                        }
+                    } else {
+                        content =
+                            item.product.deliveryContent ||
+                            'Your product has been delivered.';
+                    }
 
                     await this.databaseService.orderItem.update({
                         where: { id: item.id },

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { faker } from '@faker-js/faker';
-import { IsUUID, IsInt, Min, IsOptional, IsString } from 'class-validator';
+import { IsUUID, IsInt, Min, Max, IsOptional, IsString } from 'class-validator';
 
 export class CartAddItemDto {
     @ApiProperty({
@@ -18,6 +18,7 @@ export class CartAddItemDto {
     })
     @IsInt()
     @Min(1)
+    @Max(1000)
     quantity: number;
 
     @ApiPropertyOptional({

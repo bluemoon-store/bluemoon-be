@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, Min } from 'class-validator';
+import { IsInt, Min, Max } from 'class-validator';
 
 export class CartUpdateItemDto {
     @ApiProperty({
@@ -9,5 +9,6 @@ export class CartUpdateItemDto {
     })
     @IsInt()
     @Min(1)
+    @Max(1000)
     quantity: number;
 }

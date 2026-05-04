@@ -16,7 +16,6 @@ import {
     TicketDetailResponseDto,
     TicketListItemDto,
     TicketOrderSnapshotDto,
-    TicketResponseDto,
     TicketUserSnapshotDto,
 } from './dtos/response/ticket.response';
 

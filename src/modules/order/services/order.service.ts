@@ -28,6 +28,7 @@ import {
     generateOrderNumberString,
 } from '../utils/order.util';
 import { OrderDeliveryService } from './order-delivery.service';
+import { StockLineService } from 'src/modules/stock-line/services/stock-line.service';
 
 @Injectable()
 export class OrderService implements IOrderService {
@@ -38,6 +39,7 @@ export class OrderService implements IOrderService {
         private readonly walletService: WalletService,
         private readonly couponService: CouponService,
         private readonly activityLogEmitter: ActivityLogEmitterService,
+        private readonly stockLineService: StockLineService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderService.name);
@@ -120,17 +122,33 @@ export class OrderService implements IOrderService {
                     );
                 }
 
+                if (variant.stockQuantity === 0) {
+                    throw new HttpException(
+                        `order.error.outOfStock: ${product.name}`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+
                 if (variant.stockQuantity < item.quantity) {
                     throw new HttpException(
                         `order.error.insufficientStock: ${product.name}`,
                         HttpStatus.BAD_REQUEST
                     );
                 }
-            } else if (product.stockQuantity < item.quantity) {
-                throw new HttpException(
-                    `order.error.insufficientStock: ${product.name}`,
-                    HttpStatus.BAD_REQUEST
-                );
+            } else {
+                if (product.stockQuantity === 0) {
+                    throw new HttpException(
+                        `order.error.outOfStock: ${product.name}`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                if (product.stockQuantity < item.quantity) {
+                    throw new HttpException(
+                        `order.error.insufficientStock: ${product.name}`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
             }
         }
     }
@@ -314,14 +332,13 @@ export class OrderService implements IOrderService {
                     });
 
                     if (cartItem.variantId) {
-                        await tx.productVariant.update({
-                            where: { id: cartItem.variantId },
-                            data: {
-                                stockQuantity: {
-                                    decrement: cartItem.quantity,
-                                },
-                            },
-                        });
+                        await this.stockLineService.allocateForOrderItem(
+                            tx,
+                            orderItem.id,
+                            cartItem.variantId,
+                            cartItem.quantity,
+                            this.stockLineService.getDefaultReservationDeadline()
+                        );
                     } else {
                         await tx.product.update({
                             where: { id: cartItem.productId },
@@ -443,6 +460,7 @@ export class OrderService implements IOrderService {
 
             const updatedOrder = await this.databaseService.$transaction(
                 async tx => {
+                    await this.stockLineService.markSoldForOrder(tx, orderId);
                     return tx.order.update({
                         where: { id: orderId },
                         data: {
@@ -691,29 +709,64 @@ export class OrderService implements IOrderService {
                 updateData.cancelledAt = new Date();
             }
 
-            const updatedOrder = await this.databaseService.order.update({
-                where: { id: orderId },
-                data: updateData,
-                include: {
-                    items: {
-                        include: {
-                            product: {
-                                include: {
-                                    category: true,
-                                    images: {
-                                        where: { deletedAt: null },
-                                        orderBy: [
-                                            { isPrimary: 'desc' },
-                                            { sortOrder: 'asc' },
-                                        ],
+            let updatedOrder;
+            if (data.status === OrderStatus.COMPLETED) {
+                updatedOrder = await this.databaseService.$transaction(
+                    async tx => {
+                        await this.stockLineService.markSoldForOrder(
+                            tx,
+                            orderId
+                        );
+                        return tx.order.update({
+                            where: { id: orderId },
+                            data: updateData,
+                            include: {
+                                items: {
+                                    include: {
+                                        product: {
+                                            include: {
+                                                category: true,
+                                                images: {
+                                                    where: { deletedAt: null },
+                                                    orderBy: [
+                                                        { isPrimary: 'desc' },
+                                                        { sortOrder: 'asc' },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                                cryptoPayment: true,
+                            },
+                        });
+                    }
+                );
+            } else {
+                updatedOrder = await this.databaseService.order.update({
+                    where: { id: orderId },
+                    data: updateData,
+                    include: {
+                        items: {
+                            include: {
+                                product: {
+                                    include: {
+                                        category: true,
+                                        images: {
+                                            where: { deletedAt: null },
+                                            orderBy: [
+                                                { isPrimary: 'desc' },
+                                                { sortOrder: 'asc' },
+                                            ],
+                                        },
                                     },
                                 },
                             },
                         },
+                        cryptoPayment: true,
                     },
-                    cryptoPayment: true,
-                },
-            });
+                });
+            }
 
             this.logger.info(
                 {
@@ -766,6 +819,7 @@ export class OrderService implements IOrderService {
         try {
             const order = await this.databaseService.order.findFirst({
                 where: { id: orderId, deletedAt: null },
+                include: { items: true },
             });
 
             if (!order) {
@@ -783,6 +837,17 @@ export class OrderService implements IOrderService {
                     'order.error.cannotRefundOrder',
                     HttpStatus.BAD_REQUEST
                 );
+            }
+
+            if (order.items.length > 0) {
+                await this.databaseService.$transaction(async tx => {
+                    for (const item of order.items) {
+                        await this.stockLineService.retireForOrderItem(
+                            tx,
+                            item.id
+                        );
+                    }
+                });
             }
 
             await this.updateOrderStatus(orderId, {
@@ -859,27 +924,16 @@ export class OrderService implements IOrderService {
             // Restore stock and cancel order in transaction
             const cancelledOrder = await this.databaseService.$transaction(
                 async tx => {
-                    // Restore stock for each item
                     for (const item of order.items) {
-                        if (item.variantId) {
-                            await tx.productVariant.update({
-                                where: { id: item.variantId },
-                                data: {
-                                    stockQuantity: {
-                                        increment: item.quantity,
-                                    },
-                                },
-                            });
-                        } else {
-                            await tx.product.update({
-                                where: { id: item.productId },
-                                data: {
-                                    stockQuantity: {
-                                        increment: item.quantity,
-                                    },
-                                },
-                            });
-                        }
+                        await this.stockLineService.restoreCancelledOrderItem(
+                            tx,
+                            {
+                                id: item.id,
+                                variantId: item.variantId,
+                                productId: item.productId,
+                                quantity: item.quantity,
+                            }
+                        );
                     }
 
                     // Update order status
