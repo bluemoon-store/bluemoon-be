@@ -13,6 +13,7 @@ import { WorkerModule } from 'src/workers/worker.module';
 import { ReviewModule } from 'src/modules/review/review.module';
 import { CouponModule } from 'src/modules/coupon/coupon.module';
 import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
+import { VouchModule } from 'src/modules/vouch/vouch.module';
 
 import { HealthController } from './controllers/health.controller';
 import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
@@ -38,6 +39,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
         TicketModule,
         CryptoPaymentModule,
         ReviewModule,
+        VouchModule,
         CouponModule,
     ],
     controllers: [HealthController],

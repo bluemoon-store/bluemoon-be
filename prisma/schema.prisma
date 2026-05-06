@@ -34,6 +34,7 @@ model User {
   assignedTickets SupportTicket[] @relation("AssignedTickets")
   ticketMessages  TicketMessage[]
   reviews         OrderReview[]
+  vouches         Vouch[]
   isBanned        Boolean         @default(false) @map("is_banned")
   bannedAt        DateTime?       @map("banned_at")
   bannedReason    String?         @map("banned_reason")
@@ -366,6 +367,25 @@ model OrderReview {
   @@map("order_reviews")
 }
 
+model Vouch {
+  id          String    @id @default(uuid())
+  orderItemId String    @map("order_item_id")
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageKey    String    @map("image_key")
+  imageUrl    String?   @map("image_url")
+  caption     String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([orderItemId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("vouches")
+}
+
 model OrderItem {
   id               String    @id @default(uuid())
   orderId          String    @map("order_id")
@@ -383,6 +403,7 @@ model OrderItem {
   regionLabel   String?         @map("region_label")
   regionCountry String?         @map("region_country")
   stockLines    ProductStockLine[]
+  vouches       Vouch[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

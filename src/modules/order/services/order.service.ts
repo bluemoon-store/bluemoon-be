@@ -182,6 +182,10 @@ export class OrderService implements IOrderService {
                                     },
                                 },
                             },
+                            vouches: {
+                                where: { deletedAt: null },
+                                orderBy: { createdAt: 'desc' },
+                            },
                         },
                     },
                 },
@@ -379,6 +383,10 @@ export class OrderService implements IOrderService {
                                     },
                                 },
                             },
+                            vouches: {
+                                where: { deletedAt: null },
+                                orderBy: { createdAt: 'desc' },
+                            },
                         },
                     },
                     cryptoPayment: true,
@@ -573,6 +581,10 @@ export class OrderService implements IOrderService {
                                             },
                                         },
                                     },
+                                    vouches: {
+                                        where: { deletedAt: null },
+                                        orderBy: { createdAt: 'desc' },
+                                    },
                                 },
                             },
                             cryptoPayment: true,
@@ -632,6 +644,10 @@ export class OrderService implements IOrderService {
                                         ],
                                     },
                                 },
+                            },
+                            vouches: {
+                                where: { deletedAt: null },
+                                orderBy: { createdAt: 'desc' },
                             },
                         },
                     },

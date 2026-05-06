@@ -15,6 +15,24 @@ import {
 import { ProductResponseDto } from 'src/modules/product/dtos/response/product.response';
 import { CryptoPaymentResponseDto } from 'src/modules/crypto-payment/dtos/response/crypto-payment.response';
 
+export class OrderItemVouchDto {
+    @ApiProperty()
+    @Expose()
+    id: string;
+
+    @ApiProperty()
+    @Expose()
+    imageUrl: string;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    caption: string | null;
+
+    @ApiProperty()
+    @Expose()
+    createdAt: Date;
+}
+
 export class OrderItemResponseDto implements OrderItem {
     @ApiProperty({
         example: faker.string.uuid(),
@@ -127,6 +145,15 @@ export class OrderItemResponseDto implements OrderItem {
     @Type(() => ProductResponseDto)
     @ValidateNested()
     product?: ProductResponseDto;
+
+    @ApiPropertyOptional({
+        type: [OrderItemVouchDto],
+    })
+    @Expose()
+    @IsOptional()
+    @Type(() => OrderItemVouchDto)
+    @ValidateNested({ each: true })
+    vouches?: OrderItemVouchDto[];
 }
 
 export class OrderReviewEmbedDto {
