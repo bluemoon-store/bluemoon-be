@@ -1,8 +1,17 @@
+import { randomBytes } from 'node:crypto';
+
 import { Injectable } from '@nestjs/common';
-import { DeliveryType, Prisma, Product, ProductCategory } from '@prisma/client';
+import {
+    DeliveryType,
+    Prisma,
+    Product,
+    ProductCategory,
+    StockLineStatus,
+} from '@prisma/client';
 import { PinoLogger } from 'nestjs-pino';
 import { Command } from 'nestjs-command';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { hashStockLineContent } from 'src/modules/stock-line/utils/stock-line-hash.util';
 
 type CategorySlug =
     | 'cashout'
@@ -187,7 +196,6 @@ const PRODUCT_DEFS: ProductSeedDef[] = [
         isNew: false,
         isRestocked: true,
         sortOrder: 1,
-        flair: 'Best Seller',
         shortNotice: 'Spend like cash wherever Visa debit is accepted.',
         deliveryContent:
             'Digital delivery includes card number, expiration, and security code. Register the card on the issuer site if required before first use.',
@@ -730,6 +738,52 @@ const REGION_ROWS = [
     { label: 'Europe', countryCode: 'GB', sortOrder: 2 },
 ] as const;
 
+const STOCK_LINES_PER_VARIANT = 20;
+
+type StockFormat = 'credentials' | 'code';
+
+const STREAMING_CATEGORY: CategorySlug = 'streaming';
+
+function pickStockFormat(categorySlug: CategorySlug): StockFormat {
+    return categorySlug === STREAMING_CATEGORY ? 'credentials' : 'code';
+}
+
+function randomFromCharset(length: number, charset: string): string {
+    const bytes = randomBytes(length);
+    let out = '';
+    for (let i = 0; i < length; i++) {
+        out += charset[bytes[i] % charset.length];
+    }
+    return out;
+}
+
+function generateStockLineContent(format: StockFormat): string {
+    if (format === 'credentials') {
+        const userChars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        const passChars =
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const localPart = randomFromCharset(8, userChars);
+        const password = randomFromCharset(12, passChars);
+        return `${localPart}@example.com:${password}`;
+    }
+    // 16-char hyphenated redemption code: XXXX-XXXX-XXXX-XXXX
+    const codeChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return [0, 0, 0, 0].map(() => randomFromCharset(4, codeChars)).join('-');
+}
+
+function generateUniqueStockLines(
+    format: StockFormat,
+    count: number
+): string[] {
+    const set = new Set<string>();
+    // Defensive cap to prevent runaway loops if entropy is somehow exhausted.
+    let safety = count * 10;
+    while (set.size < count && safety-- > 0) {
+        set.add(generateStockLineContent(format));
+    }
+    return Array.from(set);
+}
+
 const STREAMING_RELATED: ProductSlug[] = ['netflix', 'disney-plus'];
 const FOOD_RELATED: ProductSlug[] = ['starbucks', 'doordash'];
 const FLIGHTS_RELATED: ProductSlug[] = [
@@ -820,6 +874,10 @@ export class ProductsSeedService {
             if (existing) {
                 this.logger.info(`Product ${def.slug} already exists`);
                 products.push(existing);
+                await this.topUpVariantStockLines(
+                    existing.id,
+                    def.categorySlug
+                );
                 continue;
             }
 
@@ -829,13 +887,15 @@ export class ProductsSeedService {
                 def.iconUrl ?? `https://picsum.photos/seed/${def.slug}/64/64`;
             const basePrice = VARIANT_DENOMS[0].price;
 
+            const totalStock = STOCK_LINES_PER_VARIANT * VARIANT_DENOMS.length;
+
             const product = await this.databaseService.product.create({
                 data: {
                     name: def.name,
                     slug: def.slug,
                     description: def.description,
                     price: new Prisma.Decimal(basePrice),
-                    stockQuantity: 10_000,
+                    stockQuantity: totalStock,
                     categoryId: category.id,
                     deliveryType: DeliveryType.INSTANT,
                     deliveryContent: def.deliveryContent,
@@ -866,7 +926,7 @@ export class ProductsSeedService {
                         create: VARIANT_DENOMS.map(v => ({
                             label: v.label,
                             price: new Prisma.Decimal(v.price),
-                            stockQuantity: 5000,
+                            stockQuantity: STOCK_LINES_PER_VARIANT,
                             sortOrder: v.sortOrder,
                         })),
                     },
@@ -880,13 +940,81 @@ export class ProductsSeedService {
                         },
                     },
                 },
+                include: { variants: true },
             });
 
+            const format = pickStockFormat(def.categorySlug);
+            for (const variant of product.variants) {
+                const lines = generateUniqueStockLines(
+                    format,
+                    STOCK_LINES_PER_VARIANT
+                );
+                await this.databaseService.productStockLine.createMany({
+                    data: lines.map(content => ({
+                        variantId: variant.id,
+                        content,
+                        contentHash: hashStockLineContent(content),
+                        status: StockLineStatus.AVAILABLE,
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+
             products.push(product);
-            this.logger.info(`Created product: ${def.name}`);
+            this.logger.info(
+                `Created product: ${def.name} (+${totalStock} stock lines)`
+            );
         }
 
         return products;
+    }
+
+    /**
+     * Backfills missing AVAILABLE stock lines for an already-seeded product
+     * up to STOCK_LINES_PER_VARIANT per variant. Lets `yarn seed:products` be
+     * re-run to repair products that were originally seeded with bogus counters
+     * and zero actual stock-line rows.
+     */
+    private async topUpVariantStockLines(
+        productId: string,
+        categorySlug: CategorySlug
+    ): Promise<void> {
+        const variants = await this.databaseService.productVariant.findMany({
+            where: { productId, deletedAt: null },
+        });
+        const format = pickStockFormat(categorySlug);
+
+        for (const variant of variants) {
+            const existingCount =
+                await this.databaseService.productStockLine.count({
+                    where: { variantId: variant.id },
+                });
+            if (existingCount >= STOCK_LINES_PER_VARIANT) continue;
+
+            const needed = STOCK_LINES_PER_VARIANT - existingCount;
+            const lines = generateUniqueStockLines(format, needed);
+            await this.databaseService.productStockLine.createMany({
+                data: lines.map(content => ({
+                    variantId: variant.id,
+                    content,
+                    contentHash: hashStockLineContent(content),
+                    status: StockLineStatus.AVAILABLE,
+                })),
+                skipDuplicates: true,
+            });
+
+            const availableCount =
+                await this.databaseService.productStockLine.count({
+                    where: {
+                        variantId: variant.id,
+                        status: StockLineStatus.AVAILABLE,
+                    },
+                });
+            await this.databaseService.productVariant.update({
+                where: { id: variant.id },
+                data: { stockQuantity: availableCount },
+            });
+        }
     }
 
     private async seedRelatedProducts(): Promise<void> {

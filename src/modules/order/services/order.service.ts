@@ -182,10 +182,6 @@ export class OrderService implements IOrderService {
                                     },
                                 },
                             },
-                            vouches: {
-                                where: { deletedAt: null },
-                                orderBy: { createdAt: 'desc' },
-                            },
                         },
                     },
                 },

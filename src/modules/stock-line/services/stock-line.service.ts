@@ -10,12 +10,13 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
 
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
+
 import { hashStockLineContent } from '../utils/stock-line-hash.util';
 import { StockLineListQueryDto } from '../dtos/request/stock-line.list.query';
 import {
     StockLineAdminRowDto,
     StockLineBulkAddResponseDto,
-    StockLineListResponseDto,
 } from '../dtos/response/stock-line.admin.response';
 import { StockLineSummaryResponseDto } from '../dtos/response/stock-line.summary.response';
 
@@ -73,21 +74,31 @@ export class StockLineService {
         tx: DbClient,
         variantId: string
     ): Promise<StockLineSummaryResponseDto> {
-        const [available, reserved, sold, refunded] = await Promise.all([
-            tx.productStockLine.count({
-                where: { variantId, status: StockLineStatus.AVAILABLE },
-            }),
-            tx.productStockLine.count({
-                where: { variantId, status: StockLineStatus.RESERVED },
-            }),
-            tx.productStockLine.count({
-                where: { variantId, status: StockLineStatus.SOLD },
-            }),
-            tx.productStockLine.count({
-                where: { variantId, status: StockLineStatus.REFUNDED },
-            }),
-        ]);
+        const grouped = await tx.productStockLine.groupBy({
+            by: ['status'],
+            where: {
+                variantId,
+                status: {
+                    in: [
+                        StockLineStatus.AVAILABLE,
+                        StockLineStatus.RESERVED,
+                        StockLineStatus.SOLD,
+                        StockLineStatus.REFUNDED,
+                    ],
+                },
+            },
+            _count: { _all: true },
+        });
+
+        const counts = new Map<StockLineStatus, number>(
+            grouped.map(row => [row.status, row._count._all])
+        );
+        const available = counts.get(StockLineStatus.AVAILABLE) ?? 0;
+        const reserved = counts.get(StockLineStatus.RESERVED) ?? 0;
+        const sold = counts.get(StockLineStatus.SOLD) ?? 0;
+        const refunded = counts.get(StockLineStatus.REFUNDED) ?? 0;
         const total = available + reserved + sold + refunded;
+
         return { available, reserved, sold, refunded, total };
     }
 
@@ -131,8 +142,11 @@ export class StockLineService {
                 skipDuplicates: true,
             });
 
-            await this.syncVariantAvailableCount(tx, variantId);
             const totals = await this.getSummaryCounts(tx, variantId);
+            await tx.productVariant.update({
+                where: { id: variantId },
+                data: { stockQuantity: totals.available },
+            });
             const skipped = rows.length - added + skippedInInput;
 
             return { added, skipped, totals };
@@ -143,7 +157,7 @@ export class StockLineService {
         productId: string,
         variantId: string,
         query: StockLineListQueryDto
-    ): Promise<StockLineListResponseDto> {
+    ): Promise<ApiPaginatedDataDto<StockLineAdminRowDto>> {
         await this.assertVariantBelongsToProduct(
             this.databaseService,
             productId,
@@ -185,11 +199,16 @@ export class StockLineService {
             this.databaseService.productStockLine.count({ where }),
         ]);
 
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+
         return {
             items: items as StockLineAdminRowDto[],
-            total,
-            page,
-            limit,
+            metadata: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: total,
+                totalPages,
+            },
         };
     }
 
@@ -245,7 +264,7 @@ export class StockLineService {
 
     private async lockVariantRow(tx: DbTx, variantId: string): Promise<void> {
         await tx.$executeRawUnsafe(
-            `SELECT id FROM "product_variants" WHERE id = $1::uuid FOR UPDATE`,
+            `SELECT id FROM "product_variants" WHERE id = $1 FOR UPDATE`,
             variantId
         );
     }

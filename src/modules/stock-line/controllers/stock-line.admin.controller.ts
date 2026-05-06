@@ -13,17 +13,19 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ActivityLogCategory } from '@prisma/client';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
+import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
+import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
 import { StockLineBulkAddRequestDto } from '../dtos/request/stock-line.bulk-add.request';
 import { StockLineListQueryDto } from '../dtos/request/stock-line.list.query';
 import {
+    StockLineAdminRowDto,
     StockLineBulkAddResponseDto,
-    StockLineListResponseDto,
 } from '../dtos/response/stock-line.admin.response';
 import { StockLineSummaryResponseDto } from '../dtos/response/stock-line.summary.response';
 import { StockLineService } from '../services/stock-line.service';
@@ -67,8 +69,8 @@ export class StockLineAdminController {
     @AllowedRoles(ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List stock lines for a variant' })
-    @DocResponse({
-        serialization: StockLineListResponseDto,
+    @DocPaginatedResponse({
+        serialization: StockLineAdminRowDto,
         httpStatus: HttpStatus.OK,
         messageKey: 'product.success.stockLinesListed',
     })
@@ -76,7 +78,7 @@ export class StockLineAdminController {
         @Param('id') productId: string,
         @Param('variantId') variantId: string,
         @Query(new QueryTransformPipe()) query: StockLineListQueryDto
-    ): Promise<StockLineListResponseDto> {
+    ): Promise<ApiPaginatedDataDto<StockLineAdminRowDto>> {
         return this.stockLineService.listLines(productId, variantId, query);
     }
 
