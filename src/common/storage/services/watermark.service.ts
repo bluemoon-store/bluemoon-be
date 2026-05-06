@@ -5,6 +5,7 @@ import sharp from 'sharp';
 
 const MAX_DIMENSION = 2000;
 const TILE_WIDTH = 120;
+const TILE_GAP = 36;
 const WATERMARK_OPACITY = 0.18;
 const SUPPORTED_INPUTS = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -50,13 +51,23 @@ export class WatermarkService {
         });
 
         const watermarkSvg = await this.getWatermarkSvg();
-        const tileBuffer = await sharp(watermarkSvg)
+        const baseTile = await sharp(watermarkSvg)
             .resize({ width: TILE_WIDTH, withoutEnlargement: true })
             .png()
             .ensureAlpha(WATERMARK_OPACITY)
             .rotate(30, {
                 background: { r: 0, g: 0, b: 0, alpha: 0 },
             })
+            .toBuffer();
+        const tileBuffer = await sharp(baseTile)
+            .extend({
+                top: Math.floor(TILE_GAP / 2),
+                bottom: Math.ceil(TILE_GAP / 2),
+                left: Math.floor(TILE_GAP / 2),
+                right: Math.ceil(TILE_GAP / 2),
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+            })
+            .png()
             .toBuffer();
 
         const composited = resized.composite([
