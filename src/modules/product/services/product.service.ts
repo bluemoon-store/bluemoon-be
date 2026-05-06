@@ -24,7 +24,6 @@ import {
     generateSlug,
 } from '../utils/product.util';
 import {
-    AdminProductRegionCreateDto,
     AdminProductVariantCreateDto,
     AdminProductVariantUpdateDto,
 } from '../dtos/request/product.admin.subresource.request';
@@ -50,16 +49,10 @@ const listInclude = {
             },
         },
     },
-    regions: {
-        orderBy: { sortOrder: 'asc' as const },
-    },
 } satisfies Prisma.ProductInclude;
 
 const detailInclude = {
     ...listInclude,
-    regions: {
-        orderBy: { sortOrder: 'asc' as const },
-    },
     relatedFrom: {
         include: {
             relatedProduct: {
@@ -84,9 +77,6 @@ const adminInclude = {
             },
         },
     },
-    regions: {
-        orderBy: { sortOrder: 'asc' as const },
-    },
 } satisfies Prisma.ProductInclude;
 
 @Injectable()
@@ -106,7 +96,6 @@ export class ProductService implements IProductService {
         const primaryImageUrl = computePrimaryImageUrl(product.images);
         const fromPrice = computeFromPrice(product.price, product.variants);
         const tags = buildProductTags(product);
-        const regions = product.regions.filter(r => r.isActive);
         const variants = product.variants
             .filter(v => v.isActive && v.deletedAt === null)
             .map(v => {
@@ -118,7 +107,6 @@ export class ProductService implements IProductService {
             });
         return {
             ...product,
-            regions,
             variants,
             primaryImageUrl,
             fromPrice,
@@ -148,7 +136,6 @@ export class ProductService implements IProductService {
         return {
             ...list,
             heroImageUrl: list.primaryImageUrl,
-            regions: product.regions.filter(r => r.isActive),
             variants: list.variants,
             related,
         };
@@ -306,18 +293,6 @@ export class ProductService implements IProductService {
                                   isActive: v.isActive ?? true,
                                   sortOrder: v.sortOrder ?? i,
                               })),
-                          }
-                        : undefined,
-                    regions: data.regions?.length
-                        ? {
-                              createMany: {
-                                  data: data.regions.map((r, i) => ({
-                                      label: r.label,
-                                      countryCode: r.countryCode,
-                                      isActive: r.isActive ?? true,
-                                      sortOrder: r.sortOrder ?? i,
-                                  })),
-                              },
                           }
                         : undefined,
                 },
@@ -630,33 +605,6 @@ export class ProductService implements IProductService {
         }
     }
 
-    private async syncRegions(
-        productId: string,
-        regions: ProductUpdateDto['regions']
-    ): Promise<void> {
-        if (!regions) {
-            return;
-        }
-
-        await this.databaseService.productRegion.deleteMany({
-            where: { productId },
-        });
-
-        if (regions.length === 0) {
-            return;
-        }
-
-        await this.databaseService.productRegion.createMany({
-            data: regions.map((r, i) => ({
-                productId,
-                label: r.label,
-                countryCode: r.countryCode,
-                isActive: r.isActive ?? true,
-                sortOrder: r.sortOrder ?? i,
-            })),
-        });
-    }
-
     private async syncRelated(
         productId: string,
         relatedProductIds: string[] | undefined
@@ -724,7 +672,7 @@ export class ProductService implements IProductService {
                 slug = await this.ensureUniqueSlug(generateSlug(data.slug), id);
             }
 
-            const { variants, regions, relatedProductIds, ...rest } =
+            const { variants, relatedProductIds, ...rest } =
                 data as ProductUpdateDto & Record<string, unknown>;
 
             const updateData: Prisma.ProductUpdateInput = {};
@@ -777,7 +725,6 @@ export class ProductService implements IProductService {
             ]);
 
             await this.syncVariants(id, variants);
-            await this.syncRegions(id, regions);
             await this.syncRelated(id, relatedProductIds);
 
             const product = await this.databaseService.product.findUnique({
@@ -1167,43 +1114,6 @@ export class ProductService implements IProductService {
         await this.databaseService.productVariant.update({
             where: { id: variantId },
             data: { deletedAt: new Date() },
-        });
-        return this.findOne(productId);
-    }
-
-    async addRegion(
-        productId: string,
-        dto: AdminProductRegionCreateDto
-    ): Promise<ProductResponseDto> {
-        await this.findOne(productId);
-        await this.databaseService.productRegion.create({
-            data: {
-                productId,
-                label: dto.label,
-                countryCode: dto.countryCode,
-                isActive: dto.isActive ?? true,
-                sortOrder: dto.sortOrder ?? 0,
-            },
-        });
-        return this.findOne(productId);
-    }
-
-    async deleteRegion(
-        productId: string,
-        regionId: string
-    ): Promise<ProductResponseDto> {
-        await this.findOne(productId);
-        const r = await this.databaseService.productRegion.findFirst({
-            where: { id: regionId, productId },
-        });
-        if (!r) {
-            throw new HttpException(
-                'product.error.regionNotFound',
-                HttpStatus.NOT_FOUND
-            );
-        }
-        await this.databaseService.productRegion.delete({
-            where: { id: regionId },
         });
         return this.findOne(productId);
     }

@@ -133,38 +133,6 @@ export class ProductVariantResponseDto {
     deletedAt: Date | null;
 }
 
-export class ProductRegionResponseDto {
-    @ApiProperty({ example: faker.string.uuid() })
-    @Expose()
-    @IsUUID()
-    id: string;
-
-    @ApiProperty({ example: faker.string.uuid() })
-    @Expose()
-    @IsUUID()
-    productId: string;
-
-    @ApiProperty({ example: 'AB' })
-    @Expose()
-    @IsString()
-    label: string;
-
-    @ApiProperty({ example: 'CA' })
-    @Expose()
-    @IsString()
-    countryCode: string;
-
-    @ApiProperty({ example: true })
-    @Expose()
-    @IsBoolean()
-    isActive: boolean;
-
-    @ApiProperty({ example: 0 })
-    @Expose()
-    @IsInt()
-    sortOrder: number;
-}
-
 export class ProductResponseDto implements Product {
     @ApiProperty({
         example: faker.string.uuid(),
@@ -363,16 +331,6 @@ export class ProductResponseDto implements Product {
     @ValidateNested({ each: true })
     @Type(() => ProductVariantResponseDto)
     variants?: ProductVariantResponseDto[];
-
-    @ApiPropertyOptional({
-        type: [ProductRegionResponseDto],
-    })
-    @Expose()
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ProductRegionResponseDto)
-    regions?: ProductRegionResponseDto[];
 }
 
 export class ProductListResponseDto extends ProductResponseDto {
@@ -442,16 +400,6 @@ export class ProductDetailResponseDto extends ProductListResponseDto {
     @ValidateNested({ each: true })
     @Type(() => ProductVariantResponseDto)
     variants?: ProductVariantResponseDto[];
-
-    @ApiPropertyOptional({
-        type: [ProductRegionResponseDto],
-    })
-    @Expose()
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ProductRegionResponseDto)
-    regions?: ProductRegionResponseDto[];
 
     @ApiPropertyOptional({
         type: [ProductListResponseDto],

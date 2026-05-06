@@ -209,17 +209,12 @@ export class CartService implements ICartService {
             // Get or create cart
             const cart = await this.getOrCreateCart(userId);
 
-            const regionLabel = data.regionLabel ?? '';
-            const regionCountry = data.regionCountry ?? '';
-
             // Check if item already exists in cart
             const existingItem = await this.databaseService.cartItem.findFirst({
                 where: {
                     cartId: cart.id,
                     productId: data.productId,
                     variantId: data.variantId ?? null,
-                    regionLabel,
-                    regionCountry,
                 },
                 include: {
                     product: true,
@@ -250,8 +245,6 @@ export class CartService implements ICartService {
                         productId: data.productId,
                         quantity: data.quantity,
                         variantId: data.variantId ?? null,
-                        regionLabel,
-                        regionCountry,
                         unitPrice,
                     },
                 });
@@ -432,8 +425,6 @@ export class CartService implements ICartService {
                             productId: item.productId,
                             quantity: item.quantity,
                             variantId: item.variantId ?? null,
-                            regionLabel: item.regionLabel ?? '',
-                            regionCountry: item.regionCountry ?? '',
                             unitPrice: item.unitPrice,
                         })),
                     });

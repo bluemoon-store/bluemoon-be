@@ -14,10 +14,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-    ProductRegionInputDto,
-    ProductVariantInputDto,
-} from './product.create.request';
+import { ProductVariantInputDto } from './product.create.request';
 
 export class ProductVariantUpdateInputDto extends ProductVariantInputDto {
     @ApiPropertyOptional({
@@ -186,16 +183,6 @@ export class ProductUpdateDto {
     @ValidateNested({ each: true })
     @Type(() => ProductVariantUpdateInputDto)
     variants?: ProductVariantUpdateInputDto[];
-
-    @ApiPropertyOptional({
-        type: [ProductRegionInputDto],
-        description: 'Replace regions when provided',
-    })
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ProductRegionInputDto)
-    regions?: ProductRegionInputDto[];
 
     @ApiPropertyOptional({
         type: [String],

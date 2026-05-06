@@ -66,27 +66,6 @@ export class AdminProductVariantUpdateDto {
     sortOrder?: number;
 }
 
-export class AdminProductRegionCreateDto {
-    @ApiProperty({ example: 'AB' })
-    @IsString()
-    label: string;
-
-    @ApiProperty({ example: 'CA' })
-    @IsString()
-    countryCode: string;
-
-    @ApiPropertyOptional({ default: true })
-    @IsOptional()
-    @IsBoolean()
-    isActive?: boolean;
-
-    @ApiPropertyOptional({ default: 0 })
-    @IsOptional()
-    @IsInt()
-    @Min(0)
-    sortOrder?: number;
-}
-
 export class AdminProductRelatedSetDto {
     @ApiProperty({
         type: [String],

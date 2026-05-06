@@ -4,7 +4,6 @@ import {
     IsArray,
     IsInt,
     IsOptional,
-    IsString,
     IsUUID,
     Max,
     Min,
@@ -37,22 +36,6 @@ export class CartSyncItemDto {
     @IsOptional()
     @IsUUID()
     variantId?: string;
-
-    @ApiPropertyOptional({
-        example: 'AB',
-        description: 'Selected region label (snapshot)',
-    })
-    @IsOptional()
-    @IsString()
-    regionLabel?: string;
-
-    @ApiPropertyOptional({
-        example: 'CA',
-        description: 'ISO country code for region (snapshot)',
-    })
-    @IsOptional()
-    @IsString()
-    regionCountry?: string;
 }
 
 export class CartSyncDto {

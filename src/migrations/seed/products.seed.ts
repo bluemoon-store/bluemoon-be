@@ -732,12 +732,6 @@ const VARIANT_DENOMS = [
     { label: '$5', price: '5.00', sortOrder: 2 },
 ] as const;
 
-const REGION_ROWS = [
-    { label: 'Global', countryCode: 'US', sortOrder: 0 },
-    { label: 'North America', countryCode: 'CA', sortOrder: 1 },
-    { label: 'Europe', countryCode: 'GB', sortOrder: 2 },
-] as const;
-
 const STOCK_LINES_PER_VARIANT = 20;
 
 type StockFormat = 'credentials' | 'code';
@@ -929,15 +923,6 @@ export class ProductsSeedService {
                             stockQuantity: STOCK_LINES_PER_VARIANT,
                             sortOrder: v.sortOrder,
                         })),
-                    },
-                    regions: {
-                        createMany: {
-                            data: REGION_ROWS.map(r => ({
-                                label: r.label,
-                                countryCode: r.countryCode,
-                                sortOrder: r.sortOrder,
-                            })),
-                        },
                     },
                 },
                 include: { variants: true },

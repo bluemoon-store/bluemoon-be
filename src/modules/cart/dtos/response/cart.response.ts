@@ -51,20 +51,6 @@ export class CartItemResponseDto implements CartItem {
     @IsUUID()
     variantId: string | null;
 
-    @ApiProperty({
-        example: '',
-    })
-    @Expose()
-    @IsString()
-    regionLabel: string;
-
-    @ApiProperty({
-        example: '',
-    })
-    @Expose()
-    @IsString()
-    regionCountry: string;
-
     @ApiPropertyOptional({
         example: null,
         nullable: true,

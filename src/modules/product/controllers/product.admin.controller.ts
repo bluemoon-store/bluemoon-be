@@ -30,7 +30,6 @@ import { ProductListQueryDto } from '../dtos/request/product.list.request';
 import { CategoryListQueryDto } from '../dtos/request/category.list.request';
 import {
     AdminProductRelatedSetDto,
-    AdminProductRegionCreateDto,
     AdminProductImageCreateDto,
     AdminProductVariantCreateDto,
     AdminProductVariantUpdateDto,
@@ -305,38 +304,6 @@ export class ProductAdminController {
         @Param('variantId') variantId: string
     ): Promise<ProductResponseDto> {
         return this.productService.deleteVariant(productId, variantId);
-    }
-
-    @Post(':id/regions')
-    @AllowedRoles(ADMIN_ROLES)
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Add product region' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.updated',
-    })
-    public async addRegion(
-        @Param('id') productId: string,
-        @Body() payload: AdminProductRegionCreateDto
-    ): Promise<ProductResponseDto> {
-        return this.productService.addRegion(productId, payload);
-    }
-
-    @Delete(':id/regions/:regionId')
-    @AllowedRoles(ADMIN_ROLES)
-    @ApiBearerAuth('accessToken')
-    @ApiOperation({ summary: 'Remove product region' })
-    @DocResponse({
-        serialization: ProductResponseDto,
-        httpStatus: HttpStatus.OK,
-        messageKey: 'product.success.updated',
-    })
-    public async deleteRegion(
-        @Param('id') productId: string,
-        @Param('regionId') regionId: string
-    ): Promise<ProductResponseDto> {
-        return this.productService.deleteRegion(productId, regionId);
     }
 
     @Put(':id/related')

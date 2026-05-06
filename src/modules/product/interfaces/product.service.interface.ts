@@ -10,7 +10,6 @@ import {
     ProductDetailResponseDto,
 } from '../dtos/response/product.response';
 import {
-    AdminProductRegionCreateDto,
     AdminProductVariantCreateDto,
     AdminProductVariantUpdateDto,
 } from '../dtos/request/product.admin.subresource.request';
@@ -61,14 +60,6 @@ export interface IProductService {
     deleteVariant(
         productId: string,
         variantId: string
-    ): Promise<ProductResponseDto>;
-    addRegion(
-        productId: string,
-        dto: AdminProductRegionCreateDto
-    ): Promise<ProductResponseDto>;
-    deleteRegion(
-        productId: string,
-        regionId: string
     ): Promise<ProductResponseDto>;
     setRelatedProducts(
         productId: string,

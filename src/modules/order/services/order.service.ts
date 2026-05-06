@@ -326,8 +326,6 @@ export class OrderService implements IOrderService {
                             priceAtPurchase,
                             variantId: cartItem.variantId,
                             variantLabel,
-                            regionLabel: cartItem.regionLabel || null,
-                            regionCountry: cartItem.regionCountry || null,
                         },
                     });
 

@@ -70,27 +70,6 @@ export class ProductVariantInputDto {
     sortOrder?: number;
 }
 
-export class ProductRegionInputDto {
-    @ApiProperty({ example: 'AB' })
-    @IsString()
-    label: string;
-
-    @ApiProperty({ example: 'CA' })
-    @IsString()
-    countryCode: string;
-
-    @ApiPropertyOptional({ example: true, default: true })
-    @IsOptional()
-    @IsBoolean()
-    isActive?: boolean;
-
-    @ApiPropertyOptional({ example: 0, default: 0 })
-    @IsOptional()
-    @IsInt()
-    @Min(0)
-    sortOrder?: number;
-}
-
 export class ProductCreateDto {
     @ApiProperty({
         example: faker.commerce.productName(),
@@ -259,14 +238,4 @@ export class ProductCreateDto {
     @ValidateNested({ each: true })
     @Type(() => ProductVariantInputDto)
     variants?: ProductVariantInputDto[];
-
-    @ApiPropertyOptional({
-        type: [ProductRegionInputDto],
-        description: 'Available regions / states',
-    })
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => ProductRegionInputDto)
-    regions?: ProductRegionInputDto[];
 }

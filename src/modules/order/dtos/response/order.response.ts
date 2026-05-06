@@ -88,24 +88,6 @@ export class OrderItemResponseDto implements OrderItem {
     variantLabel: string | null;
 
     @ApiPropertyOptional({
-        example: 'AB',
-        nullable: true,
-    })
-    @Expose()
-    @IsOptional()
-    @IsString()
-    regionLabel: string | null;
-
-    @ApiPropertyOptional({
-        example: 'CA',
-        nullable: true,
-    })
-    @Expose()
-    @IsOptional()
-    @IsString()
-    regionCountry: string | null;
-
-    @ApiPropertyOptional({
         example: 'Your product key: ABC123XYZ',
         nullable: true,
     })
