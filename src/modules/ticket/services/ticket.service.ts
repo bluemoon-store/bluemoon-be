@@ -53,16 +53,14 @@ export class TicketService implements ITicketService {
         userId: string,
         data: TicketCreateDto
     ): Promise<TicketDetailResponseDto> {
-        if (data.orderId) {
-            const order = await this.databaseService.order.findFirst({
-                where: { id: data.orderId, deletedAt: null },
-            });
-            if (!order || order.userId !== userId) {
-                throw new HttpException(
-                    'ticket.error.orderMismatch',
-                    HttpStatus.BAD_REQUEST
-                );
-            }
+        const order = await this.databaseService.order.findFirst({
+            where: { orderNumber: data.orderNumber, deletedAt: null },
+        });
+        if (!order || order.userId !== userId) {
+            throw new HttpException(
+                'ticket.error.orderMismatch',
+                HttpStatus.BAD_REQUEST
+            );
         }
 
         const ticketNumber = await this.generateUniqueTicketNumber();
@@ -73,7 +71,7 @@ export class TicketService implements ITicketService {
                     ticketNumber,
                     userId,
                     subject: data.subject,
-                    orderId: data.orderId,
+                    orderId: order.id,
                     priority: data.priority ?? TicketPriority.MEDIUM,
                     status: TicketStatus.OPEN,
                     messages: {

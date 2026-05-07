@@ -4,7 +4,6 @@ import {
     IsEnum,
     IsOptional,
     IsString,
-    IsUUID,
     MaxLength,
     MinLength,
 } from 'class-validator';
@@ -22,13 +21,13 @@ export class TicketCreateDto {
     @MaxLength(5000)
     message: string;
 
-    @ApiPropertyOptional({
-        example: 'a13d0e4a-b8ec-4c3a-b5e2-1f6f9f6f6f6f',
-        nullable: true,
+    @ApiProperty({
+        example: 'ORD-20260507-AB12C',
     })
-    @IsOptional()
-    @IsUUID()
-    orderId?: string;
+    @IsString()
+    @MinLength(1)
+    @MaxLength(64)
+    orderNumber: string;
 
     @ApiPropertyOptional({ enum: TicketPriority })
     @IsOptional()
