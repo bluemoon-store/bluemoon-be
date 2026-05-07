@@ -4,9 +4,9 @@ import path from 'path';
 import sharp from 'sharp';
 
 const MAX_DIMENSION = 2000;
-const TILE_WIDTH = 120;
-const TILE_GAP = 36;
-const WATERMARK_OPACITY = 0.18;
+const TILE_WIDTH = 400;
+const TILE_GAP = 120;
+const WATERMARK_OPACITY = 0.5;
 const SUPPORTED_INPUTS = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 @Injectable()
@@ -51,13 +51,35 @@ export class WatermarkService {
         });
 
         const watermarkSvg = await this.getWatermarkSvg();
-        const baseTile = await sharp(watermarkSvg)
-            .resize({ width: TILE_WIDTH, withoutEnlargement: true })
-            .png()
-            .ensureAlpha(WATERMARK_OPACITY)
+        const rotatedWatermark = sharp(watermarkSvg, { density: 300 })
+            .resize({ width: TILE_WIDTH })
             .rotate(30, {
                 background: { r: 0, g: 0, b: 0, alpha: 0 },
             })
+            .ensureAlpha();
+
+        const { data, info } = await rotatedWatermark
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+        const opacityAlpha = Math.round(255 * WATERMARK_OPACITY);
+        for (
+            let channelIndex = 3;
+            channelIndex < data.length;
+            channelIndex += 4
+        ) {
+            data[channelIndex] = Math.round(
+                (data[channelIndex] * opacityAlpha) / 255
+            );
+        }
+
+        const baseTile = await sharp(data, {
+            raw: {
+                width: info.width,
+                height: info.height,
+                channels: info.channels,
+            },
+        })
+            .png()
             .toBuffer();
         const tileBuffer = await sharp(baseTile)
             .extend({
