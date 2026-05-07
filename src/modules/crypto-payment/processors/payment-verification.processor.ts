@@ -1,7 +1,6 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentStatus } from '@prisma/client';
 
@@ -309,10 +308,9 @@ export class PaymentVerificationProcessor {
     }
 
     /**
-     * Scheduled task: Check all pending payments every minute
-     * This ensures no payments are missed even if jobs fail
+     * Scheduled task: Check all pending payments every minute.
+     * @Cron decorator lives on PaymentScheduler (singleton) which delegates here.
      */
-    @Cron(CronExpression.EVERY_MINUTE)
     async handlePendingPaymentsCron(): Promise<void> {
         this.logger.debug('Starting scheduled check of all pending payments');
 
@@ -337,10 +335,9 @@ export class PaymentVerificationProcessor {
     }
 
     /**
-     * Scheduled task: Expire old payments (runs every 5 minutes)
-     * This is a safety net to catch any payments that weren't expired properly
+     * Scheduled task: Expire old payments (runs every 5 minutes).
+     * @Cron decorator lives on PaymentScheduler (singleton) which delegates here.
      */
-    @Cron('*/5 * * * *') // Every 5 minutes
     async handleExpiredPaymentsCron(): Promise<void> {
         this.logger.debug(
             'Starting scheduled expiration check for old payments'
@@ -403,9 +400,9 @@ export class PaymentVerificationProcessor {
     }
 
     /**
-     * Safety net: expire wallet top-ups that stayed PENDING past expiresAt
+     * Safety net: expire wallet top-ups that stayed PENDING past expiresAt.
+     * @Cron decorator lives on PaymentScheduler (singleton) which delegates here.
      */
-    @Cron('*/5 * * * *')
     async handleExpiredWalletTopUpsCron(): Promise<void> {
         this.logger.debug(
             'Starting scheduled expiration check for wallet top-ups'

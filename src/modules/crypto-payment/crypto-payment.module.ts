@@ -28,6 +28,9 @@ import { BlockchainProviderFactory } from './blockchain-providers/blockchain-pro
 import { PaymentVerificationProcessor } from './processors/payment-verification.processor';
 import { PaymentForwardingProcessor } from './processors/payment-forwarding.processor';
 
+// Schedulers
+import { PaymentScheduler } from './schedulers/payment.scheduler';
+
 // Controllers
 import { CryptoPaymentPublicController } from './controllers/crypto-payment.public.controller';
 import { ExchangeRatePublicController } from './controllers/exchange-rate.public.controller';
@@ -74,6 +77,7 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         ...workerOnlyProviders([
             PaymentVerificationProcessor,
             PaymentForwardingProcessor,
+            PaymentScheduler,
         ]),
     ],
     exports: [
