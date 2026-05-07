@@ -35,27 +35,25 @@ async function bootstrapApi(): Promise<void> {
         const host = config.getOrThrow('app.http.host');
         const port = config.getOrThrow('app.http.port');
 
-        // Bull Board - Queue dashboard (non-production only)
-        if (env !== APP_ENVIRONMENT.PRODUCTION) {
-            const serverAdapter = new BullBoardExpressAdapter();
-            serverAdapter.setBasePath('/admin/queues');
+        // Bull Board - Queue dashboard
+        const serverAdapter = new BullBoardExpressAdapter();
+        serverAdapter.setBasePath('/admin/queues');
 
-            const queues = [
-                app.get(getQueueToken('crypto-payment-verification')),
-                app.get(getQueueToken('crypto-payment-forwarding')),
-                app.get(getQueueToken(APP_BULL_QUEUES.EMAIL)),
-                app.get(getQueueToken(APP_BULL_QUEUES.NOTIFICATION)),
-                app.get(getQueueToken(APP_BULL_QUEUES.ACTIVITY_LOG)),
-            ];
+        const queues = [
+            app.get(getQueueToken('crypto-payment-verification')),
+            app.get(getQueueToken('crypto-payment-forwarding')),
+            app.get(getQueueToken(APP_BULL_QUEUES.EMAIL)),
+            app.get(getQueueToken(APP_BULL_QUEUES.NOTIFICATION)),
+            app.get(getQueueToken(APP_BULL_QUEUES.ACTIVITY_LOG)),
+        ];
 
-            createBullBoard({
-                queues: queues.map(queue => new BullAdapter(queue)),
-                serverAdapter,
-            });
+        createBullBoard({
+            queues: queues.map(queue => new BullAdapter(queue)),
+            serverAdapter,
+        });
 
-            app.use('/admin/queues', serverAdapter.getRouter());
-            logger.log('Bull Board available at /admin/queues');
-        }
+        app.use('/admin/queues', serverAdapter.getRouter());
+        logger.log('Bull Board available at /admin/queues');
 
         app.use(compression());
         app.useLogger(logger);
