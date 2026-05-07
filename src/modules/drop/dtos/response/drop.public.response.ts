@@ -100,6 +100,11 @@ export class DropPublicResponseDto {
     @IsInt()
     claimedCount: number;
 
+    @ApiProperty()
+    @Expose()
+    @IsBoolean()
+    hasClaimed: boolean;
+
     @ApiPropertyOptional({ nullable: true })
     @Expose()
     @IsOptional()

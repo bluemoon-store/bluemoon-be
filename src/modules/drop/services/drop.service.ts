@@ -1,7 +1,5 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, StockLineStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
@@ -28,21 +26,13 @@ import {
     isUserAllowed,
 } from '../utils/drop.util';
 
-const LIST_CACHE_MS = 30_000;
-const PUBLIC_LIVE_CACHE_KEY = 'drops:public:live';
-
 @Injectable()
 export class DropService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
-        private readonly stockLineService: StockLineService,
-        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+        private readonly stockLineService: StockLineService
     ) {}
-
-    private async clearPublicLiveCache(): Promise<void> {
-        await this.cacheManager.del(PUBLIC_LIVE_CACHE_KEY);
-    }
 
     private static readonly DROP_INCLUDE = {
         product: {
@@ -235,7 +225,6 @@ export class DropService {
             },
             include: DropService.DROP_INCLUDE,
         });
-        await this.clearPublicLiveCache();
 
         return this.mapDrop(row);
     }
@@ -394,7 +383,6 @@ export class DropService {
                     : {}),
             },
         });
-        await this.clearPublicLiveCache();
 
         return this.findOne(id);
     }
@@ -414,7 +402,6 @@ export class DropService {
             where: { id },
             data: { isActive: !existing.isActive },
         });
-        await this.clearPublicLiveCache();
         return this.findOne(id);
     }
 
@@ -424,21 +411,15 @@ export class DropService {
             where: { id },
             data: { deletedAt: new Date() },
         });
-        await this.clearPublicLiveCache();
         return {
             success: true,
             message: 'drop.success.deleted',
         };
     }
 
-    async listPublicLiveDrops(): Promise<DropPublicResponseDto[]> {
-        const cached = await this.cacheManager.get<DropPublicResponseDto[]>(
-            PUBLIC_LIVE_CACHE_KEY
-        );
-        if (cached) {
-            return cached;
-        }
-
+    async listPublicLiveDrops(
+        userId?: string
+    ): Promise<DropPublicResponseDto[]> {
         const rows = await this.databaseService.drop.findMany({
             where: {
                 isActive: true,
@@ -449,35 +430,41 @@ export class DropService {
             orderBy: { createdAt: 'desc' },
         });
 
-        const mapped: DropPublicResponseDto[] = rows
-            .filter(row => row.claimedCount < row.quantity)
-            .map(row => ({
-                id: row.id,
-                product: {
-                    id: row.product.id,
-                    name: row.product.name,
-                    slug: row.product.slug,
-                    iconUrl: row.product.iconUrl ?? null,
-                    images: (row.product.images ?? []).map(img => ({
-                        url: img.url ?? null,
-                        isPrimary: img.isPrimary,
-                    })),
+        const liveRows = rows.filter(row => row.claimedCount < row.quantity);
+        let claimedDropIds = new Set<string>();
+        if (userId && liveRows.length > 0) {
+            const claims = await this.databaseService.dropClaim.findMany({
+                where: {
+                    userId,
+                    dropId: { in: liveRows.map(row => row.id) },
                 },
-                variant: {
-                    id: row.variant.id,
-                    label: row.variant.label,
-                },
-                description: row.description ?? null,
-                quantity: row.quantity,
-                claimedCount: row.claimedCount,
-                expiresAt: row.expiresAt,
-            }));
+                select: { dropId: true },
+            });
+            claimedDropIds = new Set(claims.map(claim => claim.dropId));
+        }
 
-        await this.cacheManager.set(
-            PUBLIC_LIVE_CACHE_KEY,
-            mapped,
-            LIST_CACHE_MS
-        );
+        const mapped: DropPublicResponseDto[] = liveRows.map(row => ({
+            id: row.id,
+            product: {
+                id: row.product.id,
+                name: row.product.name,
+                slug: row.product.slug,
+                iconUrl: row.product.iconUrl ?? null,
+                images: (row.product.images ?? []).map(img => ({
+                    url: img.url ?? null,
+                    isPrimary: img.isPrimary,
+                })),
+            },
+            variant: {
+                id: row.variant.id,
+                label: row.variant.label,
+            },
+            description: row.description ?? null,
+            quantity: row.quantity,
+            claimedCount: row.claimedCount,
+            hasClaimed: claimedDropIds.has(row.id),
+            expiresAt: row.expiresAt,
+        }));
         return mapped;
     }
 
@@ -624,7 +611,6 @@ export class DropService {
                         variantLabel: drop.variant.label,
                         dashboardPath: '/dashboard/drops',
                     };
-                    await this.clearPublicLiveCache();
                     return result;
                 },
                 {

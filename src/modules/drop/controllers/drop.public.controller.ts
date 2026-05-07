@@ -1,10 +1,18 @@
-import { Controller, Get, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    HttpStatus,
+    Param,
+    Post,
+    UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
 import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
+import { JwtOptionalAccessGuard } from 'src/common/request/guards/jwt.optional-access.guard';
 
 import {
     DropClaimResponseDto,
@@ -23,14 +31,15 @@ export class DropPublicController {
 
     @Get()
     @PublicRoute()
+    @UseGuards(JwtOptionalAccessGuard)
     @ApiOperation({ summary: 'List live drops' })
     @DocResponse({
         serialization: DropPublicResponseDto,
         httpStatus: HttpStatus.OK,
         messageKey: 'drop.success.list',
     })
-    async list(): Promise<DropPublicResponseDto[]> {
-        return this.dropService.listPublicLiveDrops();
+    async list(@AuthUser() user?: IAuthUser): Promise<DropPublicResponseDto[]> {
+        return this.dropService.listPublicLiveDrops(user?.userId);
     }
 
     @Post(':id/claim')
