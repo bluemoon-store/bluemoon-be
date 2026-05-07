@@ -14,6 +14,7 @@ import { ReviewModule } from 'src/modules/review/review.module';
 import { CouponModule } from 'src/modules/coupon/coupon.module';
 import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 import { VouchModule } from 'src/modules/vouch/vouch.module';
+import { DropModule } from 'src/modules/drop/drop.module';
 
 import { HealthController } from './controllers/health.controller';
 import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
@@ -41,6 +42,7 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
         ReviewModule,
         VouchModule,
         CouponModule,
+        DropModule,
     ],
     controllers: [HealthController],
 })

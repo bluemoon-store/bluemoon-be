@@ -57,6 +57,7 @@ model User {
   invitationTokenExpiry          DateTime? @map("invitation_token_expiry")
 
   activityLogs ActivityLog[] @relation("ActorActivityLogs")
+  dropClaims   DropClaim[]
 
   @@map("users")
 }
@@ -162,6 +163,7 @@ model Product {
   warrantyText    String?   @map("warranty_text") @db.Text
 
   variants    ProductVariant[]
+  drops       Drop[]
   relatedFrom ProductRelated[] @relation("RelatedFrom")
   relatedTo   ProductRelated[] @relation("RelatedTo")
 
@@ -187,6 +189,7 @@ model ProductVariant {
   cartItems     CartItem[]
   orderItems    OrderItem[]
   stockLines    ProductStockLine[]
+  drops         Drop[]
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
@@ -219,12 +222,53 @@ model ProductStockLine {
 
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
+  claims         DropClaim[]
 
   @@unique([variantId, contentHash])
   @@index([variantId, status])
   @@index([orderItemId])
   @@index([status, reservedUntil])
   @@map("product_stock_lines")
+}
+
+model Drop {
+  id            String         @id @default(uuid())
+  productId     String         @map("product_id")
+  variantId     String         @map("variant_id")
+  product       Product        @relation(fields: [productId], references: [id])
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
+  description   String?
+  quantity      Int
+  claimedCount  Int            @default(0) @map("claimed_count")
+  allowedEmails String[]       @default([]) @map("allowed_emails")
+  expiresAt     DateTime?      @map("expires_at")
+  isActive      Boolean        @default(true) @map("is_active")
+  claims        DropClaim[]
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("deleted_at")
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([isActive, expiresAt])
+  @@index([deletedAt])
+  @@map("drops")
+}
+
+model DropClaim {
+  id             String            @id @default(uuid())
+  dropId         String            @map("drop_id")
+  userId         String            @map("user_id")
+  stockLineId    String?           @unique @map("stock_line_id")
+  claimedContent String            @db.Text @map("claimed_content")
+  drop           Drop              @relation(fields: [dropId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stockLine      ProductStockLine? @relation(fields: [stockLineId], references: [id], onDelete: SetNull)
+  claimedAt      DateTime          @default(now()) @map("claimed_at")
+
+  @@unique([dropId, userId])
+  @@index([userId])
+  @@map("drop_claims")
 }
 
 model ProductRelated {
@@ -744,6 +788,7 @@ enum ActivityLogCategory {
   ORDER
   USER
   COUPON
+  DROP
   WALLET
   CRYPTO_PAYMENT
   REVIEW

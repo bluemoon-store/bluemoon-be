@@ -262,7 +262,7 @@ export class StockLineService {
         return this.getSummaryCounts(this.databaseService, variantId);
     }
 
-    private async lockVariantRow(tx: DbTx, variantId: string): Promise<void> {
+    async lockVariantRow(tx: DbTx, variantId: string): Promise<void> {
         await tx.$executeRawUnsafe(
             `SELECT id FROM "product_variants" WHERE id = $1 FOR UPDATE`,
             variantId
