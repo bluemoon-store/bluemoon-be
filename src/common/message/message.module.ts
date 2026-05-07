@@ -1,11 +1,7 @@
 import { join } from 'path';
 
 import { Module } from '@nestjs/common';
-import {
-    AcceptLanguageResolver,
-    HeaderResolver,
-    I18nModule,
-} from 'nestjs-i18n';
+import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 
 import { MessageService } from './services/message.service';
 
@@ -17,10 +13,7 @@ import { MessageService } from './services/message.service';
                 path: join(__dirname, '../../languages/'),
                 watch: true,
             },
-            resolvers: [
-                AcceptLanguageResolver,
-                new HeaderResolver(['accept-language']),
-            ],
+            resolvers: [AcceptLanguageResolver],
         }),
     ],
     exports: [MessageService],
