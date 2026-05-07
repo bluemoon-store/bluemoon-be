@@ -73,6 +73,75 @@ export class DropService {
         },
     } satisfies Prisma.DropInclude;
 
+    private static readonly MY_CLAIM_INCLUDE = {
+        drop: {
+            include: {
+                product: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        iconUrl: true,
+                        redeemProcess: true,
+                        warrantyText: true,
+                        images: {
+                            where: { deletedAt: null },
+                            select: {
+                                url: true,
+                                isPrimary: true,
+                                sortOrder: true,
+                            },
+                            orderBy: [
+                                { isPrimary: 'desc' as const },
+                                { sortOrder: 'asc' as const },
+                            ],
+                            take: 1,
+                        },
+                    },
+                },
+                variant: { select: { id: true, label: true, price: true } },
+            },
+        },
+        vouches: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'desc' as const },
+            select: {
+                id: true,
+                imageUrl: true,
+                caption: true,
+                createdAt: true,
+            },
+        },
+    } satisfies Prisma.DropClaimInclude;
+
+    private mapMyClaim(row: any): MyDropClaimResponseDto {
+        const primaryImage = row.drop.product.images?.[0] ?? null;
+        return {
+            claimId: row.id,
+            dropId: row.dropId,
+            productId: row.drop.product.id,
+            variantId: row.drop.variant.id,
+            productName: row.drop.product.name,
+            productSlug: row.drop.product.slug,
+            productIconUrl: row.drop.product.iconUrl ?? null,
+            productImageUrl: primaryImage?.url ?? null,
+            productRedeemProcess: row.drop.product.redeemProcess ?? null,
+            productWarrantyText: row.drop.product.warrantyText ?? null,
+            variantLabel: row.drop.variant.label,
+            variantPrice: row.drop.variant.price?.toString() ?? '0',
+            description: row.drop.description ?? null,
+            claimedContent: row.claimedContent,
+            claimedAt: row.claimedAt,
+            expiresAt: row.drop.expiresAt ?? null,
+            vouches: (row.vouches ?? []).map((vouch: any) => ({
+                id: vouch.id,
+                imageUrl: vouch.imageUrl ?? null,
+                caption: vouch.caption ?? null,
+                createdAt: vouch.createdAt,
+            })),
+        };
+    }
+
     private mapDrop(row: any): DropResponseDto {
         const primaryImage = row.product.images?.[0] ?? null;
         return {
@@ -586,25 +655,27 @@ export class DropService {
     async listMyClaims(userId: string): Promise<MyDropClaimResponseDto[]> {
         const rows = await this.databaseService.dropClaim.findMany({
             where: { userId },
-            include: {
-                drop: {
-                    include: {
-                        product: { select: { name: true, slug: true } },
-                        variant: { select: { label: true } },
-                    },
-                },
-            },
+            include: DropService.MY_CLAIM_INCLUDE,
             orderBy: { claimedAt: 'desc' },
         });
 
-        return rows.map(row => ({
-            claimId: row.id,
-            dropId: row.dropId,
-            productName: row.drop.product.name,
-            productSlug: row.drop.product.slug,
-            variantLabel: row.drop.variant.label,
-            claimedContent: row.claimedContent,
-            claimedAt: row.claimedAt,
-        }));
+        return rows.map(row => this.mapMyClaim(row));
+    }
+
+    async findMyClaim(
+        userId: string,
+        claimId: string
+    ): Promise<MyDropClaimResponseDto> {
+        const row = await this.databaseService.dropClaim.findFirst({
+            where: { id: claimId, userId },
+            include: DropService.MY_CLAIM_INCLUDE,
+        });
+        if (!row) {
+            throw new HttpException(
+                'drop.error.claimNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        return this.mapMyClaim(row);
     }
 }

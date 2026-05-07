@@ -10,7 +10,9 @@ import { SupabaseStorageService } from 'src/common/storage/services/supabase.sto
 import { WatermarkService } from 'src/common/storage/services/watermark.service';
 
 import { VouchCreateDto } from '../dtos/request/vouch.create.request';
+import { VouchDropClaimCreateDto } from '../dtos/request/vouch.drop-claim.create.request';
 import { VouchListQueryDto, VouchSort } from '../dtos/request/vouch.list.query';
+import { VouchDropClaimResponseDto } from '../dtos/response/vouch.drop-claim.response';
 import { VouchResponseDto } from '../dtos/response/vouch.response';
 import { IVouchService } from '../interfaces/vouch.service.interface';
 
@@ -52,6 +54,34 @@ export class VouchService implements IVouchService {
         },
     } as const;
 
+    private readonly dropClaimIncludeConfig = {
+        user: { select: { id: true, userName: true, avatar: true } },
+        dropClaim: {
+            include: {
+                drop: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                                images: {
+                                    where: { deletedAt: null },
+                                    orderBy: [
+                                        { isPrimary: 'desc' },
+                                        { sortOrder: 'asc' },
+                                    ],
+                                    select: { url: true },
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    } as const;
+
     private getOrderBySort(sort?: VouchSort) {
         return sort === VouchSort.OLDEST
             ? { createdAt: 'asc' }
@@ -85,6 +115,50 @@ export class VouchService implements IVouchService {
                 imageUrl: vouch.orderItem.product.images[0]?.url ?? null,
             },
         };
+    }
+
+    private mapDropClaimResponse(vouch: any): VouchDropClaimResponseDto {
+        return {
+            id: vouch.id,
+            dropClaimId: vouch.dropClaimId,
+            imageUrl: vouch.imageUrl ?? null,
+            caption: vouch.caption,
+            createdAt: vouch.createdAt,
+            user: {
+                id: vouch.user.id,
+                userName: vouch.user.userName,
+                avatar: vouch.user.avatar,
+            },
+            product: {
+                id: vouch.dropClaim.drop.product.id,
+                name: vouch.dropClaim.drop.product.name,
+                slug: vouch.dropClaim.drop.product.slug,
+                imageUrl: vouch.dropClaim.drop.product.images[0]?.url ?? null,
+            },
+        };
+    }
+
+    private async uploadVouchImage(
+        userId: string,
+        file: Express.Multer.File,
+        prefix: ENUM_FILE_STORE
+    ): Promise<{ key: string; imageUrl: string }> {
+        const watermarked = await this.watermarkService.applyJinxTile(
+            file.buffer,
+            file.mimetype
+        );
+
+        const safeName = this.slugifyName(file.originalname || 'vouch-image');
+        const key = `${userId}/${prefix}/${Date.now()}_${safeName}`;
+
+        await this.storageService.uploadObject(
+            key,
+            watermarked.buffer,
+            watermarked.contentType
+        );
+
+        const imageUrl = this.storageService.getPublicUrl(key, 'userUploads');
+        return { key, imageUrl };
     }
 
     public async create(
@@ -133,21 +207,11 @@ export class VouchService implements IVouchService {
             );
         }
 
-        const watermarked = await this.watermarkService.applyJinxTile(
-            file.buffer,
-            file.mimetype
+        const { key, imageUrl } = await this.uploadVouchImage(
+            userId,
+            file,
+            ENUM_FILE_STORE.VOUCH_IMAGES
         );
-
-        const safeName = this.slugifyName(file.originalname || 'vouch-image');
-        const key = `${userId}/${ENUM_FILE_STORE.VOUCH_IMAGES}/${Date.now()}_${safeName}`;
-
-        await this.storageService.uploadObject(
-            key,
-            watermarked.buffer,
-            watermarked.contentType
-        );
-
-        const imageUrl = this.storageService.getPublicUrl(key, 'userUploads');
         const created = await this.databaseService.vouch.create({
             data: {
                 orderItemId: dto.orderItemId,
@@ -247,6 +311,96 @@ export class VouchService implements IVouchService {
         }
 
         await this.databaseService.vouch.update({
+            where: { id: vouchId },
+            data: { deletedAt: new Date() },
+        });
+    }
+
+    public async createForDropClaim(
+        userId: string,
+        dto: VouchDropClaimCreateDto,
+        file: Express.Multer.File
+    ): Promise<VouchDropClaimResponseDto> {
+        const dropClaim = await this.databaseService.dropClaim.findFirst({
+            where: { id: dto.dropClaimId },
+            select: { id: true, userId: true },
+        });
+
+        if (!dropClaim) {
+            throw new HttpException(
+                'vouch.error.dropClaimNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        if (dropClaim.userId !== userId) {
+            throw new HttpException(
+                'vouch.error.forbidden',
+                HttpStatus.FORBIDDEN
+            );
+        }
+
+        const existingCount = await this.databaseService.dropClaimVouch.count({
+            where: { dropClaimId: dto.dropClaimId, deletedAt: null },
+        });
+        if (existingCount >= MAX_VOUCHES_PER_ITEM) {
+            throw new HttpException(
+                'vouch.error.maxPerDropClaimReached',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        const { key, imageUrl } = await this.uploadVouchImage(
+            userId,
+            file,
+            ENUM_FILE_STORE.DROP_CLAIM_VOUCH_IMAGES
+        );
+        const created = await this.databaseService.dropClaimVouch.create({
+            data: {
+                dropClaimId: dto.dropClaimId,
+                userId,
+                imageKey: key,
+                imageUrl,
+                caption: dto.caption?.trim() || null,
+            },
+            include: this.dropClaimIncludeConfig,
+        });
+
+        return this.mapDropClaimResponse(created);
+    }
+
+    public async listByDropClaim(
+        dropClaimId: string
+    ): Promise<VouchDropClaimResponseDto[]> {
+        const rows = await this.databaseService.dropClaimVouch.findMany({
+            where: { dropClaimId, deletedAt: null },
+            include: this.dropClaimIncludeConfig,
+            orderBy: { createdAt: 'desc' },
+        });
+        return rows.map(row => this.mapDropClaimResponse(row));
+    }
+
+    public async deleteMineDropClaim(
+        userId: string,
+        vouchId: string
+    ): Promise<void> {
+        const vouch = await this.databaseService.dropClaimVouch.findFirst({
+            where: { id: vouchId, deletedAt: null },
+            select: { id: true, userId: true },
+        });
+        if (!vouch) {
+            throw new HttpException(
+                'vouch.error.notFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        if (vouch.userId !== userId) {
+            throw new HttpException(
+                'vouch.error.forbidden',
+                HttpStatus.FORBIDDEN
+            );
+        }
+
+        await this.databaseService.dropClaimVouch.update({
             where: { id: vouchId },
             data: { deletedAt: new Date() },
         });

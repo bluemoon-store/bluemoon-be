@@ -56,8 +56,9 @@ model User {
   invitationToken                String?   @map("invitation_token")
   invitationTokenExpiry          DateTime? @map("invitation_token_expiry")
 
-  activityLogs ActivityLog[] @relation("ActorActivityLogs")
-  dropClaims   DropClaim[]
+  activityLogs     ActivityLog[]    @relation("ActorActivityLogs")
+  dropClaims       DropClaim[]
+  dropClaimVouches DropClaimVouch[]
 
   @@map("users")
 }
@@ -265,10 +266,30 @@ model DropClaim {
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   stockLine      ProductStockLine? @relation(fields: [stockLineId], references: [id], onDelete: SetNull)
   claimedAt      DateTime          @default(now()) @map("claimed_at")
+  vouches        DropClaimVouch[]
 
   @@unique([dropId, userId])
   @@index([userId])
   @@map("drop_claims")
+}
+
+model DropClaimVouch {
+  id          String    @id @default(uuid())
+  dropClaimId String    @map("drop_claim_id")
+  dropClaim   DropClaim @relation(fields: [dropClaimId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageKey    String    @map("image_key")
+  imageUrl    String?   @map("image_url")
+  caption     String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([dropClaimId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("drop_claim_vouches")
 }
 
 model ProductRelated {

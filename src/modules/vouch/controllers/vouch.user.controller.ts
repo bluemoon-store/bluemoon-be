@@ -29,7 +29,9 @@ import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pip
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 
 import { VouchCreateDto } from '../dtos/request/vouch.create.request';
+import { VouchDropClaimCreateDto } from '../dtos/request/vouch.drop-claim.create.request';
 import { VouchListQueryDto } from '../dtos/request/vouch.list.query';
+import { VouchDropClaimResponseDto } from '../dtos/response/vouch.drop-claim.response';
 import { VouchResponseDto } from '../dtos/response/vouch.response';
 import { VouchService } from '../services/vouch.service';
 
@@ -100,5 +102,48 @@ export class VouchUserController {
         @Param('id') id: string
     ): Promise<void> {
         await this.vouchService.deleteMine(user.userId, id);
+    }
+
+    @Post('drop-claim')
+    @ApiBearerAuth('accessToken')
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({ summary: 'Create vouch for own drop claim' })
+    @UseInterceptors(
+        FileInterceptor('file', {
+            storage: memoryStorage(),
+            limits: { fileSize: MAX_FILE_SIZE },
+        })
+    )
+    @DocResponse({
+        serialization: VouchDropClaimResponseDto,
+        httpStatus: HttpStatus.CREATED,
+        messageKey: 'vouch.success.created',
+    })
+    public async createForDropClaim(
+        @AuthUser() user: IAuthUser,
+        @UploadedFile() file: Express.Multer.File,
+        @Body() dto: VouchDropClaimCreateDto
+    ): Promise<VouchDropClaimResponseDto> {
+        if (!file) {
+            throw new BadRequestException('vouch.error.fileRequired');
+        }
+        if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            throw new BadRequestException('vouch.error.invalidFileType');
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            throw new BadRequestException('vouch.error.fileTooLarge');
+        }
+        return this.vouchService.createForDropClaim(user.userId, dto, file);
+    }
+
+    @Delete('drop-claim/:id')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Delete own drop-claim vouch (soft delete)' })
+    @HttpCode(HttpStatus.NO_CONTENT)
+    public async deleteForDropClaim(
+        @AuthUser() user: IAuthUser,
+        @Param('id') id: string
+    ): Promise<void> {
+        await this.vouchService.deleteMineDropClaim(user.userId, id);
     }
 }

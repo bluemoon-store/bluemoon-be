@@ -61,4 +61,19 @@ export class DropPublicController {
     ): Promise<MyDropClaimResponseDto[]> {
         return this.dropService.listMyClaims(user.userId);
     }
+
+    @Get('me/:claimId')
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Get current user drop claim by id' })
+    @DocResponse({
+        serialization: MyDropClaimResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'drop.success.claimDetail',
+    })
+    async myClaim(
+        @AuthUser() user: IAuthUser,
+        @Param('claimId') claimId: string
+    ): Promise<MyDropClaimResponseDto> {
+        return this.dropService.findMyClaim(user.userId, claimId);
+    }
 }
