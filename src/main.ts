@@ -14,15 +14,17 @@ import { ExpressAdapter as BullBoardExpressAdapter } from '@bull-board/express';
 
 import { CorsIoAdapter } from './common/adapters/socket-io.adapter';
 import { AppModule } from './app/app.module';
+import { WorkerAppModule } from './app/worker.module';
 import { APP_ENVIRONMENT, APP_BULL_QUEUES } from './app/enums/app.enum';
 import setupSwagger from './swagger';
 
-async function bootstrap(): Promise<void> {
+const APP_ROLE = (process.env.APP_ROLE || 'api').toLowerCase();
+
+async function bootstrapApi(): Promise<void> {
     const server = express();
     let app: any;
 
     try {
-        // Create app
         app = await NestFactory.create(AppModule, new ExpressAdapter(server), {
             bufferLogs: true,
         });
@@ -38,12 +40,9 @@ async function bootstrap(): Promise<void> {
             const serverAdapter = new BullBoardExpressAdapter();
             serverAdapter.setBasePath('/admin/queues');
 
-            // Register all queues for monitoring
             const queues = [
-                // Crypto Payment Queues
                 app.get(getQueueToken('crypto-payment-verification')),
                 app.get(getQueueToken('crypto-payment-forwarding')),
-                // Email & Notification Queues
                 app.get(getQueueToken(APP_BULL_QUEUES.EMAIL)),
                 app.get(getQueueToken(APP_BULL_QUEUES.NOTIFICATION)),
                 app.get(getQueueToken(APP_BULL_QUEUES.ACTIVITY_LOG)),
@@ -56,17 +55,12 @@ async function bootstrap(): Promise<void> {
 
             app.use('/admin/queues', serverAdapter.getRouter());
             logger.log('Bull Board available at /admin/queues');
-            logger.log(
-                `Registered ${queues.length} queues: crypto-payment-verification, crypto-payment-forwarding, ${APP_BULL_QUEUES.EMAIL}, ${APP_BULL_QUEUES.NOTIFICATION}, ${APP_BULL_QUEUES.ACTIVITY_LOG}`
-            );
         }
 
-        // Middleware
         app.use(compression());
         app.useLogger(logger);
         app.enableCors(config.get('app.cors'));
 
-        // Global settings
         app.useGlobalPipes(
             new ValidationPipe({
                 transform: true,
@@ -77,7 +71,6 @@ async function bootstrap(): Promise<void> {
 
         app.useWebSocketAdapter(new CorsIoAdapter(app, config.get('app.cors')));
 
-        // Enable versioning
         app.enableVersioning({
             type: VersioningType.URI,
             defaultVersion: '1',
@@ -85,12 +78,10 @@ async function bootstrap(): Promise<void> {
 
         useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-        // Swagger for non-production
         if (env !== APP_ENVIRONMENT.PRODUCTION) {
             setupSwagger(app);
         }
 
-        // Graceful shutdown (only in production - watch mode handles this differently)
         if (env === APP_ENVIRONMENT.PRODUCTION) {
             const gracefulShutdown = async (signal: string) => {
                 logger.log(`Received ${signal}, shutting down gracefully...`);
@@ -101,20 +92,54 @@ async function bootstrap(): Promise<void> {
             process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
             process.on('SIGINT', () => gracefulShutdown('SIGINT'));
         } else {
-            // In development, enable shutdown hooks for proper cleanup
             app.enableShutdownHooks();
         }
 
-        // Start server
         await app.listen(port, host);
 
         const appUrl = await app.getUrl();
-        logger.log(`Server running on: ${appUrl}`);
+        logger.log(`API server running on: ${appUrl}`);
     } catch (error) {
-        console.error('Server failed to start:', error);
+        console.error('API failed to start:', error);
         if (app) await app.close();
         process.exit(1);
     }
 }
 
-bootstrap();
+async function bootstrapWorker(): Promise<void> {
+    let app: any;
+
+    try {
+        app = await NestFactory.createApplicationContext(WorkerAppModule, {
+            bufferLogs: true,
+        });
+
+        const logger = app.get(Logger);
+        app.useLogger(logger);
+
+        // Workers always run with shutdown hooks so Bull can drain in-flight jobs
+        app.enableShutdownHooks();
+
+        const gracefulShutdown = async (signal: string) => {
+            logger.log(
+                `Worker received ${signal}, shutting down gracefully...`
+            );
+            await app.close();
+            process.exit(0);
+        };
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+        logger.log('Worker process started — listening for queue jobs');
+    } catch (error) {
+        console.error('Worker failed to start:', error);
+        if (app) await app.close();
+        process.exit(1);
+    }
+}
+
+if (APP_ROLE === 'worker') {
+    bootstrapWorker();
+} else {
+    bootstrapApi();
+}

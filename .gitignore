@@ -6,9 +6,11 @@ tmp/
 temp/
 coverage/
 
-# environment
+# environment — never commit production secrets
 .env
-.env.prod
+.env.*
+!.env.template
+!.env.example
 !.env.docker
 config.yaml
 config.yml

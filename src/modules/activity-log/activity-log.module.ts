@@ -4,6 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseModule } from 'src/common/database/database.module';
+import { workerOnlyProviders } from 'src/common/utils/role.util';
 
 import { ActivityLogAdminController } from './controllers/activity-log.admin.controller';
 import { AuditLogInterceptor } from './interceptors/audit-log.interceptor';
@@ -27,7 +28,7 @@ import { ActivityLogService } from './services/activity-log.service';
     providers: [
         ActivityLogService,
         ActivityLogEmitterService,
-        ActivityLogProcessor,
+        ...workerOnlyProviders([ActivityLogProcessor]),
         {
             provide: APP_INTERCEPTOR,
             scope: Scope.REQUEST,

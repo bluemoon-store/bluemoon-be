@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CommonModule } from 'src/common/common.module';
 import { RequestModule } from 'src/common/request/request.module';
 import { CustomLoggerModule } from 'src/common/logger/logger.module';
+import { workerOnlyProviders } from 'src/common/utils/role.util';
 import { OrderModule } from 'src/modules/order/order.module';
 import { StockLineModule } from 'src/modules/stock-line/stock-line.module';
 import { WalletModule } from 'src/modules/wallet/wallet.module';
@@ -69,9 +70,11 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         TronProvider,
         // Factory
         BlockchainProviderFactory,
-        // Processors
-        PaymentVerificationProcessor,
-        PaymentForwardingProcessor,
+        // Processors + cron schedulers — worker container only
+        ...workerOnlyProviders([
+            PaymentVerificationProcessor,
+            PaymentForwardingProcessor,
+        ]),
     ],
     exports: [
         SystemWalletService,
