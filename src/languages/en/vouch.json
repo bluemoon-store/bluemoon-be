@@ -1,0 +1,18 @@
+{
+    "success": {
+        "created": "Vouch created successfully",
+        "list": "Vouches retrieved successfully"
+    },
+    "error": {
+        "fileRequired": "Please attach a photo before submitting your vouch.",
+        "invalidFileType": "Unsupported image format. Please use JPEG, PNG, or WebP.",
+        "fileTooLarge": "Image is too large. The maximum size is 10 MB.",
+        "orderItemNotFound": "We couldn't find this order item. It may have been removed.",
+        "forbidden": "You don't have permission to vouch for this item.",
+        "orderItemNotEligible": "You can only post a vouch after the order is completed and the item has been delivered.",
+        "maxPerOrderItemReached": "You've already added the maximum of 5 vouches for this order item.",
+        "dropClaimNotFound": "We couldn't find this drop claim.",
+        "maxPerDropClaimReached": "You've already added the maximum of 5 vouches for this drop.",
+        "notFound": "Vouch not found."
+    }
+}
