@@ -15,7 +15,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    READ_ADMIN_ROLES,
+    STAFF_OPERATIONS_ROLES,
+} from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -42,7 +45,7 @@ export class DropAdminController {
         category: ActivityLogCategory.DROP,
         resourceType: 'Drop',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create drop' })
     @DocResponse({
@@ -55,7 +58,7 @@ export class DropAdminController {
     }
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List drops' })
     @DocPaginatedResponse({
@@ -70,7 +73,7 @@ export class DropAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get drop by ID' })
     @DocResponse({
@@ -89,7 +92,7 @@ export class DropAdminController {
         resourceType: 'Drop',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update drop' })
     @DocResponse({
@@ -111,7 +114,7 @@ export class DropAdminController {
         resourceType: 'Drop',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle drop active flag' })
     @DocResponse({
@@ -130,7 +133,7 @@ export class DropAdminController {
         resourceType: 'Drop',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Soft delete drop' })
     @DocGenericResponse({

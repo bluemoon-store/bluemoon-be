@@ -13,7 +13,10 @@ import {
     CryptoCurrency,
 } from '@prisma/client';
 
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    FINANCIAL_OPS_ROLES,
+    STAFF_OPERATIONS_ROLES,
+} from 'src/common/request/constants/roles.constant';
 
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -46,7 +49,7 @@ export class CryptoPaymentAdminController {
     ) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all crypto payments' })
     @DocPaginatedResponse({
@@ -120,7 +123,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get crypto payment detail' })
     @DocResponse({
@@ -160,7 +163,7 @@ export class CryptoPaymentAdminController {
         resourceIdParam: 'id',
         severity: ActivityLogSeverity.WARNING,
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(FINANCIAL_OPS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually verify payment' })
     @DocResponse({
@@ -194,7 +197,7 @@ export class CryptoPaymentAdminController {
         resourceIdParam: 'id',
         severity: ActivityLogSeverity.WARNING,
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(FINANCIAL_OPS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually forward payment to platform wallet' })
     @DocResponse({
@@ -221,7 +224,7 @@ export class CryptoPaymentAdminController {
     }
 
     @Get('wallet-indexes')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(FINANCIAL_OPS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get wallet derivation indexes' })
     @DocResponse({

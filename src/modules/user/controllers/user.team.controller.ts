@@ -12,7 +12,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { AuthUser } from 'src/common/request/decorators/request.user.decorator';
 import { IAuthUser } from 'src/common/request/interfaces/request.interface';
@@ -30,7 +29,7 @@ export class UserTeamController {
     constructor(private readonly userTeamService: UserTeamService) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List team members' })
     public listTeamMembers() {
@@ -38,7 +37,7 @@ export class UserTeamController {
     }
 
     @Post('invite')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Invite team member' })
     public inviteTeamMember(
@@ -49,7 +48,7 @@ export class UserTeamController {
     }
 
     @Put(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update team member role/status' })
     @DocGenericResponse({
@@ -76,7 +75,7 @@ export class UserTeamController {
     }
 
     @Post(':id/resend-invite')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Resend invitation email' })
     @DocGenericResponse({

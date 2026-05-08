@@ -11,7 +11,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ActivityLogCategory } from '@prisma/client';
 
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    READ_ADMIN_ROLES,
+    STAFF_OPERATIONS_ROLES,
+} from 'src/common/request/constants/roles.constant';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
@@ -42,7 +45,7 @@ export class UserAdminController {
     constructor(private readonly userService: UserService) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List users (admin)' })
     @DocPaginatedResponse({
@@ -62,7 +65,7 @@ export class UserAdminController {
     }
 
     @Get('stats')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'User statistics (admin)' })
     @DocResponse({
@@ -75,7 +78,7 @@ export class UserAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get user by id (admin)' })
     @DocResponse({
@@ -96,7 +99,7 @@ export class UserAdminController {
         resourceType: 'User',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Flag user' })
     @DocGenericResponse({
@@ -117,7 +120,7 @@ export class UserAdminController {
         resourceType: 'User',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Unflag user' })
     @DocGenericResponse({
@@ -137,7 +140,7 @@ export class UserAdminController {
         resourceType: 'User',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Ban user' })
     @DocGenericResponse({
@@ -158,7 +161,7 @@ export class UserAdminController {
         resourceType: 'User',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Unban user' })
     @DocGenericResponse({
@@ -178,7 +181,7 @@ export class UserAdminController {
         resourceType: 'User',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete user' })
     @DocGenericResponse({

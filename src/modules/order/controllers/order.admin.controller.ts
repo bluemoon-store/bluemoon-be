@@ -11,7 +11,11 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ActivityLogCategory, ActivityLogSeverity } from '@prisma/client';
 
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    READ_ADMIN_ROLES,
+    STAFF_OPERATIONS_ROLES,
+    SUPPORT_HANDLING_ROLES,
+} from 'src/common/request/constants/roles.constant';
 
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
@@ -44,7 +48,7 @@ export class OrderAdminController {
     ) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all orders (admin)' })
     @DocPaginatedResponse({
@@ -64,7 +68,7 @@ export class OrderAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get order detail (admin)' })
     @DocResponse({
@@ -86,7 +90,7 @@ export class OrderAdminController {
         resourceIdParam: 'id',
         severity: ActivityLogSeverity.WARNING,
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update order status' })
     @DocResponse({
@@ -108,7 +112,7 @@ export class OrderAdminController {
         resourceType: 'Order',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Manually deliver order' })
     @DocResponse({
@@ -130,7 +134,7 @@ export class OrderAdminController {
         resourceType: 'Order',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Refund order' })
     @DocGenericResponse({

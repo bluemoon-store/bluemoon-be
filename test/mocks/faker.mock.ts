@@ -5,6 +5,26 @@ export const faker = {
         password: jest.fn(() => 'TestPassword123!'),
         url: jest.fn(() => 'https://example.com'),
     },
+    commerce: {
+        department: jest.fn(() => 'Games'),
+        productName: jest.fn(() => 'Test Product'),
+        productDescription: jest.fn(() => 'Test product description'),
+    },
+    helpers: {
+        slugify: jest.fn((value: string) =>
+            value.toLowerCase().replace(/\s+/g, '-')
+        ),
+        arrayElement: jest.fn((values: unknown[]) => values[0]),
+    },
+    image: {
+        avatar: jest.fn(() => 'https://example.com/avatar.png'),
+    },
+    phone: {
+        number: jest.fn(() => '+15555550123'),
+    },
+    datatype: {
+        boolean: jest.fn(() => true),
+    },
     person: {
         firstName: jest.fn(() => 'John'),
         lastName: jest.fn(() => 'Doe'),
@@ -19,7 +39,9 @@ export const faker = {
     },
     date: {
         past: jest.fn(() => new Date('2020-01-01')),
+        recent: jest.fn(() => new Date('2024-01-01')),
         future: jest.fn(() => new Date('2030-01-01')),
+        birthdate: jest.fn(() => new Date('1990-01-01')),
     },
     lorem: {
         paragraph: jest.fn(() => 'Lorem ipsum dolor sit amet'),

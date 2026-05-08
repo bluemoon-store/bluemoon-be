@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import { SUPPORT_HANDLING_ROLES } from 'src/common/request/constants/roles.constant';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
@@ -49,7 +49,7 @@ export class TicketAdminController {
     ) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all tickets (admin)' })
     @DocPaginatedResponse({
@@ -64,7 +64,7 @@ export class TicketAdminController {
     }
 
     @Get(':id/messages')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Paginated ticket messages (cursor)' })
     @DocResponse({
@@ -85,7 +85,7 @@ export class TicketAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get ticket detail (admin)' })
     @DocResponse({
@@ -105,7 +105,7 @@ export class TicketAdminController {
 
     @Post(':id/messages')
     @HttpCode(HttpStatus.CREATED)
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Staff reply' })
     @DocResponse({
@@ -126,7 +126,7 @@ export class TicketAdminController {
     }
 
     @Post(':id/attachments/presign')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Presigned upload URL (admin)' })
     @DocResponse({
@@ -147,7 +147,7 @@ export class TicketAdminController {
     }
 
     @Patch(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update ticket status, priority, assignee' })
     @DocResponse({
@@ -167,7 +167,7 @@ export class TicketAdminController {
     }
 
     @Post(':id/read')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Mark ticket read by staff (unread badge)' })
     @DocGenericResponse({
@@ -185,7 +185,7 @@ export class TicketAdminController {
     }
 
     @Post(':id/close')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(SUPPORT_HANDLING_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Close ticket (convenience)' })
     @DocResponse({

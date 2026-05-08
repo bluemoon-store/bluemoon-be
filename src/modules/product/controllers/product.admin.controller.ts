@@ -16,7 +16,10 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    READ_ADMIN_ROLES,
+    STAFF_OPERATIONS_ROLES,
+} from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -60,7 +63,7 @@ export class ProductAdminController {
         category: ActivityLogCategory.PRODUCT,
         resourceType: 'Product',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create product' })
     @DocResponse({
@@ -75,7 +78,7 @@ export class ProductAdminController {
     }
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all products (admin)' })
     @DocPaginatedResponse({
@@ -104,7 +107,7 @@ export class ProductAdminController {
     }
 
     @Get('search')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Search products (admin)' })
     @DocPaginatedResponse({
@@ -126,7 +129,7 @@ export class ProductAdminController {
         category: ActivityLogCategory.PRODUCT_CATEGORY,
         resourceType: 'ProductCategory',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Create category' })
     @DocResponse({
@@ -141,7 +144,7 @@ export class ProductAdminController {
     }
 
     @Get('categories')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List all categories (admin)' })
     @DocPaginatedResponse({
@@ -160,7 +163,7 @@ export class ProductAdminController {
     }
 
     @Get('categories/:id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get category by ID' })
     @DocResponse({
@@ -181,7 +184,7 @@ export class ProductAdminController {
         resourceType: 'ProductCategory',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update category' })
     @DocResponse({
@@ -203,7 +206,7 @@ export class ProductAdminController {
         resourceType: 'ProductCategory',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete category' })
     @DocGenericResponse({
@@ -223,7 +226,7 @@ export class ProductAdminController {
         resourceType: 'ProductCategory',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle category active status' })
     @DocResponse({
@@ -246,7 +249,7 @@ export class ProductAdminController {
         resourceType: 'ProductVariant',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add product variant' })
     @DocResponse({
@@ -268,7 +271,7 @@ export class ProductAdminController {
         resourceType: 'ProductVariant',
         resourceIdParam: 'variantId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product variant' })
     @DocResponse({
@@ -291,7 +294,7 @@ export class ProductAdminController {
         resourceType: 'ProductVariant',
         resourceIdParam: 'variantId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove product variant (soft delete)' })
     @DocResponse({
@@ -307,7 +310,7 @@ export class ProductAdminController {
     }
 
     @Put(':id/related')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Set related products' })
     @DocResponse({
@@ -328,7 +331,7 @@ export class ProductAdminController {
     // Product by ID and CRUD
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(READ_ADMIN_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get product by ID (admin)' })
     @DocResponse({
@@ -347,7 +350,7 @@ export class ProductAdminController {
         resourceType: 'Product',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product' })
     @DocResponse({
@@ -369,7 +372,7 @@ export class ProductAdminController {
         resourceType: 'Product',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete product' })
     @DocGenericResponse({
@@ -389,7 +392,7 @@ export class ProductAdminController {
         resourceType: 'Product',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Update product stock' })
     @DocResponse({
@@ -411,7 +414,7 @@ export class ProductAdminController {
         resourceType: 'Product',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Toggle product active status' })
     @DocResponse({
@@ -432,7 +435,7 @@ export class ProductAdminController {
         resourceType: 'Product',
         resourceIdParam: 'id',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Add image to product' })
     @DocResponse({
@@ -462,7 +465,7 @@ export class ProductAdminController {
         resourceType: 'ProductImage',
         resourceIdParam: 'imageId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Remove image from product' })
     @DocResponse({
@@ -484,7 +487,7 @@ export class ProductAdminController {
         resourceType: 'ProductImage',
         resourceIdParam: 'imageId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Set image as primary' })
     @DocResponse({

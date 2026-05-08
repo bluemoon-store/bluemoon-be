@@ -19,7 +19,6 @@ import { Role } from '@prisma/client';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 
@@ -42,7 +41,7 @@ export class ActivityLogAdminController {
     constructor(private readonly activityLogService: ActivityLogService) {}
 
     @Get()
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List activity logs (cursor pagination)' })
     @DocResponse({
@@ -78,7 +77,7 @@ export class ActivityLogAdminController {
     }
 
     @Get('actors')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Distinct actors for filter dropdown (cached)' })
     @DocGenericResponse({
@@ -92,7 +91,7 @@ export class ActivityLogAdminController {
     }
 
     @Get(':id')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles([Role.OWNER])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Get single activity log entry' })
     @DocResponse({

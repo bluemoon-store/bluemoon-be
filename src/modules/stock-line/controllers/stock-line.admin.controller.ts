@@ -15,7 +15,10 @@ import { ActivityLogCategory } from '@prisma/client';
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { DocPaginatedResponse } from 'src/common/doc/decorators/doc.paginated.decorator';
 import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
-import { ADMIN_ROLES } from 'src/common/request/constants/roles.constant';
+import {
+    STAFF_OPERATIONS_ROLES,
+    STOCK_CONTRIBUTOR_ROLES,
+} from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { QueryTransformPipe } from 'src/common/request/pipes/query-transform.pipe';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
@@ -45,7 +48,7 @@ export class StockLineAdminController {
         resourceType: 'ProductVariant',
         resourceIdParam: 'variantId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STOCK_CONTRIBUTOR_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Bulk add stock lines for a variant' })
     @DocResponse({
@@ -66,7 +69,7 @@ export class StockLineAdminController {
     }
 
     @Get(':id/variants/:variantId/stock/lines')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STOCK_CONTRIBUTOR_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'List stock lines for a variant' })
     @DocPaginatedResponse({
@@ -83,7 +86,7 @@ export class StockLineAdminController {
     }
 
     @Get(':id/variants/:variantId/stock/summary')
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STOCK_CONTRIBUTOR_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Stock line counts for a variant' })
     @DocResponse({
@@ -105,7 +108,7 @@ export class StockLineAdminController {
         resourceType: 'ProductStockLine',
         resourceIdParam: 'lineId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete one AVAILABLE stock line' })
     @DocGenericResponse({
@@ -132,7 +135,7 @@ export class StockLineAdminController {
         resourceType: 'ProductVariant',
         resourceIdParam: 'variantId',
     })
-    @AllowedRoles(ADMIN_ROLES)
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Clear all AVAILABLE stock lines for a variant' })
     @DocGenericResponse({
