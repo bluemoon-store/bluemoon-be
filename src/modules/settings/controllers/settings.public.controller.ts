@@ -1,0 +1,26 @@
+import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+
+import { DocResponse } from 'src/common/doc/decorators/doc.response.decorator';
+import { PublicRoute } from 'src/common/request/decorators/request.public.decorator';
+
+import { SettingsPublicResponseDto } from '../dtos/response/settings.public.response';
+import { SettingsService } from '../services/settings.service';
+
+@ApiTags('public.settings')
+@Controller({ path: '/settings', version: '1' })
+export class SettingsPublicController {
+    constructor(private readonly settingsService: SettingsService) {}
+
+    @Get('public')
+    @PublicRoute()
+    @ApiOperation({ summary: 'Get public settings' })
+    @DocResponse({
+        serialization: SettingsPublicResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'settings.success.publicFound',
+    })
+    async getPublic(): Promise<SettingsPublicResponseDto> {
+        return this.settingsService.getPublic();
+    }
+}

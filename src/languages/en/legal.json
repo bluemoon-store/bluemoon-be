@@ -1,0 +1,11 @@
+{
+    "success": {
+        "list": "Legal documents retrieved successfully",
+        "found": "Legal document retrieved successfully",
+        "updated": "Legal document updated successfully"
+    },
+    "error": {
+        "invalidType": "Invalid legal document type",
+        "notFound": "Legal document not found"
+    }
+}

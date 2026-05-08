@@ -722,6 +722,8 @@ enum ContentType {
   FAQ
   TERMS
   PRIVACY
+  REFUND
+  COOKIE
   LANDING_PAGE
   ABOUT
 }
@@ -738,6 +740,37 @@ model SystemSettings {
 
   @@index([category])
   @@map("system_settings")
+}
+
+model FaqCategory {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  position  Int       @default(0)
+  items     FaqItem[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([position])
+  @@index([deletedAt])
+  @@map("faq_categories")
+}
+
+model FaqItem {
+  id         String      @id @default(uuid())
+  categoryId String      @map("category_id")
+  category   FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  question   String
+  answerHtml String      @map("answer_html") @db.Text
+  position   Int         @default(0)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  deletedAt  DateTime?   @map("deleted_at")
+
+  @@index([categoryId, position])
+  @@index([deletedAt])
+  @@map("faq_items")
 }
 
 // Analytics/Statistics

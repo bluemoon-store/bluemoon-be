@@ -1,0 +1,17 @@
+{
+    "success": {
+        "generalFound": "General settings retrieved successfully",
+        "generalUpdated": "General settings updated successfully",
+        "socialFound": "Social settings retrieved successfully",
+        "socialUpdated": "Social settings updated successfully",
+        "publicFound": "Public settings retrieved successfully",
+        "emailValidityTested": "Email validity URL tested successfully"
+    },
+    "error": {
+        "invalidSupportLink": "Support link must be a relative path or an https URL",
+        "invalidTelegramLink": "Telegram link must start with https://t.me/ or https://telegram.me/",
+        "invalidDiscordLink": "Discord link must start with a valid Discord URL",
+        "privateHostBlocked": "Private or localhost addresses are not allowed",
+        "dnsResolutionFailed": "Could not resolve the host"
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "success": {
+        "list": "FAQ categories retrieved successfully",
+        "categoryCreated": "FAQ category created successfully",
+        "categoryUpdated": "FAQ category updated successfully",
+        "categoryDeleted": "FAQ category deleted successfully",
+        "itemCreated": "FAQ item created successfully",
+        "itemUpdated": "FAQ item updated successfully",
+        "itemDeleted": "FAQ item deleted successfully",
+        "reordered": "FAQ reordered successfully"
+    },
+    "error": {
+        "categoryNotFound": "FAQ category not found",
+        "itemNotFound": "FAQ item not found"
+    }
+}

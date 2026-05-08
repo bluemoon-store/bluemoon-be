@@ -15,6 +15,9 @@ import { CouponModule } from 'src/modules/coupon/coupon.module';
 import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
 import { VouchModule } from 'src/modules/vouch/vouch.module';
 import { DropModule } from 'src/modules/drop/drop.module';
+import { SettingsModule } from 'src/modules/settings/settings.module';
+import { LegalModule } from 'src/modules/legal/legal.module';
+import { FaqModule } from 'src/modules/faq/faq.module';
 
 import { HealthController } from './controllers/health.controller';
 import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.module';
@@ -43,6 +46,9 @@ import { CryptoPaymentModule } from 'src/modules/crypto-payment/crypto-payment.m
         VouchModule,
         CouponModule,
         DropModule,
+        SettingsModule,
+        LegalModule,
+        FaqModule,
     ],
     controllers: [HealthController],
 })
