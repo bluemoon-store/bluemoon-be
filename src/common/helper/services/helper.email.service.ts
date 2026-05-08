@@ -9,7 +9,7 @@ import {
     EMAIL_TEMPLATES,
     EMAIL_TEMPLATE_SUBJECTS,
 } from 'src/common/email/enums/email-template.enum';
-import { ResendService } from 'src/common/email/services/resend.service';
+import { EmailProviderService } from 'src/common/email/services/email-provider.service';
 
 import { ISendEmailParams } from '../interfaces/email.interface';
 import {
@@ -25,7 +25,7 @@ export class HelperEmailService implements IHelperEmailService {
     >();
 
     constructor(
-        private readonly resendService: ResendService,
+        private readonly emailProvider: EmailProviderService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(HelperEmailService.name);
@@ -39,7 +39,7 @@ export class HelperEmailService implements IHelperEmailService {
         const subject = this.resolveSubject(emailType);
         const html = this.renderTemplate(emailType, payload ?? {});
 
-        return this.resendService.send({
+        return this.emailProvider.send({
             to: emails,
             subject,
             html,
