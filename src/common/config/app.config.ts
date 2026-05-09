@@ -19,7 +19,18 @@ export default registerAs('app', (): Record<string, any> => {
     const corsConfig: CorsOptions = {
         origin: corsOrigin,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'Accept',
+            'X-Requested-With',
+            'X-HTTP-Method-Override',
+            'X-Content-Range',
+            'Content-Range',
+            'Range',
+            'sentry-trace',
+            'baggage',
+        ],
         credentials: true,
         exposedHeaders: ['Content-Range', 'X-Content-Range'],
     };
