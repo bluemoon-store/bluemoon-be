@@ -50,6 +50,8 @@ export class ProductPublicController {
             isHot: query.isHot,
             isNew: query.isNew,
             isRestocked: query.isRestocked,
+            sortBy: query.sortBy,
+            sortOrder: query.sortOrder,
         });
     }
 

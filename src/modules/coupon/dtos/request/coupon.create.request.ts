@@ -79,7 +79,7 @@ export class CouponCreateDto {
     categoryScope: CouponCategoryScope;
 
     @ApiPropertyOptional({
-        example: '10% off your first purchase',
+        example: '10% off',
         description: 'Marketing label shown at checkout',
     })
     @IsOptional()

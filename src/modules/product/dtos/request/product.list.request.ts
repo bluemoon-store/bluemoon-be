@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsNumber, IsString, IsBoolean } from 'class-validator';
+import {
+    IsOptional,
+    IsNumber,
+    IsString,
+    IsBoolean,
+    IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+import { SortOrder } from 'src/common/helper/dtos/query.dto';
 
 /**
  * Query parameters for listing products
@@ -78,4 +86,22 @@ export class ProductListQueryDto {
     @Type(() => Boolean)
     @IsBoolean()
     isRestocked?: boolean;
+
+    @ApiPropertyOptional({
+        description:
+            'Field to sort by (e.g. updatedAt, createdAt, name, sortOrder). When omitted, falls back to the default ordering based on the active flag filter.',
+        example: 'updatedAt',
+    })
+    @IsOptional()
+    @IsString()
+    sortBy?: string;
+
+    @ApiPropertyOptional({
+        description: 'Sort direction',
+        enum: SortOrder,
+        example: SortOrder.DESC,
+    })
+    @IsOptional()
+    @IsEnum(SortOrder)
+    sortOrder?: SortOrder;
 }

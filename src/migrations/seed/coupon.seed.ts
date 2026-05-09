@@ -50,7 +50,7 @@ export class CouponSeedService {
             await this.databaseService.coupon.create({
                 data: {
                     code: 'WELCOME10',
-                    description: '10% off your first purchase',
+                    description: '10% off',
                     discountType: CouponDiscountType.PERCENT,
                     discountValue: new Prisma.Decimal('10'),
                     categoryScope: CouponCategoryScope.ALL,
@@ -69,7 +69,7 @@ export class CouponSeedService {
             await this.databaseService.coupon.create({
                 data: {
                     code: 'FIVEOFF',
-                    description: '$5 off your order',
+                    description: '$5 off',
                     discountType: CouponDiscountType.FIXED,
                     discountValue: new Prisma.Decimal('5'),
                     categoryScope: CouponCategoryScope.ALL,
@@ -89,7 +89,7 @@ export class CouponSeedService {
             await this.databaseService.coupon.create({
                 data: {
                     code: 'SUMMER25',
-                    description: '25% off Shopping & Food',
+                    description: '25% off',
                     discountType: CouponDiscountType.PERCENT,
                     discountValue: new Prisma.Decimal('25'),
                     categoryScope: CouponCategoryScope.SPECIFIC,

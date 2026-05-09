@@ -8,6 +8,8 @@ import { OrderByInput } from 'src/common/helper/interfaces/pagination.interface'
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 
+import { SortOrder } from 'src/common/helper/dtos/query.dto';
+
 import { ProductCreateDto } from '../dtos/request/product.create.request';
 import { ProductUpdateDto } from '../dtos/request/product.update.request';
 import { ProductSearchDto } from '../dtos/request/product.search.request';
@@ -239,6 +241,51 @@ export class ProductService implements IProductService {
         return [{ sortOrder: 'asc' }, { createdAt: 'desc' }];
     }
 
+    /**
+     * Whitelist of fields the public list endpoint allows clients to sort by.
+     * Anything outside this list is silently ignored so a bad query string
+     * cannot crash the endpoint with a Prisma error.
+     */
+    private readonly publicListSortableFields = new Set<
+        keyof Prisma.ProductOrderByWithRelationInput
+    >([
+        'updatedAt',
+        'createdAt',
+        'name',
+        'sortOrder',
+        'launchedAt',
+        'restockedAt',
+        'price',
+    ]);
+
+    private resolveListOrderBy(options: {
+        isHot?: boolean;
+        isNew?: boolean;
+        isRestocked?: boolean;
+        sortBy?: string;
+        sortOrder?: SortOrder;
+    }): Prisma.ProductOrderByWithRelationInput[] {
+        const requested = options.sortBy as
+            | keyof Prisma.ProductOrderByWithRelationInput
+            | undefined;
+
+        if (requested && this.publicListSortableFields.has(requested)) {
+            const direction: 'asc' | 'desc' =
+                options.sortOrder === SortOrder.ASC ? 'asc' : 'desc';
+            return [
+                {
+                    [requested]: direction,
+                } as Prisma.ProductOrderByWithRelationInput,
+            ];
+        }
+
+        return this.listOrderBy({
+            isHot: options.isHot,
+            isNew: options.isNew,
+            isRestocked: options.isRestocked,
+        });
+    }
+
     async create(data: ProductCreateDto): Promise<ProductResponseDto> {
         try {
             const category =
@@ -347,6 +394,8 @@ export class ProductService implements IProductService {
         isHot?: boolean;
         isNew?: boolean;
         isRestocked?: boolean;
+        sortBy?: string;
+        sortOrder?: SortOrder;
     }): Promise<ApiPaginatedDataDto<ProductListResponseDto>> {
         try {
             const where = this.buildListWhere({
@@ -358,10 +407,12 @@ export class ProductService implements IProductService {
                 isRestocked: options?.isRestocked,
             });
 
-            const orderBy = this.listOrderBy({
+            const orderBy = this.resolveListOrderBy({
                 isHot: options?.isHot,
                 isNew: options?.isNew,
                 isRestocked: options?.isRestocked,
+                sortBy: options?.sortBy,
+                sortOrder: options?.sortOrder,
             });
 
             type ListPayload = Prisma.ProductGetPayload<{

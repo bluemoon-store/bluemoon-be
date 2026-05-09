@@ -1,6 +1,8 @@
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
+import { SortOrder } from 'src/common/helper/dtos/query.dto';
+
 import { ProductCreateDto } from '../dtos/request/product.create.request';
 import { ProductUpdateDto } from '../dtos/request/product.update.request';
 import { ProductSearchDto } from '../dtos/request/product.search.request';
@@ -25,6 +27,8 @@ export interface IProductService {
         isHot?: boolean;
         isNew?: boolean;
         isRestocked?: boolean;
+        sortBy?: string;
+        sortOrder?: SortOrder;
     }): Promise<ApiPaginatedDataDto<ProductListResponseDto>>;
     search(
         query: ProductSearchDto
