@@ -11,7 +11,8 @@
         "userUnflagged": "User unflagged successfully",
         "userListRetrieved": "User list retrieved successfully",
         "userRetrieved": "User retrieved successfully",
-        "userStatsRetrieved": "User statistics retrieved successfully"
+        "userStatsRetrieved": "User statistics retrieved successfully",
+        "created": "User created successfully"
     },
     "error": {
         "notFound": "User not found in database",
@@ -30,6 +31,10 @@
         "failedToFlagUser": "Failed to flag user",
         "failedToUnflagUser": "Failed to unflag user",
         "failedToListUsers": "Failed to list users",
-        "failedToGetUserStats": "Failed to retrieve user statistics"
+        "failedToCreateUser": "Failed to create user",
+        "failedToGetUserStats": "Failed to retrieve user statistics",
+        "alreadyExists": "Email or username already taken",
+        "emailAlreadyTaken": "Email already taken",
+        "usernameAlreadyTaken": "Username already taken"
     }
 }

@@ -1,3 +1,5 @@
+import { randomInt } from 'node:crypto';
+
 import {
     HttpStatus,
     Injectable,
@@ -16,6 +18,7 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { UserUpdateDto } from '../dtos/request/user.update.request';
 import { UserBanDto } from '../dtos/request/user.ban.request';
 import { UserFlagDto } from '../dtos/request/user.flag.request';
+import { UserAdminCreateDto } from '../dtos/request/user.admin.create.request';
 import { UserListQueryDto } from '../dtos/request/user.list.query.request';
 import {
     UserGetProfileResponseDto,
@@ -25,9 +28,11 @@ import {
     UserAdminListItemResponseDto,
     UserAdminStatsResponseDto,
 } from '../dtos/response/user.admin.response';
+import { UserAdminCreateResponseDto } from '../dtos/response/user.admin.create.response';
 import { PurchaseHistoryOrderDto } from '../dtos/response/user.purchase-history.response';
 import { IUserService } from '../interfaces/user.service.interface';
 import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 type UserWithWallet = Prisma.UserGetPayload<{ include: { wallet: true } }>;
 
@@ -37,7 +42,8 @@ export class UserService implements IUserService {
         private readonly databaseService: DatabaseService,
         private readonly helperEncryptionService: HelperEncryptionService,
         private readonly helperPaginationService: HelperPaginationService,
-        private readonly activityLogEmitter: ActivityLogEmitterService
+        private readonly activityLogEmitter: ActivityLogEmitterService,
+        private readonly walletService: WalletService
     ) {}
 
     async updateUser(
@@ -371,6 +377,118 @@ export class UserService implements IUserService {
         }
 
         return this.mapUserToAdminListItem(user);
+    }
+
+    async createByAdmin(
+        dto: UserAdminCreateDto
+    ): Promise<UserAdminCreateResponseDto> {
+        const email = dto.email.trim().toLowerCase();
+        const userName = dto.userName.trim().toLowerCase();
+
+        try {
+            const existing = await this.databaseService.user.findFirst({
+                where: {
+                    deletedAt: null,
+                    OR: [{ email }, { userName }],
+                },
+            });
+
+            if (existing) {
+                const emailTaken = existing.email === email;
+                const userNameTaken = existing.userName === userName;
+                if (emailTaken && userNameTaken) {
+                    throw new HttpException(
+                        'user.error.alreadyExists',
+                        HttpStatus.CONFLICT
+                    );
+                }
+                if (emailTaken) {
+                    throw new HttpException(
+                        'user.error.emailAlreadyTaken',
+                        HttpStatus.CONFLICT
+                    );
+                }
+                if (userNameTaken) {
+                    throw new HttpException(
+                        'user.error.userNameExists',
+                        HttpStatus.CONFLICT
+                    );
+                }
+            }
+
+            const generatedPassword = this.generateStrongRandomPassword();
+            const hashed =
+                await this.helperEncryptionService.createHash(
+                    generatedPassword
+                );
+
+            const created = await this.databaseService.user.create({
+                data: {
+                    email,
+                    userName,
+                    password: hashed,
+                    firstName: dto.firstName ?? null,
+                    lastName: dto.lastName ?? null,
+                    phone: dto.phone ?? null,
+                    role: Role.USER,
+                    isVerified: dto.markVerified ?? false,
+                },
+            });
+
+            await this.walletService.createWallet(created.id);
+
+            const withWallet = await this.databaseService.user.findFirst({
+                where: { id: created.id },
+                include: { wallet: true },
+            });
+
+            if (!withWallet) {
+                throw new HttpException(
+                    'user.error.failedToCreateUser',
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            this.activityLogEmitter.setAuditResourceId(created.id);
+
+            return {
+                user: this.mapUserToAdminListItem(withWallet),
+                generatedPassword,
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                'user.error.failedToCreateUser',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    private generateStrongRandomPassword(length = 16): string {
+        const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        const lower = 'abcdefghijkmnopqrstuvwxyz';
+        const digits = '23456789';
+        const symbols = '@$!%*?&';
+        const all = upper + lower + digits + symbols;
+        const pick = (pool: string) => pool[randomInt(pool.length)]!;
+        const chars: string[] = [
+            pick(upper),
+            pick(lower),
+            pick(digits),
+            pick(symbols),
+        ];
+        for (let i = chars.length; i < length; i++) {
+            chars.push(pick(all));
+        }
+        for (let i = chars.length - 1; i > 0; i--) {
+            const j = randomInt(i + 1);
+            const tmp = chars[i]!;
+            chars[i] = chars[j]!;
+            chars[j] = tmp;
+        }
+        return chars.join('');
     }
 
     async getUserStats(): Promise<UserAdminStatsResponseDto> {

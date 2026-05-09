@@ -1,3 +1,7 @@
+jest.mock('src/modules/wallet/services/wallet.service', () => ({
+    WalletService: class WalletService {},
+}));
+
 import { HttpException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Role } from '@prisma/client';
@@ -8,6 +12,7 @@ import { HelperPaginationService } from 'src/common/helper/services/helper.pagin
 import { UserUpdateDto } from 'src/modules/user/dtos/request/user.update.request';
 import { UserService } from 'src/modules/user/services/user.service';
 import { ActivityLogEmitterService } from 'src/modules/activity-log/services/activity-log.emitter.service';
+import { WalletService } from 'src/modules/wallet/services/wallet.service';
 
 describe('UserService', () => {
     let service: UserService;
@@ -15,12 +20,15 @@ describe('UserService', () => {
     const mockPrismaService = {
         user: {
             findUnique: jest.fn(),
+            findFirst: jest.fn(),
+            create: jest.fn(),
             update: jest.fn(),
         },
     };
 
     const mockHelperEncryptionService = {
         match: jest.fn(),
+        createHash: jest.fn(),
     };
 
     const mockHelperPaginationService = {
@@ -31,6 +39,11 @@ describe('UserService', () => {
     const mockActivityLogEmitter = {
         captureBefore: jest.fn(),
         captureAfter: jest.fn(),
+        setAuditResourceId: jest.fn(),
+    };
+
+    const mockWalletService = {
+        createWallet: jest.fn(),
     };
 
     beforeEach(async () => {
@@ -50,6 +63,7 @@ describe('UserService', () => {
                     provide: ActivityLogEmitterService,
                     useValue: mockActivityLogEmitter,
                 },
+                { provide: WalletService, useValue: mockWalletService },
             ],
         }).compile();
 
@@ -150,6 +164,106 @@ describe('UserService', () => {
             const result = await service.getProfile('123');
 
             expect(result).toEqual(mockUser);
+        });
+    });
+
+    describe('createByAdmin', () => {
+        beforeEach(() => {
+            mockHelperEncryptionService.createHash.mockResolvedValue(
+                'argon-hashed'
+            );
+            mockWalletService.createWallet.mockResolvedValue({});
+            mockPrismaService.user.findFirst.mockReset();
+            mockPrismaService.user.create.mockReset();
+        });
+
+        it('should reject when email is taken', async () => {
+            mockPrismaService.user.findFirst.mockResolvedValue({
+                id: 'u1',
+                email: 'taken@example.com',
+                userName: 'other',
+            });
+
+            await expect(
+                service.createByAdmin({
+                    email: 'taken@example.com',
+                    userName: 'newuser',
+                    markVerified: false,
+                })
+            ).rejects.toMatchObject({
+                response: 'user.error.emailAlreadyTaken',
+            });
+        });
+
+        it('should reject when username is taken', async () => {
+            mockPrismaService.user.findFirst.mockResolvedValue({
+                id: 'u1',
+                email: 'other@example.com',
+                userName: 'taken_name',
+            });
+
+            await expect(
+                service.createByAdmin({
+                    email: 'fresh@example.com',
+                    userName: 'taken_name',
+                    markVerified: false,
+                })
+            ).rejects.toMatchObject({
+                response: 'user.error.userNameExists',
+            });
+        });
+
+        it('should create user, wallet, hash password, and return plaintext once', async () => {
+            mockPrismaService.user.findFirst
+                .mockResolvedValueOnce(null)
+                .mockResolvedValueOnce({
+                    id: 'new-id',
+                    email: 'new@example.com',
+                    userName: 'newuser',
+                    firstName: null,
+                    lastName: null,
+                    avatar: null,
+                    role: Role.USER,
+                    isVerified: true,
+                    isBanned: false,
+                    bannedAt: null,
+                    bannedReason: null,
+                    isFlagged: false,
+                    flaggedAt: null,
+                    flaggedReason: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    deletedAt: null,
+                    wallet: { balance: null },
+                });
+
+            mockPrismaService.user.create.mockResolvedValue({
+                id: 'new-id',
+                email: 'new@example.com',
+                userName: 'newuser',
+            });
+
+            const result = await service.createByAdmin({
+                email: 'new@example.com',
+                userName: 'newuser',
+                markVerified: true,
+            });
+
+            expect(mockHelperEncryptionService.createHash).toHaveBeenCalledWith(
+                expect.any(String)
+            );
+            expect(
+                mockHelperEncryptionService.createHash.mock.calls[0][0]
+            ).toHaveLength(16);
+            expect(mockWalletService.createWallet).toHaveBeenCalledWith(
+                'new-id'
+            );
+            expect(
+                mockActivityLogEmitter.setAuditResourceId
+            ).toHaveBeenCalledWith('new-id');
+            expect(result.generatedPassword).toHaveLength(16);
+            expect(result.user.id).toBe('new-id');
+            expect(result.user.isVerified).toBe(true);
         });
     });
 });

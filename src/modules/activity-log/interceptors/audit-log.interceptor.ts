@@ -25,6 +25,18 @@ import { IActivityLogJobPayload } from '../interfaces/activity-log-job.interface
 import { ActivityLogEmitterService } from '../services/activity-log.emitter.service';
 import { ActivityLogService } from '../services/activity-log.service';
 
+function getByPath(obj: unknown, path: string): unknown {
+    const parts = path.split('.').filter(Boolean);
+    let cur: unknown = obj;
+    for (const p of parts) {
+        if (cur === null || typeof cur !== 'object') {
+            return undefined;
+        }
+        cur = (cur as Record<string, unknown>)[p];
+    }
+    return cur;
+}
+
 function redactDeep(value: unknown): unknown {
     if (value === null || value === undefined) {
         return value;
@@ -82,11 +94,11 @@ export class AuditLogInterceptor implements NestInterceptor {
         >();
 
         return next.handle().pipe(
-            tap(() => {
-                void this.enqueue(req, meta, null);
+            tap(responseBody => {
+                void this.enqueue(req, meta, null, responseBody);
             }),
             catchError(err => {
-                void this.enqueue(req, meta, err);
+                void this.enqueue(req, meta, err, undefined);
                 return throwError(() => err);
             })
         );
@@ -100,12 +112,31 @@ export class AuditLogInterceptor implements NestInterceptor {
             id?: string;
         },
         meta: AuditLogOptions,
-        error: unknown | null
+        error: unknown | null,
+        responseBody?: unknown
     ): Promise<void> {
         const diff = this.activityLogEmitter.consumeDiff();
         const resourceParam = meta.resourceIdParam ?? 'id';
         const params = req.params ?? {};
-        const resourceId = params[resourceParam] ?? params.id ?? null;
+        let resourceId = params[resourceParam] ?? params.id ?? null;
+
+        if (
+            meta.resourceIdResponsePath &&
+            responseBody !== undefined &&
+            error === null
+        ) {
+            const extracted = getByPath(
+                responseBody,
+                meta.resourceIdResponsePath
+            );
+            if (typeof extracted === 'string' && extracted.length > 0) {
+                resourceId = extracted;
+            }
+        }
+
+        if (!resourceId) {
+            resourceId = this.activityLogEmitter.takeAuditResourceId() ?? null;
+        }
 
         const metadata: Record<string, unknown> = {
             method: req.method,

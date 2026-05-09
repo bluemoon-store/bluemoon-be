@@ -17,6 +17,8 @@ import {
 } from '../dtos/response/user.admin.response';
 
 import { UserBanDto } from '../dtos/request/user.ban.request';
+import { UserAdminCreateDto } from '../dtos/request/user.admin.create.request';
+import { UserAdminCreateResponseDto } from '../dtos/response/user.admin.create.response';
 
 export interface IUserService {
     updateUser(
@@ -40,4 +42,5 @@ export interface IUserService {
     getUserStats(): Promise<UserAdminStatsResponseDto>;
     flagUser(userId: string, data: UserFlagDto): Promise<ApiGenericResponseDto>;
     unflagUser(userId: string): Promise<ApiGenericResponseDto>;
+    createByAdmin(dto: UserAdminCreateDto): Promise<UserAdminCreateResponseDto>;
 }

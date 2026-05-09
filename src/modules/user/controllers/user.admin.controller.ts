@@ -3,6 +3,7 @@ import {
     Controller,
     Delete,
     Get,
+    HttpCode,
     HttpStatus,
     Param,
     Post,
@@ -29,10 +30,12 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { UserBanDto } from '../dtos/request/user.ban.request';
 import { UserFlagDto } from '../dtos/request/user.flag.request';
 import { UserListQueryDto } from '../dtos/request/user.list.query.request';
+import { UserAdminCreateDto } from '../dtos/request/user.admin.create.request';
 import {
     UserAdminListItemResponseDto,
     UserAdminStatsResponseDto,
 } from '../dtos/response/user.admin.response';
+import { UserAdminCreateResponseDto } from '../dtos/response/user.admin.create.response';
 import { UserService } from '../services/user.service';
 import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
@@ -75,6 +78,28 @@ export class UserAdminController {
     })
     public async getUserStats(): Promise<UserAdminStatsResponseDto> {
         return this.userService.getUserStats();
+    }
+
+    @Post()
+    @HttpCode(HttpStatus.CREATED)
+    @AuditLog({
+        action: 'user.create',
+        category: ActivityLogCategory.USER,
+        resourceType: 'User',
+        resourceIdResponsePath: 'user.id',
+    })
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({ summary: 'Create a regular user (admin)' })
+    @DocResponse({
+        serialization: UserAdminCreateResponseDto,
+        httpStatus: HttpStatus.CREATED,
+        messageKey: 'user.success.created',
+    })
+    public async createUser(
+        @Body() payload: UserAdminCreateDto
+    ): Promise<UserAdminCreateResponseDto> {
+        return this.userService.createByAdmin(payload);
     }
 
     @Get(':id')

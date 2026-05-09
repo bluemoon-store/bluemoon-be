@@ -14,6 +14,9 @@ export class ActivityLogEmitterService {
 
     private resourceLabel?: string;
 
+    /** When route params have no resource id (e.g. POST create), audit log reads this once. */
+    private auditResourceId?: string;
+
     captureBefore(payload: { before: Record<string, unknown> }): void {
         this.partialBefore = { ...this.partialBefore, ...payload.before };
     }
@@ -42,5 +45,15 @@ export class ActivityLogEmitterService {
         const label = this.resourceLabel;
         this.resourceLabel = undefined;
         return { before, after, resourceLabel: label };
+    }
+
+    setAuditResourceId(id: string): void {
+        this.auditResourceId = id;
+    }
+
+    takeAuditResourceId(): string | undefined {
+        const id = this.auditResourceId;
+        this.auditResourceId = undefined;
+        return id;
     }
 }

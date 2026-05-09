@@ -8,6 +8,8 @@ export interface AuditLogOptions {
     category: ActivityLogCategory;
     resourceType?: string;
     resourceIdParam?: string;
+    /** Dot path on the JSON response body (e.g. `user.id`) when there is no `:id` route param */
+    resourceIdResponsePath?: string;
     severity?: ActivityLogSeverity;
 }
 
