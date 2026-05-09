@@ -3,6 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { Prisma } from '@prisma/client';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { SupabaseStorageService } from 'src/common/storage/services/supabase.storage.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { OrderByInput } from 'src/common/helper/interfaces/pagination.interface';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -87,6 +88,7 @@ export class ProductService implements IProductService {
         private readonly databaseService: DatabaseService,
         private readonly paginationService: HelperPaginationService,
         private readonly activityLogEmitter: ActivityLogEmitterService,
+        private readonly storageService: SupabaseStorageService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(ProductService.name);
@@ -350,6 +352,10 @@ export class ProductService implements IProductService {
                 const imageData = data.images.map((img, index) => ({
                     productId: product.id,
                     key: img.key,
+                    url: this.storageService.getPublicUrl(
+                        img.key,
+                        'publicAssets'
+                    ),
                     isPrimary: img.isPrimary ?? index === 0,
                     sortOrder: img.sortOrder ?? index,
                 }));
@@ -973,6 +979,10 @@ export class ProductService implements IProductService {
                 data: {
                     productId,
                     key: imageKey,
+                    url: this.storageService.getPublicUrl(
+                        imageKey,
+                        'publicAssets'
+                    ),
                     isPrimary,
                     sortOrder,
                 },
