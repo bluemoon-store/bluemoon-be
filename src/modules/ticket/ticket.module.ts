@@ -5,10 +5,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
 import { DatabaseModule } from 'src/common/database/database.module';
-import { FileService } from 'src/common/file/services/files.service';
+import { CommonFileModule } from 'src/common/file/file.module';
 import { HelperModule } from 'src/common/helper/helper.module';
 import { RequestModule } from 'src/common/request/request.module';
-import { StorageModule } from 'src/common/storage/storage.module';
 
 import { TicketAdminController } from './controllers/ticket.admin.controller';
 import { TicketPublicController } from './controllers/ticket.public.controller';
@@ -20,8 +19,8 @@ import { TicketService } from './services/ticket.service';
     imports: [
         DatabaseModule,
         HelperModule,
+        CommonFileModule,
         RequestModule,
-        StorageModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
@@ -36,7 +35,6 @@ import { TicketService } from './services/ticket.service';
         { provide: TICKET_SERVICE, useExisting: TicketService },
         TicketMessageService,
         TicketGateway,
-        FileService,
     ],
     exports: [TicketService, TicketMessageService],
 })

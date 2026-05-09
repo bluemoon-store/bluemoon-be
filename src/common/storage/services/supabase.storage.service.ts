@@ -107,11 +107,13 @@ export class SupabaseStorageService implements IStorageService {
     async uploadObject(
         key: string,
         body: Buffer | string,
-        contentType: string
+        contentType: string,
+        bucketKind: SupabaseStorageBucketKind = 'userUploads'
     ): Promise<void> {
         try {
+            const bucketName = this.resolveBucketName(bucketKind);
             const { error } = await this.client.storage
-                .from(this.userUploadsBucket)
+                .from(bucketName)
                 .upload(key, body, {
                     contentType,
                     upsert: true,

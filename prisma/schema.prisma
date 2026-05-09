@@ -413,22 +413,31 @@ model OrderReview {
   @@map("order_reviews")
 }
 
+enum VouchStatus {
+  PENDING
+  APPROVED
+}
+
 model Vouch {
-  id          String    @id @default(uuid())
-  orderItemId String    @map("order_item_id")
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  userId      String    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  imageKey    String    @map("image_key")
-  imageUrl    String?   @map("image_url")
-  caption     String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  id          String      @id @default(uuid())
+  orderItemId String      @map("order_item_id")
+  orderItem   OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageKey    String      @map("image_key")
+  imageUrl    String?     @map("image_url")
+  caption     String?     @db.Text
+  status      VouchStatus @default(PENDING)
+  approvedAt  DateTime?   @map("approved_at")
+  approvedBy  String?     @map("approved_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  deletedAt   DateTime?   @map("deleted_at")
 
   @@index([orderItemId])
   @@index([userId])
   @@index([createdAt])
+  @@index([status])
   @@map("vouches")
 }
 
@@ -846,6 +855,7 @@ enum ActivityLogCategory {
   WALLET
   CRYPTO_PAYMENT
   REVIEW
+  VOUCH
   CONTENT
   SETTINGS
 }

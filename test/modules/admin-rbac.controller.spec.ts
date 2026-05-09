@@ -36,6 +36,7 @@ import { DropAdminController } from 'src/modules/drop/controllers/drop.admin.con
 import { OrderAdminController } from 'src/modules/order/controllers/order.admin.controller';
 import { ProductAdminController } from 'src/modules/product/controllers/product.admin.controller';
 import { ReviewAdminController } from 'src/modules/review/controllers/review.admin.controller';
+import { VouchAdminController } from 'src/modules/vouch/controllers/vouch.admin.controller';
 import { StockLineAdminController } from 'src/modules/stock-line/controllers/stock-line.admin.controller';
 import { TicketAdminController } from 'src/modules/ticket/controllers/ticket.admin.controller';
 import { UserAdminController } from 'src/modules/user/controllers/user.admin.controller';
@@ -293,6 +294,18 @@ describe('Admin RBAC controller metadata', () => {
             expectMethodRoles(ReviewAdminController, 'list', READ_ADMIN_ROLES);
             expectMethodRoles(
                 ReviewAdminController,
+                'delete',
+                STAFF_OPERATIONS_ROLES
+            );
+
+            expectMethodRoles(VouchAdminController, 'list', READ_ADMIN_ROLES);
+            expectMethodRoles(
+                VouchAdminController,
+                'approve',
+                STAFF_OPERATIONS_ROLES
+            );
+            expectMethodRoles(
+                VouchAdminController,
                 'delete',
                 STAFF_OPERATIONS_ROLES
             );

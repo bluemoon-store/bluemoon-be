@@ -19,6 +19,12 @@ describe('FileService', () => {
                 url: 'https://test.supabase.co/storage/v1/object/upload/sign/bucket/k',
                 expiresIn: 3600,
             }),
+            uploadObject: jest.fn().mockResolvedValue(undefined),
+            getPublicUrl: jest
+                .fn()
+                .mockReturnValue(
+                    'https://test.supabase.co/storage/v1/object/public/public-bucket/u/k/f.png'
+                ),
         };
 
         loggerMock = {
@@ -59,7 +65,7 @@ describe('FileService', () => {
     describe('getPresignUrlPutObject', () => {
         const mockPresignDto: FilePresignDto = {
             fileName: 'test.jpg',
-            storeType: ENUM_FILE_STORE.ENERGY_MAP_IMAGES,
+            storeType: ENUM_FILE_STORE.PUBLIC_ASSETS,
             contentType: 'image/jpeg',
         };
         const mockUserId = 'user123';
@@ -112,6 +118,44 @@ describe('FileService', () => {
             expect(storageService.getPresignedUploadUrl).toHaveBeenCalledWith(
                 expect.any(String),
                 'image/jpeg'
+            );
+        });
+    });
+
+    describe('uploadPublicAsset', () => {
+        const adminId = 'admin-1';
+        const mockFile = {
+            originalname: 'My Banner.PNG',
+            mimetype: 'image/png',
+            buffer: Buffer.from('x'),
+            size: 100,
+        } as Express.Multer.File;
+
+        it('should upload to public assets bucket and return key and url', async () => {
+            const publicUrl =
+                'https://test.supabase.co/storage/v1/object/public/b/admin/k.png';
+
+            storageService.uploadObject.mockResolvedValue(undefined);
+            storageService.getPublicUrl.mockReturnValue(publicUrl);
+
+            const result = await service.uploadPublicAsset(adminId, mockFile);
+
+            expect(result.url).toBe(publicUrl);
+            expect(result.key).toMatch(
+                new RegExp(
+                    `^${adminId}/${ENUM_FILE_STORE.PUBLIC_ASSETS}/\\d+_my-banner\\.png$`
+                )
+            );
+
+            expect(storageService.uploadObject).toHaveBeenCalledWith(
+                result.key,
+                mockFile.buffer,
+                'image/png',
+                'publicAssets'
+            );
+            expect(storageService.getPublicUrl).toHaveBeenCalledWith(
+                result.key,
+                'publicAssets'
             );
         });
     });

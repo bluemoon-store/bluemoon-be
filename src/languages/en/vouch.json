@@ -1,7 +1,8 @@
 {
     "success": {
         "created": "Vouch created successfully",
-        "list": "Vouches retrieved successfully"
+        "list": "Vouches retrieved successfully",
+        "approved": "Vouch approved successfully"
     },
     "error": {
         "fileRequired": "Please attach a photo before submitting your vouch.",

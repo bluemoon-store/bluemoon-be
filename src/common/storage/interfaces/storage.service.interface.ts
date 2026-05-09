@@ -20,7 +20,8 @@ export interface IStorageService {
     uploadObject(
         key: string,
         body: Buffer | string,
-        contentType: string
+        contentType: string,
+        bucketKind?: 'userUploads' | 'publicAssets'
     ): Promise<void>;
 
     /**

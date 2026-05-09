@@ -189,6 +189,7 @@ describe('SupabaseStorageService', () => {
 
             await service.uploadObject(key, body, contentType);
 
+            expect(mockFrom).toHaveBeenCalledWith('test-bucket');
             expect(mockUpload).toHaveBeenCalledWith(key, body, {
                 contentType,
                 upsert: true,
@@ -198,6 +199,20 @@ describe('SupabaseStorageService', () => {
                 { key, contentType },
                 'Object uploaded to storage'
             );
+        });
+
+        it('should upload to public assets bucket when bucketKind is publicAssets', async () => {
+            const key = 'admin/public-assets/logo.png';
+            const body = Buffer.from('png-bytes');
+            const contentType = 'image/png';
+
+            await service.uploadObject(key, body, contentType, 'publicAssets');
+
+            expect(mockFrom).toHaveBeenCalledWith('public-bucket');
+            expect(mockUpload).toHaveBeenCalledWith(key, body, {
+                contentType,
+                upsert: true,
+            });
         });
 
         it('should throw and log error on upload failure', async () => {

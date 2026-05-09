@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { VouchStatus } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 
 export class VouchUserDto {
@@ -49,6 +50,14 @@ export class VouchResponseDto {
     @ApiPropertyOptional({ nullable: true })
     @Expose()
     caption: string | null;
+
+    @ApiProperty({ enum: VouchStatus })
+    @Expose()
+    status: VouchStatus;
+
+    @ApiPropertyOptional({ nullable: true })
+    @Expose()
+    approvedAt: Date | null;
 
     @ApiProperty()
     @Expose()

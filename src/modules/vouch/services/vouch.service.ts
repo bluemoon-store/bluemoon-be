@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
+import { OrderStatus, Prisma, VouchStatus } from '@prisma/client';
 import { PinoLogger } from 'nestjs-pino';
 
 import { DatabaseService } from 'src/common/database/services/database.service';
@@ -9,6 +9,7 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
 import { SupabaseStorageService } from 'src/common/storage/services/supabase.storage.service';
 import { WatermarkService } from 'src/common/storage/services/watermark.service';
 
+import { AdminVouchListQueryDto } from '../dtos/request/vouch.admin-list.request';
 import { VouchCreateDto } from '../dtos/request/vouch.create.request';
 import { VouchDropClaimCreateDto } from '../dtos/request/vouch.drop-claim.create.request';
 import { VouchListQueryDto, VouchSort } from '../dtos/request/vouch.list.query';
@@ -102,6 +103,8 @@ export class VouchService implements IVouchService {
             orderItemId: vouch.orderItemId,
             imageUrl: vouch.imageUrl,
             caption: vouch.caption,
+            status: vouch.status,
+            approvedAt: vouch.approvedAt ?? null,
             createdAt: vouch.createdAt,
             user: {
                 id: vouch.user.id,
@@ -233,7 +236,10 @@ export class VouchService implements IVouchService {
             this.databaseService.vouch,
             { page: query.page ?? 1, limit: query.limit ?? 12 },
             {
-                where: { deletedAt: null },
+                where: {
+                    deletedAt: null,
+                    status: VouchStatus.APPROVED,
+                },
                 include: this.includeConfig,
                 orderBy: this.getOrderBySort(query.sort),
             }
@@ -271,6 +277,7 @@ export class VouchService implements IVouchService {
     ): Promise<ApiPaginatedDataDto<VouchResponseDto>> {
         const where: Prisma.VouchWhereInput = {
             deletedAt: null,
+            status: VouchStatus.APPROVED,
             orderItem: {
                 productId,
             },
@@ -307,6 +314,79 @@ export class VouchService implements IVouchService {
             throw new HttpException(
                 'vouch.error.forbidden',
                 HttpStatus.FORBIDDEN
+            );
+        }
+
+        await this.databaseService.vouch.update({
+            where: { id: vouchId },
+            data: { deletedAt: new Date() },
+        });
+    }
+
+    public async listAdmin(
+        query: AdminVouchListQueryDto
+    ): Promise<ApiPaginatedDataDto<VouchResponseDto>> {
+        const where: Prisma.VouchWhereInput = {
+            deletedAt: null,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+        };
+
+        const paginated = await this.paginationService.paginate<any>(
+            this.databaseService.vouch,
+            { page: query.page ?? 1, limit: query.limit ?? 10 },
+            {
+                where,
+                include: this.includeConfig,
+                orderBy: this.getOrderBySort(query.sort),
+            }
+        );
+
+        return {
+            metadata: paginated.metadata,
+            items: paginated.items.map(item => this.mapResponse(item)),
+        };
+    }
+
+    public async approveAdmin(
+        vouchId: string,
+        adminUserId: string
+    ): Promise<VouchResponseDto> {
+        const existing = await this.databaseService.vouch.findFirst({
+            where: { id: vouchId, deletedAt: null },
+            include: this.includeConfig,
+        });
+        if (!existing) {
+            throw new HttpException(
+                'vouch.error.notFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        if (existing.status === VouchStatus.APPROVED) {
+            return this.mapResponse(existing);
+        }
+
+        const updated = await this.databaseService.vouch.update({
+            where: { id: vouchId },
+            data: {
+                status: VouchStatus.APPROVED,
+                approvedAt: new Date(),
+                approvedBy: adminUserId,
+            },
+            include: this.includeConfig,
+        });
+
+        return this.mapResponse(updated);
+    }
+
+    public async deleteAdmin(vouchId: string): Promise<void> {
+        const vouch = await this.databaseService.vouch.findFirst({
+            where: { id: vouchId, deletedAt: null },
+            select: { id: true },
+        });
+        if (!vouch) {
+            throw new HttpException(
+                'vouch.error.notFound',
+                HttpStatus.NOT_FOUND
             );
         }
 
