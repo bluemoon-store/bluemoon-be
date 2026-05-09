@@ -1,9 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 
 export class SettingsUpdateGeneralRequestDto {
     @ApiPropertyOptional({ maxLength: 2048, nullable: true })
-    @IsOptional()
+    @ValidateIf(
+        (_, value) => value !== null && value !== undefined && value !== ''
+    )
     @IsString()
     @MaxLength(2048)
     @Matches(/^(\/|https:\/\/)/, {
