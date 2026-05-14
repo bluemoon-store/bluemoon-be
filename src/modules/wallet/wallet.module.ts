@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseModule } from 'src/common/database/database.module';
 import { HelperModule } from 'src/common/helper/helper.module';
 import { ActivityLogModule } from 'src/modules/activity-log/activity-log.module';
@@ -17,9 +18,10 @@ import { WalletService } from './services/wallet.service';
         CacheModule.register(),
         DatabaseModule,
         HelperModule,
-        BullModule.registerQueue({
-            name: 'crypto-payment-verification',
-        }),
+        BullModule.registerQueue(
+            { name: 'crypto-payment-verification' },
+            { name: APP_BULL_QUEUES.EMAIL }
+        ),
         ActivityLogModule,
     ],
     controllers: [WalletPublicController, WalletAdminController],

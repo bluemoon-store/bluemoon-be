@@ -16,7 +16,13 @@ import {
     Prisma,
 } from '@prisma/client';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    IPaymentFailedPayload,
+    ISendEmailBasePayload,
+} from 'src/common/helper/interfaces/email.interface';
 import { StockLineService } from 'src/modules/stock-line/services/stock-line.service';
 import { SystemWalletService } from './system-wallet.service';
 import { ExchangeRateService } from './exchange-rate.service';
@@ -41,6 +47,8 @@ export class CryptoPaymentService implements ICryptoPaymentService {
         private readonly configService: ConfigService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue,
         private readonly stockLineService: StockLineService,
         private readonly logger: PinoLogger
     ) {
@@ -514,6 +522,12 @@ export class CryptoPaymentService implements ICryptoPaymentService {
                 { paymentId, orderId },
                 'Payment expired successfully'
             );
+
+            await this.enqueuePaymentFailedEmail(
+                orderId,
+                `${payment.cryptocurrency}`,
+                payment.amountUsd.toString()
+            );
         } catch (error) {
             this.logger.error({ error, paymentId }, 'Failed to expire payment');
             // Don't throw - expiration is not critical
@@ -683,5 +697,43 @@ export class CryptoPaymentService implements ICryptoPaymentService {
             confirmedAt: payment.confirmedAt || undefined,
             expiresAt: payment.expiresAt,
         };
+    }
+
+    private async enqueuePaymentFailedEmail(
+        orderId: string,
+        paymentMethod: string,
+        amountUsd: string
+    ): Promise<void> {
+        try {
+            const order = await this.databaseService.order.findUnique({
+                where: { id: orderId },
+                include: { user: true },
+            });
+            if (!order || !order.user) return;
+
+            const numeric = Number(amountUsd);
+            const formatted = `$${(Number.isFinite(numeric)
+                ? numeric
+                : 0
+            ).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`;
+
+            this.emailQueue.add(EMAIL_TEMPLATES.PAYMENT_FAILED, {
+                data: {
+                    order_id: order.orderNumber,
+                    payment_method: paymentMethod,
+                    amount: formatted,
+                    date: new Date().toISOString().slice(0, 10),
+                },
+                toEmails: [order.user.email],
+            } as ISendEmailBasePayload<IPaymentFailedPayload>);
+        } catch (error) {
+            this.logger.error(
+                { error, orderId },
+                'Failed to enqueue payment-failed email'
+            );
+        }
     }
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 
 import { InjectQueue } from '@nestjs/bull';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
@@ -12,7 +12,7 @@ import { DatabaseService } from 'src/common/database/services/database.service';
 import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
     ISendEmailBasePayload,
-    ITeamInvitationPayload,
+    IWelcomeToJinxManagementPayload,
 } from 'src/common/helper/interfaces/email.interface';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -95,8 +95,9 @@ export class UserTeamService {
             Date.now() + 7 * 24 * 60 * 60 * 1000
         );
 
-        const generatedPassword =
-            await this.helperEncryptionService.createHash(randomUUID());
+        const temporaryPassword = randomBytes(9).toString('base64url');
+        const hashedTemporaryPassword =
+            await this.helperEncryptionService.createHash(temporaryPassword);
 
         let created;
         try {
@@ -105,7 +106,7 @@ export class UserTeamService {
                     email: payload.email,
                     role: payload.role,
                     userName: payload.userName,
-                    password: generatedPassword,
+                    password: hashedTemporaryPassword,
                     firstName: payload.name?.trim() || null,
                     isVerified: false,
                     invitedBy: invitedByUserId,
@@ -137,10 +138,8 @@ export class UserTeamService {
 
         await this.sendInvitationEmail(
             created.email,
-            inviter,
             payload.role,
-            invitationToken,
-            created.userName
+            temporaryPassword
         );
 
         return created;
@@ -220,31 +219,28 @@ export class UserTeamService {
             );
         }
 
-        const inviter = user.invitedBy
-            ? await this.databaseService.user.findUnique({
-                  where: { id: user.invitedBy },
-              })
-            : null;
-
         const invitationToken = randomUUID();
         const invitationTokenExpiry = new Date(
             Date.now() + 7 * 24 * 60 * 60 * 1000
         );
+
+        const temporaryPassword = randomBytes(9).toString('base64url');
+        const hashedTemporaryPassword =
+            await this.helperEncryptionService.createHash(temporaryPassword);
 
         await this.databaseService.user.update({
             where: { id: user.id },
             data: {
                 invitationToken,
                 invitationTokenExpiry,
+                password: hashedTemporaryPassword,
             },
         });
 
         await this.sendInvitationEmail(
             user.email,
-            inviter ?? user,
             user.role,
-            invitationToken,
-            user.userName
+            temporaryPassword
         );
 
         return {
@@ -320,35 +316,21 @@ export class UserTeamService {
 
     private async sendInvitationEmail(
         email: string,
-        inviter: {
-            firstName: string | null;
-            lastName: string | null;
-            userName: string;
-            email: string;
-        },
         role: Role,
-        token: string,
-        assignedUserName: string
+        temporaryPassword: string
     ): Promise<void> {
-        const adminUrl =
+        const adminPanelLink =
+            this.configService.get<string>('app.emailLinks.adminPanel') ??
             this.configService.get<string>('app.adminUrl') ??
-            this.configService.get<string>('app.frontendUrl') ??
-            'http://localhost:3000';
-        const inviteLink = `${adminUrl.replace(/\/$/, '')}/accept-invitation?token=${encodeURIComponent(token)}&username=${encodeURIComponent(assignedUserName)}`;
+            'http://localhost:3001';
 
-        const inviterName =
-            [inviter.firstName, inviter.lastName].filter(Boolean).join(' ') ||
-            inviter.userName ||
-            inviter.email;
-
-        this.emailQueue.add(EMAIL_TEMPLATES.TEAM_INVITATION, {
+        this.emailQueue.add(EMAIL_TEMPLATES.WELCOME_TO_JINX_MANAGEMENT, {
             data: {
-                inviterName,
-                role: role.toString(),
-                inviteLink,
-                expiresIn: '7 days',
+                admin_role: role.toString(),
+                temporary_password: temporaryPassword,
+                admin_panel_link: adminPanelLink,
             },
             toEmails: [email],
-        } as ISendEmailBasePayload<ITeamInvitationPayload>);
+        } as ISendEmailBasePayload<IWelcomeToJinxManagementPayload>);
     }
 }

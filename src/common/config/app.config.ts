@@ -71,5 +71,27 @@ export default registerAs('app', (): Record<string, any> => {
 
         frontendUrl: process.env.APP_FRONTEND_URL ?? 'http://localhost:3000',
         adminUrl: process.env.APP_ADMIN_URL ?? 'http://localhost:3001',
+
+        emailAssetBaseUrl:
+            process.env.EMAIL_ASSET_BASE_URL ??
+            'https://pegucwoschqnmnnexpwu.supabase.co/storage/v1/object/public/public-assets/email-templates',
+
+        emailLinks: {
+            store: process.env.EMAIL_LINK_STORE ?? 'https://jinx.to',
+            adminPanel:
+                process.env.EMAIL_LINK_ADMIN_PANEL ??
+                process.env.APP_ADMIN_URL ??
+                'https://admin.jinx.to',
+            telegram: process.env.EMAIL_LINK_TELEGRAM ?? '',
+            discord: process.env.EMAIL_LINK_DISCORD ?? '',
+            support: process.env.EMAIL_LINK_SUPPORT ?? 'mailto:support@jinx.to',
+            terms: process.env.EMAIL_LINK_TERMS ?? 'https://jinx.to/terms',
+            privacy:
+                process.env.EMAIL_LINK_PRIVACY ?? 'https://jinx.to/privacy',
+            cookies:
+                process.env.EMAIL_LINK_COOKIES ?? 'https://jinx.to/cookies',
+            refunds:
+                process.env.EMAIL_LINK_REFUNDS ?? 'https://jinx.to/refunds',
+        },
     };
 });

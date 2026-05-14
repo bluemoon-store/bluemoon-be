@@ -4,8 +4,8 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
+    IVerifyEmailPayload,
     ISendEmailBasePayload,
-    IWelcomeEmailDataPayload,
 } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
 import { EmailProcessorWorker } from 'src/workers/processors/email.processor';
@@ -48,21 +48,21 @@ describe('EmailProcessorWorkerService', () => {
         expect(service).toBeDefined();
     });
 
-    describe('processWelcomeEmails', () => {
-        it('should process the welcome email job and call sendEmail', async () => {
-            const jobData: ISendEmailBasePayload<IWelcomeEmailDataPayload> = {
+    describe('processVerifyEmail', () => {
+        it('should process the verify-email job and call sendEmail', async () => {
+            const jobData: ISendEmailBasePayload<IVerifyEmailPayload> = {
                 toEmails: ['test@example.com'],
-                data: { userName: 'Test User' },
+                data: { verification_link: 'https://jinx.to/verify?token=x' },
             };
             const jobMock = { data: jobData } as Job<
-                ISendEmailBasePayload<IWelcomeEmailDataPayload>
+                ISendEmailBasePayload<IVerifyEmailPayload>
             >;
 
-            await service.processWelcomeEmails(jobMock);
+            await service.processVerifyEmail(jobMock);
 
             expect(helperEmailServiceMock.sendEmail).toHaveBeenCalledWith({
                 emails: jobData.toEmails,
-                emailType: EMAIL_TEMPLATES.WELCOME_EMAIL,
+                emailType: EMAIL_TEMPLATES.VERIFY_EMAIL,
                 payload: jobData.data,
             });
         });

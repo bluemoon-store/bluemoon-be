@@ -1,12 +1,23 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { InjectQueue } from '@nestjs/bull';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import axios from 'axios';
+import { Queue } from 'bull';
 import { Cache } from 'cache-manager';
+import { PinoLogger } from 'nestjs-pino';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    IScheduledMaintenancePayload,
+    ISendEmailBasePayload,
+} from 'src/common/helper/interfaces/email.interface';
+import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 
+import { SettingsScheduleMaintenanceRequestDto } from '../dtos/request/settings.schedule-maintenance.request';
 import { SettingsUpdateGeneralRequestDto } from '../dtos/request/settings.update-general.request';
 import { SettingsUpdateSocialRequestDto } from '../dtos/request/settings.update-social.request';
 import { SettingsEmailValidityTestResponseDto } from '../dtos/response/settings.email-validity-test.response';
@@ -27,8 +38,13 @@ const KEYS = {
 export class SettingsService {
     constructor(
         private readonly databaseService: DatabaseService,
-        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
-    ) {}
+        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue,
+        private readonly logger: PinoLogger
+    ) {
+        this.logger.setContext(SettingsService.name);
+    }
 
     private normalizeNullable(value?: string | null): string | null {
         if (value == null) return null;
@@ -233,5 +249,55 @@ export class SettingsService {
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
+    }
+
+    public async broadcastMaintenanceNotice(
+        payload: SettingsScheduleMaintenanceRequestDto
+    ): Promise<ApiGenericResponseDto> {
+        const data: IScheduledMaintenancePayload = {
+            date: payload.date,
+            start_time: payload.startTime,
+            end_time: payload.endTime,
+        };
+
+        const batchSize = 200;
+        let cursor: string | undefined;
+        let totalQueued = 0;
+
+        // Iterate via keyset pagination to handle large user bases without
+        // loading every row into memory at once.
+        while (true) {
+            const batch = await this.databaseService.user.findMany({
+                where: { deletedAt: null, isBanned: false },
+                select: { id: true, email: true },
+                orderBy: { id: 'asc' },
+                take: batchSize,
+                ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+            });
+
+            if (batch.length === 0) break;
+
+            for (const recipient of batch) {
+                if (!recipient.email) continue;
+                this.emailQueue.add(EMAIL_TEMPLATES.SCHEDULED_MAINTENANCE, {
+                    data,
+                    toEmails: [recipient.email],
+                } as ISendEmailBasePayload<IScheduledMaintenancePayload>);
+                totalQueued++;
+            }
+
+            cursor = batch[batch.length - 1].id;
+            if (batch.length < batchSize) break;
+        }
+
+        this.logger.info(
+            { totalQueued, payload },
+            'Scheduled-maintenance notice queued'
+        );
+
+        return {
+            success: true,
+            message: 'settings.success.maintenanceScheduled',
+        };
     }
 }

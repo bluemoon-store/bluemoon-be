@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseModule } from 'src/common/database/database.module';
 import { RequestModule } from 'src/common/request/request.module';
 import { HelperModule } from 'src/common/helper/helper.module';
@@ -26,6 +28,9 @@ import { OrderDeliveryService } from './services/order-delivery.service';
         RequestModule,
         ActivityLogModule,
         StockLineModule,
+        BullModule.registerQueue({
+            name: APP_BULL_QUEUES.EMAIL,
+        }),
     ],
     controllers: [OrderPublicController, OrderAdminController],
     providers: [OrderService, OrderDeliveryService],

@@ -11,28 +11,65 @@ export interface ISendEmailBasePayload<T> {
     toEmails: string[];
 }
 
-export interface IWelcomeEmailDataPayload {
-    userName: string;
-}
-
 export interface IForgotPasswordOtpPayload {
-    otp: string;
-    userName: string;
+    otp_code: string;
 }
 
 export interface IResetPasswordLinkPayload {
-    resetUrl: string;
+    reset_link: string;
     userName: string;
 }
 
 export interface IVerifyEmailPayload {
-    verificationUrl: string;
-    userName: string;
+    verification_link: string;
 }
 
-export interface ITeamInvitationPayload {
-    inviterName: string;
-    role: string;
-    inviteLink: string;
-    expiresIn: string;
+export interface IWelcomeToJinxManagementPayload {
+    admin_role: string;
+    temporary_password: string;
+    admin_panel_link: string;
+}
+
+export type IAccountBannedPayload = Record<string, never>;
+
+export interface IAdminPasswordChangedPayload {
+    admin_email: string;
+    updated_date: string;
+    admin_panel_link: string;
+}
+
+export type IPasswordChangedPayload = Record<string, never>;
+
+export interface IOrderConfirmedPayload {
+    order_id: string;
+    payment_method: string;
+    amount: string;
+    date: string;
+    dashboard_link: string;
+}
+
+export interface IPaymentFailedPayload {
+    order_id: string;
+    payment_method: string;
+    amount: string;
+    date: string;
+}
+
+export interface IWalletTopUpSuccessfulPayload {
+    amount: string;
+    wallet_balance: string;
+    date: string;
+    dashboard_link: string;
+}
+
+export interface IScheduledMaintenancePayload {
+    date: string;
+    start_time: string;
+    end_time: string;
+}
+
+export interface IMonthlyStoreReportPayload {
+    report_month: string;
+    total_orders: number;
+    total_revenue: string;
 }

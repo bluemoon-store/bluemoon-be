@@ -1,8 +1,17 @@
+import { InjectQueue } from '@nestjs/bull';
 import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Queue } from 'bull';
 import { PinoLogger } from 'nestjs-pino';
 import { OrderStatus, Prisma } from '@prisma/client';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    IOrderConfirmedPayload,
+    ISendEmailBasePayload,
+} from 'src/common/helper/interfaces/email.interface';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
@@ -40,6 +49,9 @@ export class OrderService implements IOrderService {
         private readonly couponService: CouponService,
         private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly stockLineService: StockLineService,
+        private readonly configService: ConfigService,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(OrderService.name);
@@ -503,6 +515,12 @@ export class OrderService implements IOrderService {
                     'Failed to process instant delivery after wallet payment'
                 );
             }
+
+            await this.enqueueOrderConfirmedEmail(
+                orderId,
+                'Wallet',
+                totalAmount
+            );
 
             return updatedOrder as unknown as OrderResponseDto;
         } catch (error) {
@@ -1059,6 +1077,46 @@ export class OrderService implements IOrderService {
             throw new HttpException(
                 'order.error.getAllOrdersFailed',
                 HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    private async enqueueOrderConfirmedEmail(
+        orderId: string,
+        paymentMethod: string,
+        totalAmountUsd: number
+    ): Promise<void> {
+        try {
+            const order = await this.databaseService.order.findUnique({
+                where: { id: orderId },
+                include: { user: true },
+            });
+            if (!order || !order.user) return;
+
+            const frontendUrl =
+                this.configService.get<string>('app.frontendUrl') ??
+                'http://localhost:3000';
+            const dashboardLink = `${frontendUrl.replace(/\/$/, '')}/orders/${order.id}`;
+            const formatted = `$${totalAmountUsd.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`;
+            const completedAt = order.completedAt ?? new Date();
+
+            this.emailQueue.add(EMAIL_TEMPLATES.ORDER_CONFIRMED, {
+                data: {
+                    order_id: order.orderNumber,
+                    payment_method: paymentMethod,
+                    amount: formatted,
+                    date: completedAt.toISOString().slice(0, 10),
+                    dashboard_link: dashboardLink,
+                },
+                toEmails: [order.user.email],
+            } as ISendEmailBasePayload<IOrderConfirmedPayload>);
+        } catch (error) {
+            this.logger.error(
+                { error, orderId },
+                'Failed to enqueue order-confirmed email'
             );
         }
     }

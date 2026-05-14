@@ -8,10 +8,12 @@ import { workerOnlyProviders } from 'src/common/utils/role.util';
 
 import { EmailProcessorWorker } from './processors/email.processor';
 import { MidNightScheduleWorker } from './schedulers/midnight.scheduler';
+import { MonthlyReportScheduleWorker } from './schedulers/monthly-report.scheduler';
 import { NotificationScheduleWorker } from './schedulers/notification.scheduler';
 
 const workers = workerOnlyProviders([
     MidNightScheduleWorker,
+    MonthlyReportScheduleWorker,
     EmailProcessorWorker,
     NotificationScheduleWorker,
 ]);
@@ -20,9 +22,10 @@ const workers = workerOnlyProviders([
     imports: [
         HelperModule,
         DatabaseModule,
-        BullModule.registerQueue({
-            name: APP_BULL_QUEUES.NOTIFICATION,
-        }),
+        BullModule.registerQueue(
+            { name: APP_BULL_QUEUES.NOTIFICATION },
+            { name: APP_BULL_QUEUES.EMAIL }
+        ),
     ],
     providers: workers,
     exports: workers,

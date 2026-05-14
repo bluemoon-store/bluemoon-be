@@ -1,15 +1,29 @@
 export enum EMAIL_TEMPLATES {
-    WELCOME_EMAIL = 'welcome-email',
     FORGOT_PASSWORD_OTP = 'forgot-password-otp',
     VERIFY_EMAIL = 'verify-email',
     RESET_PASSWORD_LINK = 'reset-password-link',
-    TEAM_INVITATION = 'team-invitation',
+    WELCOME_TO_JINX_MANAGEMENT = 'welcome-to-jinx-management',
+    ACCOUNT_PERMANENTLY_BANNED = 'account-permanently-banned',
+    ADMIN_PASSWORD_CHANGED = 'admin-password-changed-successfully',
+    PASSWORD_CHANGED = 'password-changed-successfully',
+    ORDER_CONFIRMED = 'order-confirmed',
+    PAYMENT_FAILED = 'payment-failed',
+    WALLET_TOP_UP_SUCCESSFUL = 'wallet-top-up-successful',
+    SCHEDULED_MAINTENANCE = 'scheduled-maintenance',
+    MONTHLY_STORE_REPORT = 'monthly-store-report',
 }
 
 export enum EMAIL_TEMPLATE_SUBJECTS {
-    WELCOME_EMAIL = 'Welcome to Jinx.to Project',
     FORGOT_PASSWORD_OTP = 'Reset your password — verification code',
     VERIFY_EMAIL = 'Verify your email address',
     RESET_PASSWORD_LINK = 'Reset your password',
-    TEAM_INVITATION = 'You are invited to the admin team',
+    WELCOME_TO_JINX_MANAGEMENT = 'Welcome to Jinx Management',
+    ACCOUNT_PERMANENTLY_BANNED = 'Your account has been permanently banned',
+    ADMIN_PASSWORD_CHANGED = 'Admin password changed successfully',
+    PASSWORD_CHANGED = 'Your password was changed',
+    ORDER_CONFIRMED = 'Your order is confirmed',
+    PAYMENT_FAILED = 'Payment failed',
+    WALLET_TOP_UP_SUCCESSFUL = 'Wallet top-up successful',
+    SCHEDULED_MAINTENANCE = 'Scheduled maintenance notice',
+    MONTHLY_STORE_REPORT = 'Your monthly store report',
 }

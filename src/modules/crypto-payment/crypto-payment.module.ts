@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule } from '@nestjs/config';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { CommonModule } from 'src/common/common.module';
 import { RequestModule } from 'src/common/request/request.module';
 import { CustomLoggerModule } from 'src/common/logger/logger.module';
@@ -50,6 +51,9 @@ import { CryptoPaymentAdminController } from './controllers/crypto-payment.admin
         }),
         BullModule.registerQueue({
             name: 'crypto-payment-forwarding',
+        }),
+        BullModule.registerQueue({
+            name: APP_BULL_QUEUES.EMAIL,
         }),
     ],
     controllers: [

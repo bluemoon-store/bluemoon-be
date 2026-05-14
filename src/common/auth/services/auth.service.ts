@@ -13,11 +13,12 @@ import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
+    IAdminPasswordChangedPayload,
     IForgotPasswordOtpPayload,
+    IPasswordChangedPayload,
     IResetPasswordLinkPayload,
     ISendEmailBasePayload,
     IVerifyEmailPayload,
-    IWelcomeEmailDataPayload,
 } from 'src/common/helper/interfaces/email.interface';
 
 import { HelperEncryptionService } from '../../helper/services/helper.encryption.service';
@@ -232,17 +233,6 @@ export class AuthService implements IAuthService {
                 role: createdUser.role,
                 userId: createdUser.id,
             });
-
-            this.emailQueue.add(
-                EMAIL_TEMPLATES.WELCOME_EMAIL,
-                {
-                    data: {
-                        userName: createdUser.userName,
-                    },
-                    toEmails: [email],
-                } as ISendEmailBasePayload<IWelcomeEmailDataPayload>,
-                { delay: 15000 }
-            );
 
             // Trigger welcome notification
             // this.notificationQueue.add('welcome', {
@@ -506,8 +496,7 @@ export class AuthService implements IAuthService {
 
         this.emailQueue.add(EMAIL_TEMPLATES.FORGOT_PASSWORD_OTP, {
             data: {
-                otp,
-                userName: user.userName,
+                otp_code: otp,
             },
             toEmails: [user.email],
         } as ISendEmailBasePayload<IForgotPasswordOtpPayload>);
@@ -550,7 +539,7 @@ export class AuthService implements IAuthService {
 
         this.emailQueue.add(EMAIL_TEMPLATES.RESET_PASSWORD_LINK, {
             data: {
-                resetUrl,
+                reset_link: resetUrl,
                 userName: user.userName,
             },
             toEmails: [user.email],
@@ -701,6 +690,26 @@ export class AuthService implements IAuthService {
             data: { password: hashed },
         });
 
+        if (user.role === Role.USER) {
+            this.emailQueue.add(EMAIL_TEMPLATES.PASSWORD_CHANGED, {
+                data: {},
+                toEmails: [user.email],
+            } as ISendEmailBasePayload<IPasswordChangedPayload>);
+        } else {
+            const adminPanelLink =
+                this.configService.get<string>('app.emailLinks.adminPanel') ??
+                this.configService.get<string>('app.adminUrl') ??
+                '';
+            this.emailQueue.add(EMAIL_TEMPLATES.ADMIN_PASSWORD_CHANGED, {
+                data: {
+                    admin_email: user.email,
+                    updated_date: new Date().toISOString().slice(0, 10),
+                    admin_panel_link: adminPanelLink,
+                },
+                toEmails: [user.email],
+            } as ISendEmailBasePayload<IAdminPasswordChangedPayload>);
+        }
+
         return {
             success: true,
             message: 'auth.success.passwordChanged',
@@ -809,8 +818,7 @@ export class AuthService implements IAuthService {
 
         this.emailQueue.add(EMAIL_TEMPLATES.VERIFY_EMAIL, {
             data: {
-                verificationUrl,
-                userName: user.userName,
+                verification_link: verificationUrl,
             },
             toEmails: [user.email],
         } as ISendEmailBasePayload<IVerifyEmailPayload>);

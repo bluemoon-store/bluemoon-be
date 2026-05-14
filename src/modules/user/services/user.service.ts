@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 
+import { InjectQueue } from '@nestjs/bull';
 import {
     HttpStatus,
     Injectable,
@@ -7,8 +8,15 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
+import { Queue } from 'bull';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    IAccountBannedPayload,
+    ISendEmailBasePayload,
+} from 'src/common/helper/interfaces/email.interface';
 import { isPrivilegedAdminRole } from 'src/common/request/constants/roles.constant';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
@@ -43,7 +51,9 @@ export class UserService implements IUserService {
         private readonly helperEncryptionService: HelperEncryptionService,
         private readonly helperPaginationService: HelperPaginationService,
         private readonly activityLogEmitter: ActivityLogEmitterService,
-        private readonly walletService: WalletService
+        private readonly walletService: WalletService,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue
     ) {}
 
     async updateUser(
@@ -204,6 +214,11 @@ export class UserService implements IUserService {
                 },
                 resourceLabel: user.email,
             });
+
+            this.emailQueue.add(EMAIL_TEMPLATES.ACCOUNT_PERMANENTLY_BANNED, {
+                data: {},
+                toEmails: [user.email],
+            } as ISendEmailBasePayload<IAccountBannedPayload>);
 
             return {
                 success: true,

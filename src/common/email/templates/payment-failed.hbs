@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="x-apple-disable-message-reformatting">
-<title>Verify Your Email Address</title>
+<title>Payment Failed</title>
 <link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap" rel="stylesheet" type="text/css">
 <style type="text/css">
 @import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap');
@@ -17,7 +17,7 @@ body{margin:0;padding:0;background-color:#051329;}
   .email-wrap{width:100%!important;}
   .card-pad{padding:16px!important;}
   .illus-img{width:100%!important;height:auto!important;}
-  .btn-full{width:100%!important;}
+  .detail-row td{font-size:14px!important;}
   .footer-links td{font-size:12px!important;padding-right:8px!important;}
   .social-gap{padding-right:10px!important;}
 }
@@ -77,15 +77,15 @@ body{margin:0;padding:0;background-color:#051329;}
       <!-- ILLUSTRATION -->
       <tr>
         <td align="center" style="padding-top:24px;">
-          <img class="illus-img" src="{{asset_url}}/verify-email.png" alt="Verify Email" width="320" height="320" style="display:block;border:0;outline:none;text-decoration:none;max-width:100%;height:auto;">
+          <img class="illus-img" src="{{asset_url}}/payment-failed.png" alt="Payment Failed" width="320" height="320" style="display:block;border:0;outline:none;text-decoration:none;max-width:100%;height:auto;">
         </td>
       </tr>
 
       <!-- TITLE + SUBTITLE -->
       <tr>
         <td align="center" style="padding-top:24px;">
-          <p style="margin:0 0 5px;font-family:'Commissioner',Arial,sans-serif;font-size:24px;font-weight:700;color:#ffffff;line-height:32px;letter-spacing:0.48px;text-align:center;">Verify Your Email Address</p>
-          <p style="margin:0;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:24px;text-align:center;">Thank you for registering with Jinx.to Store.<br>Please use the link below to verify your email address.</p>
+          <p style="margin:0 0 5px;font-family:'Commissioner',Arial,sans-serif;font-size:24px;font-weight:700;color:#ffffff;line-height:32px;letter-spacing:0.48px;text-align:center;">Payment Failed</p>
+          <p style="margin:0;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:24px;text-align:center;">We could not complete your payment for this order.</p>
         </td>
       </tr>
 
@@ -96,32 +96,89 @@ body{margin:0;padding:0;background-color:#051329;}
         </td>
       </tr>
 
-      <!-- VERIFY EMAIL BUTTON -->
+      <!-- ORDER DETAILS BOX -->
       <tr>
-        <td align="center" style="padding-top:24px;">
-          <table role="presentation" class="btn-full" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+        <td style="padding-top:24px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td align="center" style="background-color:#eb2dff;border-radius:8px;mso-padding-alt:12px 16px;">
-                <a href="{{verification_link}}" style="display:block;padding:12px 16px;text-decoration:none;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+              <td style="background-color:#0d1b35;border:1px solid rgba(238,238,238,0.1);border-radius:12px;padding:20px;">
+                <table role="presentation" width="100%" class="detail-row" cellpadding="0" cellspacing="0" border="0">
+
+                  <!-- Order ID -->
                   <tr>
-                    <td style="padding-right:8px;vertical-align:middle;line-height:0;">
-                      <img src="{{asset_url}}/verify-email-icon.svg" alt="" width="18" height="18" style="display:block;border:0;outline:none;text-decoration:none;">
-                    </td>
-                    <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;vertical-align:middle;">Verify Email</td>
+                    <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;padding-bottom:20px;">Order ID</td>
+                    <td align="right" style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;padding-bottom:20px;">{{order_id}}</td>
                   </tr>
+
+                  <!-- Inner divider -->
+                  <tr>
+                    <td colspan="2" style="padding-bottom:20px;font-size:0;line-height:0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#253249" style="font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>
+                    </td>
+                  </tr>
+
+                  <!-- Payment Method -->
+                  <tr>
+                    <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;padding-bottom:12px;">Payment Method</td>
+                    <td align="right" style="padding-bottom:12px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right">
+                        <tr>
+                          <td style="padding-right:10px;vertical-align:middle;line-height:0;">
+                            <img src="{{asset_url}}/bitcoin.svg" alt="Bitcoin" width="20" height="20" style="display:block;border:0;outline:none;text-decoration:none;">
+                          </td>
+                          <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;vertical-align:middle;">{{payment_method}}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Amount Paid -->
+                  <tr>
+                    <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;padding-bottom:12px;">Amount Paid</td>
+                    <td align="right" style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;padding-bottom:12px;">{{amount}}</td>
+                  </tr>
+
+                  <!-- Order Date -->
+                  <tr>
+                    <td style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;padding-bottom:20px;">Order Date</td>
+                    <td align="right" style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:#ffffff;line-height:28px;letter-spacing:-0.16px;white-space:nowrap;padding-bottom:20px;">{{date}}</td>
+                  </tr>
+
+                  <!-- Inner divider 2 -->
+                  <tr>
+                    <td colspan="2" style="padding-bottom:20px;font-size:0;line-height:0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="#253249" style="font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>
+                    </td>
+                  </tr>
+
+                  <!-- Reason label -->
+                  <tr>
+                    <td colspan="2" style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;padding-bottom:8px;">Reason</td>
+                  </tr>
+
+                  <!-- Reason text -->
+                  <tr>
+                    <td colspan="2" style="font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:28px;letter-spacing:-0.16px;">Payment was declined or could not be processed. No amount has been deducted from your account.</td>
+                  </tr>
+
                 </table>
-                </a>
               </td>
             </tr>
           </table>
         </td>
       </tr>
 
-      <!-- MANUAL LINK -->
+      <!-- RETRY NOTE -->
       <tr>
         <td align="center" style="padding-top:24px;">
-          <p style="margin:0;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:24px;text-align:center;">or verify manually using this link : <a href="{{verification_link}}" style="color:#eb2dff;text-decoration:none;">{{verification_link}}</a></p>
+          <p style="margin:0;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:24px;text-align:center;">Please check your payment details and try again.</p>
+        </td>
+      </tr>
+
+      <!-- SUPPORT LINK -->
+      <tr>
+        <td align="center" style="padding-top:24px;">
+          <p style="margin:0;font-family:'Commissioner',Arial,sans-serif;font-size:16px;font-weight:500;color:rgba(255,255,255,0.75);line-height:24px;text-align:center;">If you are facing any issues - <a href="{{support_link}}" style="color:#eb2dff;text-decoration:none;">contact support</a>.</p>
         </td>
       </tr>
 
@@ -195,7 +252,7 @@ body{margin:0;padding:0;background-color:#051329;}
       </tr>
       <tr>
         <td align="center">
-        <table role="presentation" class="footer-links" cellpadding="0" cellspacing="0" border="0">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td style="font-family:'Commissioner',Arial,sans-serif;font-size:14px;font-weight:500;color:rgba(158,160,198,0.72);line-height:20px;white-space:nowrap;padding-right:15px;"><a href="{{terms_link}}" style="color:rgba(158,160,198,0.72);text-decoration:none;">Terms</a></td>
             <td style="font-family:Arial,sans-serif;font-size:12px;color:rgba(158,160,198,0.36);line-height:18px;white-space:nowrap;padding-right:15px;">|</td>
@@ -211,7 +268,6 @@ body{margin:0;padding:0;background-color:#051329;}
     </table>
     </td>
   </tr>
-  <!-- END FOOTER -->
 
 </table>
 </td>

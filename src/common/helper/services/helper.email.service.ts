@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as Handlebars from 'handlebars';
 import { PinoLogger } from 'nestjs-pino';
 
@@ -26,6 +27,7 @@ export class HelperEmailService implements IHelperEmailService {
 
     constructor(
         private readonly resendService: ResendService,
+        private readonly configService: ConfigService,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(HelperEmailService.name);
@@ -37,7 +39,10 @@ export class HelperEmailService implements IHelperEmailService {
         payload,
     }: ISendEmailParams): Promise<IEmailSendResult> {
         const subject = this.resolveSubject(emailType);
-        const html = this.renderTemplate(emailType, payload ?? {});
+        const html = this.renderTemplate(
+            emailType,
+            this.mergeCommonContext(payload ?? {})
+        );
 
         return this.resendService.send({
             to: emails,
@@ -46,18 +51,57 @@ export class HelperEmailService implements IHelperEmailService {
         });
     }
 
+    private mergeCommonContext(
+        payload: Record<string, any>
+    ): Record<string, any> {
+        const links =
+            this.configService.get<Record<string, string>>('app.emailLinks') ??
+            {};
+        const commonContext = {
+            asset_url:
+                this.configService.get<string>('app.emailAssetBaseUrl') ?? '',
+            store_link: links.store ?? '',
+            telegram_link: links.telegram ?? '',
+            discord_link: links.discord ?? '',
+            support_link: links.support ?? '',
+            terms_link: links.terms ?? '',
+            privacy_link: links.privacy ?? '',
+            cookies_link: links.cookies ?? '',
+            refunds_link: links.refunds ?? '',
+            admin_panel_link: links.adminPanel ?? '',
+        };
+
+        // Caller payload wins on collision (per-recipient values like
+        // admin_panel_link for specific roles override the global default).
+        return { ...commonContext, ...payload };
+    }
+
     private resolveSubject(emailType: EMAIL_TEMPLATES): string {
         const subjects: Record<EMAIL_TEMPLATES, string> = {
-            [EMAIL_TEMPLATES.WELCOME_EMAIL]:
-                EMAIL_TEMPLATE_SUBJECTS.WELCOME_EMAIL,
             [EMAIL_TEMPLATES.FORGOT_PASSWORD_OTP]:
                 EMAIL_TEMPLATE_SUBJECTS.FORGOT_PASSWORD_OTP,
             [EMAIL_TEMPLATES.VERIFY_EMAIL]:
                 EMAIL_TEMPLATE_SUBJECTS.VERIFY_EMAIL,
             [EMAIL_TEMPLATES.RESET_PASSWORD_LINK]:
                 EMAIL_TEMPLATE_SUBJECTS.RESET_PASSWORD_LINK,
-            [EMAIL_TEMPLATES.TEAM_INVITATION]:
-                EMAIL_TEMPLATE_SUBJECTS.TEAM_INVITATION,
+            [EMAIL_TEMPLATES.WELCOME_TO_JINX_MANAGEMENT]:
+                EMAIL_TEMPLATE_SUBJECTS.WELCOME_TO_JINX_MANAGEMENT,
+            [EMAIL_TEMPLATES.ACCOUNT_PERMANENTLY_BANNED]:
+                EMAIL_TEMPLATE_SUBJECTS.ACCOUNT_PERMANENTLY_BANNED,
+            [EMAIL_TEMPLATES.ADMIN_PASSWORD_CHANGED]:
+                EMAIL_TEMPLATE_SUBJECTS.ADMIN_PASSWORD_CHANGED,
+            [EMAIL_TEMPLATES.PASSWORD_CHANGED]:
+                EMAIL_TEMPLATE_SUBJECTS.PASSWORD_CHANGED,
+            [EMAIL_TEMPLATES.ORDER_CONFIRMED]:
+                EMAIL_TEMPLATE_SUBJECTS.ORDER_CONFIRMED,
+            [EMAIL_TEMPLATES.PAYMENT_FAILED]:
+                EMAIL_TEMPLATE_SUBJECTS.PAYMENT_FAILED,
+            [EMAIL_TEMPLATES.WALLET_TOP_UP_SUCCESSFUL]:
+                EMAIL_TEMPLATE_SUBJECTS.WALLET_TOP_UP_SUCCESSFUL,
+            [EMAIL_TEMPLATES.SCHEDULED_MAINTENANCE]:
+                EMAIL_TEMPLATE_SUBJECTS.SCHEDULED_MAINTENANCE,
+            [EMAIL_TEMPLATES.MONTHLY_STORE_REPORT]:
+                EMAIL_TEMPLATE_SUBJECTS.MONTHLY_STORE_REPORT,
         };
         const subject = subjects[emailType];
         if (!subject) {

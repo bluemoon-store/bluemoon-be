@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as Handlebars from 'handlebars';
 import { PinoLogger } from 'nestjs-pino';
@@ -23,6 +24,7 @@ jest.mock('handlebars', () => ({
 describe('HelperEmailService', () => {
     let service: HelperEmailService;
     let resendServiceMock: jest.Mocked<Pick<ResendService, 'send'>>;
+    let configServiceMock: jest.Mocked<Pick<ConfigService, 'get'>>;
     let loggerMock: jest.Mocked<PinoLogger>;
     let module: TestingModule;
 
@@ -32,6 +34,10 @@ describe('HelperEmailService', () => {
         resendServiceMock = {
             send: jest.fn().mockResolvedValue({ messageId: 'resend-id-1' }),
         };
+
+        configServiceMock = {
+            get: jest.fn().mockReturnValue(undefined),
+        } as unknown as jest.Mocked<Pick<ConfigService, 'get'>>;
 
         loggerMock = {
             info: jest.fn(),
@@ -47,6 +53,7 @@ describe('HelperEmailService', () => {
             providers: [
                 HelperEmailService,
                 { provide: ResendService, useValue: resendServiceMock },
+                { provide: ConfigService, useValue: configServiceMock },
                 { provide: PinoLogger, useValue: loggerMock },
             ],
         }).compile();
@@ -66,7 +73,7 @@ describe('HelperEmailService', () => {
 
     describe('sendEmail', () => {
         const baseParams: ISendEmailParams = {
-            emailType: EMAIL_TEMPLATES.WELCOME_EMAIL,
+            emailType: EMAIL_TEMPLATES.VERIFY_EMAIL,
             emails: ['user@example.com'],
             payload: { userName: 'Ada' },
         };
@@ -78,7 +85,7 @@ describe('HelperEmailService', () => {
             expect(Handlebars.compile).toHaveBeenCalled();
             expect(resendServiceMock.send).toHaveBeenCalledWith({
                 to: baseParams.emails,
-                subject: EMAIL_TEMPLATE_SUBJECTS.WELCOME_EMAIL,
+                subject: EMAIL_TEMPLATE_SUBJECTS.VERIFY_EMAIL,
                 html: '<p>Ada</p>',
             });
         });

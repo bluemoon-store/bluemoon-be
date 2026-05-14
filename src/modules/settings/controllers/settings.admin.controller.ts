@@ -8,8 +8,10 @@ import {
     STAFF_OPERATIONS_ROLES,
 } from 'src/common/request/constants/roles.constant';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
+import { ApiGenericResponseDto } from 'src/common/response/dtos/response.generic.dto';
 import { AuditLog } from 'src/modules/activity-log/decorators/audit-log.decorator';
 
+import { SettingsScheduleMaintenanceRequestDto } from '../dtos/request/settings.schedule-maintenance.request';
 import { SettingsTestEmailValidityRequestDto } from '../dtos/request/settings.test-email-validity.request';
 import { SettingsUpdateGeneralRequestDto } from '../dtos/request/settings.update-general.request';
 import { SettingsUpdateSocialRequestDto } from '../dtos/request/settings.update-social.request';
@@ -102,5 +104,27 @@ export class SettingsAdminController {
         @Body() payload: SettingsTestEmailValidityRequestDto
     ): Promise<SettingsEmailValidityTestResponseDto> {
         return this.settingsService.testEmailValidityUrl(payload.url);
+    }
+
+    @Post('schedule-maintenance')
+    @AuditLog({
+        action: 'settings.maintenance.broadcast',
+        category: ActivityLogCategory.SETTINGS,
+        resourceType: 'SystemSettings',
+    })
+    @AllowedRoles(STAFF_OPERATIONS_ROLES)
+    @ApiBearerAuth('accessToken')
+    @ApiOperation({
+        summary: 'Broadcast a scheduled-maintenance email to all active users',
+    })
+    @DocResponse({
+        serialization: ApiGenericResponseDto,
+        httpStatus: HttpStatus.OK,
+        messageKey: 'settings.success.maintenanceScheduled',
+    })
+    async scheduleMaintenance(
+        @Body() payload: SettingsScheduleMaintenanceRequestDto
+    ): Promise<ApiGenericResponseDto> {
+        return this.settingsService.broadcastMaintenanceNotice(payload);
     }
 }

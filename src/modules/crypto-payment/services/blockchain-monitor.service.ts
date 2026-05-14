@@ -5,7 +5,13 @@ import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 import { CryptoCurrency, PaymentStatus, OrderStatus } from '@prisma/client';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    IOrderConfirmedPayload,
+    ISendEmailBasePayload,
+} from 'src/common/helper/interfaces/email.interface';
 import { CryptoPaymentService } from './crypto-payment.service';
 import { BlockchainProviderFactory } from '../blockchain-providers/blockchain-provider.factory';
 import { IBlockchainMonitorService } from '../interfaces/blockchain-monitor.service.interface';
@@ -31,6 +37,8 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         private readonly paymentVerificationQueue: Queue,
         @InjectQueue('crypto-payment-forwarding')
         private readonly paymentForwardingQueue: Queue,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue,
         private readonly logger: PinoLogger
     ) {
         this.logger.setContext(BlockchainMonitorService.name);
@@ -844,6 +852,12 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
                 'Order status updated to COMPLETED'
             );
 
+            await this.enqueueOrderConfirmedEmail(
+                payment.orderId,
+                `${payment.cryptocurrency}`,
+                payment.amountUsd.toString()
+            );
+
             // Auto-process order for instant delivery (all products are digital)
             try {
                 await this.deliveryService.processInstantDelivery(
@@ -1008,5 +1022,49 @@ export class BlockchainMonitorService implements IBlockchainMonitorService {
         }
 
         return '';
+    }
+
+    private async enqueueOrderConfirmedEmail(
+        orderId: string,
+        paymentMethod: string,
+        amountUsd: string
+    ): Promise<void> {
+        try {
+            const order = await this.databaseService.order.findUnique({
+                where: { id: orderId },
+                include: { user: true },
+            });
+            if (!order || !order.user) return;
+
+            const frontendUrl =
+                this.configService.get<string>('app.frontendUrl') ??
+                'http://localhost:3000';
+            const dashboardLink = `${frontendUrl.replace(/\/$/, '')}/orders/${order.id}`;
+            const numeric = Number(amountUsd);
+            const formatted = `$${(Number.isFinite(numeric)
+                ? numeric
+                : 0
+            ).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`;
+            const completedAt = order.completedAt ?? new Date();
+
+            this.emailQueue.add(EMAIL_TEMPLATES.ORDER_CONFIRMED, {
+                data: {
+                    order_id: order.orderNumber,
+                    payment_method: paymentMethod,
+                    amount: formatted,
+                    date: completedAt.toISOString().slice(0, 10),
+                    dashboard_link: dashboardLink,
+                },
+                toEmails: [order.user.email],
+            } as ISendEmailBasePayload<IOrderConfirmedPayload>);
+        } catch (error) {
+            this.logger.error(
+                { error, orderId },
+                'Failed to enqueue order-confirmed email'
+            );
+        }
     }
 }

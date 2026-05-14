@@ -5,12 +5,19 @@ import { PinoLogger } from 'nestjs-pino';
 import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
 import {
+    IAccountBannedPayload,
+    IAdminPasswordChangedPayload,
     IForgotPasswordOtpPayload,
+    IMonthlyStoreReportPayload,
+    IOrderConfirmedPayload,
+    IPasswordChangedPayload,
+    IPaymentFailedPayload,
     IResetPasswordLinkPayload,
+    IScheduledMaintenancePayload,
     ISendEmailBasePayload,
-    ITeamInvitationPayload,
     IVerifyEmailPayload,
-    IWelcomeEmailDataPayload,
+    IWalletTopUpSuccessfulPayload,
+    IWelcomeToJinxManagementPayload,
 } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
 
@@ -23,32 +30,33 @@ export class EmailProcessorWorker {
         this.logger.setContext(EmailProcessorWorker.name);
     }
 
-    @Process(EMAIL_TEMPLATES.WELCOME_EMAIL)
-    async processWelcomeEmails(
-        job: Job<ISendEmailBasePayload<IWelcomeEmailDataPayload>>
+    private async dispatch(
+        job: Job<ISendEmailBasePayload<Record<string, any>>>,
+        emailType: EMAIL_TEMPLATES,
+        label: string
     ) {
         const { toEmails, data } = job.data;
 
         this.logger.info(
-            { jobId: job.id, recipients: toEmails.length },
-            'Processing welcome email job'
+            { jobId: job.id, recipients: toEmails.length, emailType },
+            `Processing ${label} email job`
         );
 
         try {
             await this.helperEmailService.sendEmail({
                 emails: toEmails,
-                emailType: EMAIL_TEMPLATES.WELCOME_EMAIL,
+                emailType,
                 payload: data,
             });
 
             this.logger.info(
-                { jobId: job.id, recipients: toEmails.length },
-                'Welcome emails sent successfully'
+                { jobId: job.id, recipients: toEmails.length, emailType },
+                `${label} emails sent successfully`
             );
         } catch (error) {
             this.logger.error(
-                { jobId: job.id, error: error.message },
-                `Failed to send welcome emails: ${error.message}`
+                { jobId: job.id, error: error.message, emailType },
+                `Failed to send ${label} emails: ${error.message}`
             );
             throw error;
         }
@@ -58,123 +66,127 @@ export class EmailProcessorWorker {
     async processForgotPasswordOtp(
         job: Job<ISendEmailBasePayload<IForgotPasswordOtpPayload>>
     ) {
-        const { toEmails, data } = job.data;
-
-        this.logger.info(
-            { jobId: job.id, recipients: toEmails.length },
-            'Processing forgot-password OTP email job'
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.FORGOT_PASSWORD_OTP,
+            'forgot-password OTP'
         );
-
-        try {
-            await this.helperEmailService.sendEmail({
-                emails: toEmails,
-                emailType: EMAIL_TEMPLATES.FORGOT_PASSWORD_OTP,
-                payload: data,
-            });
-
-            this.logger.info(
-                { jobId: job.id, recipients: toEmails.length },
-                'Forgot-password OTP emails sent successfully'
-            );
-        } catch (error) {
-            this.logger.error(
-                { jobId: job.id, error: error.message },
-                `Failed to send forgot-password OTP emails: ${error.message}`
-            );
-            throw error;
-        }
     }
 
     @Process(EMAIL_TEMPLATES.VERIFY_EMAIL)
     async processVerifyEmail(
         job: Job<ISendEmailBasePayload<IVerifyEmailPayload>>
     ) {
-        const { toEmails, data } = job.data;
-
-        this.logger.info(
-            { jobId: job.id, recipients: toEmails.length },
-            'Processing verify-email job'
-        );
-
-        try {
-            await this.helperEmailService.sendEmail({
-                emails: toEmails,
-                emailType: EMAIL_TEMPLATES.VERIFY_EMAIL,
-                payload: data,
-            });
-
-            this.logger.info(
-                { jobId: job.id, recipients: toEmails.length },
-                'Verify-email messages sent successfully'
-            );
-        } catch (error) {
-            this.logger.error(
-                { jobId: job.id, error: error.message },
-                `Failed to send verify-email: ${error.message}`
-            );
-            throw error;
-        }
+        await this.dispatch(job, EMAIL_TEMPLATES.VERIFY_EMAIL, 'verify-email');
     }
 
     @Process(EMAIL_TEMPLATES.RESET_PASSWORD_LINK)
     async processResetPasswordLink(
         job: Job<ISendEmailBasePayload<IResetPasswordLinkPayload>>
     ) {
-        const { toEmails, data } = job.data;
-
-        this.logger.info(
-            { jobId: job.id, recipients: toEmails.length },
-            'Processing reset-password-link email job'
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.RESET_PASSWORD_LINK,
+            'reset-password-link'
         );
-
-        try {
-            await this.helperEmailService.sendEmail({
-                emails: toEmails,
-                emailType: EMAIL_TEMPLATES.RESET_PASSWORD_LINK,
-                payload: data,
-            });
-
-            this.logger.info(
-                { jobId: job.id, recipients: toEmails.length },
-                'Reset-password-link emails sent successfully'
-            );
-        } catch (error) {
-            this.logger.error(
-                { jobId: job.id, error: error.message },
-                `Failed to send reset-password-link emails: ${error.message}`
-            );
-            throw error;
-        }
     }
 
-    @Process(EMAIL_TEMPLATES.TEAM_INVITATION)
-    async processTeamInvitation(
-        job: Job<ISendEmailBasePayload<ITeamInvitationPayload>>
+    @Process(EMAIL_TEMPLATES.WELCOME_TO_JINX_MANAGEMENT)
+    async processWelcomeToJinxManagement(
+        job: Job<ISendEmailBasePayload<IWelcomeToJinxManagementPayload>>
     ) {
-        const { toEmails, data } = job.data;
-
-        this.logger.info(
-            { jobId: job.id, recipients: toEmails.length },
-            'Processing team-invitation email job'
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.WELCOME_TO_JINX_MANAGEMENT,
+            'welcome-to-jinx-management'
         );
+    }
 
-        try {
-            await this.helperEmailService.sendEmail({
-                emails: toEmails,
-                emailType: EMAIL_TEMPLATES.TEAM_INVITATION,
-                payload: data,
-            });
+    @Process(EMAIL_TEMPLATES.ACCOUNT_PERMANENTLY_BANNED)
+    async processAccountBanned(
+        job: Job<ISendEmailBasePayload<IAccountBannedPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.ACCOUNT_PERMANENTLY_BANNED,
+            'account-permanently-banned'
+        );
+    }
 
-            this.logger.info(
-                { jobId: job.id, recipients: toEmails.length },
-                'Team-invitation emails sent successfully'
-            );
-        } catch (error) {
-            this.logger.error(
-                { jobId: job.id, error: error.message },
-                `Failed to send team-invitation emails: ${error.message}`
-            );
-            throw error;
-        }
+    @Process(EMAIL_TEMPLATES.ADMIN_PASSWORD_CHANGED)
+    async processAdminPasswordChanged(
+        job: Job<ISendEmailBasePayload<IAdminPasswordChangedPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.ADMIN_PASSWORD_CHANGED,
+            'admin-password-changed'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.PASSWORD_CHANGED)
+    async processPasswordChanged(
+        job: Job<ISendEmailBasePayload<IPasswordChangedPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.PASSWORD_CHANGED,
+            'password-changed'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.ORDER_CONFIRMED)
+    async processOrderConfirmed(
+        job: Job<ISendEmailBasePayload<IOrderConfirmedPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.ORDER_CONFIRMED,
+            'order-confirmed'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.PAYMENT_FAILED)
+    async processPaymentFailed(
+        job: Job<ISendEmailBasePayload<IPaymentFailedPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.PAYMENT_FAILED,
+            'payment-failed'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.WALLET_TOP_UP_SUCCESSFUL)
+    async processWalletTopUpSuccessful(
+        job: Job<ISendEmailBasePayload<IWalletTopUpSuccessfulPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.WALLET_TOP_UP_SUCCESSFUL,
+            'wallet-top-up-successful'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.SCHEDULED_MAINTENANCE)
+    async processScheduledMaintenance(
+        job: Job<ISendEmailBasePayload<IScheduledMaintenancePayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.SCHEDULED_MAINTENANCE,
+            'scheduled-maintenance'
+        );
+    }
+
+    @Process(EMAIL_TEMPLATES.MONTHLY_STORE_REPORT)
+    async processMonthlyStoreReport(
+        job: Job<ISendEmailBasePayload<IMonthlyStoreReportPayload>>
+    ) {
+        await this.dispatch(
+            job,
+            EMAIL_TEMPLATES.MONTHLY_STORE_REPORT,
+            'monthly-store-report'
+        );
     }
 }

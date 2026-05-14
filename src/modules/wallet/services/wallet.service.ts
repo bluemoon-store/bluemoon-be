@@ -10,7 +10,13 @@ import {
     WalletTransactionType,
 } from '@prisma/client';
 
+import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
+import { EMAIL_TEMPLATES } from 'src/common/email/enums/email-template.enum';
+import {
+    ISendEmailBasePayload,
+    IWalletTopUpSuccessfulPayload,
+} from 'src/common/helper/interfaces/email.interface';
 import { HelperPaginationService } from 'src/common/helper/services/helper.pagination.service';
 import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated.dto';
 import { SystemWalletService } from 'src/modules/crypto-payment/services/system-wallet.service';
@@ -39,6 +45,8 @@ export class WalletService implements IWalletService {
         private readonly configService: ConfigService,
         @InjectQueue('crypto-payment-verification')
         private readonly paymentVerificationQueue: Queue,
+        @InjectQueue(APP_BULL_QUEUES.EMAIL)
+        private readonly emailQueue: Queue,
         private readonly activityLogEmitter: ActivityLogEmitterService,
         private readonly logger: PinoLogger
     ) {
@@ -779,16 +787,56 @@ export class WalletService implements IWalletService {
                 referenceId: topUp.id,
             });
 
+            const creditedAt = new Date();
             await this.databaseService.walletTopUp.update({
                 where: { id: topUpId },
                 data: {
-                    creditedAt: new Date(),
+                    creditedAt,
                 },
             });
+
+            await this.enqueueTopUpSuccessfulEmail(
+                topUp.wallet.userId,
+                amountUsd,
+                creditedAt
+            );
         } catch (error) {
             this.logger.error({ error, topUpId }, 'Failed to credit top-up');
             throw error;
         }
+    }
+
+    private async enqueueTopUpSuccessfulEmail(
+        userId: string,
+        amountUsd: number,
+        creditedAt: Date
+    ): Promise<void> {
+        const user = await this.databaseService.user.findUnique({
+            where: { id: userId },
+            include: { wallet: true },
+        });
+        if (!user || !user.wallet) return;
+
+        const formatUsd = (n: number) =>
+            `$${n.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`;
+        const balance = parseFloat(user.wallet.balance.toString());
+        const frontendUrl =
+            this.configService.get<string>('app.frontendUrl') ??
+            'http://localhost:3000';
+        const dashboardLink = `${frontendUrl.replace(/\/$/, '')}/wallet`;
+
+        this.emailQueue.add(EMAIL_TEMPLATES.WALLET_TOP_UP_SUCCESSFUL, {
+            data: {
+                amount: formatUsd(amountUsd),
+                wallet_balance: formatUsd(balance),
+                date: creditedAt.toISOString().slice(0, 10),
+                dashboard_link: dashboardLink,
+            },
+            toEmails: [user.email],
+        } as ISendEmailBasePayload<IWalletTopUpSuccessfulPayload>);
     }
 
     async expireWalletTopUp(topUpId: string): Promise<void> {
