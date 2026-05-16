@@ -80,6 +80,25 @@ export class UserService implements IUserService {
         }
     }
 
+    async updateAvatar(
+        userId: string,
+        avatar: string | null
+    ): Promise<UserUpdateProfileResponseDto> {
+        const exists = await this.databaseService.user.findUnique({
+            where: { id: userId },
+        });
+        if (!exists) {
+            throw new HttpException(
+                'user.error.userNotFound',
+                HttpStatus.NOT_FOUND
+            );
+        }
+        return this.databaseService.user.update({
+            where: { id: userId },
+            data: { avatar },
+        });
+    }
+
     async deleteUser(
         userId: string,
         currentUserId: string,

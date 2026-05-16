@@ -25,6 +25,10 @@ export interface IUserService {
         userId: string,
         data: UserUpdateDto
     ): Promise<UserUpdateProfileResponseDto>;
+    updateAvatar(
+        userId: string,
+        avatar: string | null
+    ): Promise<UserUpdateProfileResponseDto>;
     deleteUser(
         userId: string,
         currentUserId: string,

@@ -32,11 +32,11 @@ export class FileService {
      * Server-side upload to the public assets bucket (SUPABASE_STORAGE_BUCKET_PUBLIC_ASSETS).
      */
     async uploadPublicAsset(
-        adminUserId: string,
+        userId: string,
         file: Express.Multer.File
     ): Promise<{ key: string; url: string }> {
         const safeName = this.slugifyName(file.originalname || 'asset');
-        const key = `${adminUserId}/${ENUM_FILE_STORE.PUBLIC_ASSETS}/${Date.now()}_${safeName}`;
+        const key = `${userId}/${ENUM_FILE_STORE.PUBLIC_ASSETS}/${Date.now()}_${safeName}`;
 
         await this.storageService.uploadObject(
             key,
